@@ -219,7 +219,7 @@ export interface ExtBridge {
   invoke<T = unknown>(namespace: ExtNamespace, method: string, ...args: unknown[]): Promise<T>;
   on<T = unknown>(namespace: ExtNamespace, event: string, callback: (value: T) => void): () => void;
 }
-export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input';
+export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input' | 'media';
 
 /** ns `system` (agent B). Events: `network` (NetworkStatus). Methods: `getNetwork()`. */
 export interface NetworkStatus {
@@ -305,4 +305,48 @@ export interface Iteration4Settings {
     /** Legacy alias of `surfsharkProfile`, still honoured. */
     surfsharkWireguardProfile?: string;
   };
+}
+
+/* ------------------------------------------------------------------ Iteration 5: ns `media` (Spotify Web API, PKCE)
+ * Backend: M1 (src/main/ext/media.js + backend/spotify/). Widget: M2. Music view: M3. Tokens never reach the renderer.
+ * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId),
+ *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp().
+ * Events:  `state` (MediaState, pushed on change and polled adaptively), `auth` (MediaAuthState). */
+export type MediaAuthState =
+  | { status: 'unconfigured' }                       // SPOTIFY_CLIENT_ID missing
+  | { status: 'signed-out' }
+  | { status: 'signing-in'; url: string }            // browser opened; url shown for fallback
+  | { status: 'signed-in'; displayName: string; product?: string }
+  | { status: 'error'; message: string };
+
+export interface MediaTrack { id: string; uri: string; title: string; artists: string[]; album: string; artUrl?: string; durationMs: number }
+export interface MediaDevice { id: string; name: string; type: string; active: boolean; volume?: number }
+export interface MediaState {
+  auth: MediaAuthState;
+  playing: boolean;
+  track?: MediaTrack;
+  progressMs?: number;
+  shuffle?: boolean;
+  repeat?: 'off' | 'track' | 'context';
+  volume?: number;
+  device?: MediaDevice;
+  /** true when nothing is playing and no device is active (widget offers to open Spotify) */
+  idle: boolean;
+  updatedAt: number;
+}
+export type MediaCommand = 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'shuffle' | 'repeat' | 'volume-up' | 'volume-down';
+export interface MediaPlaylist { id: string; uri: string; name: string; trackCount: number; artUrl?: string; owner?: string }
+export interface MediaSearchResult { tracks: MediaTrack[]; albums: Array<{ id: string; uri: string; name: string; artist: string; artUrl?: string }>; playlists: MediaPlaylist[]; artists: Array<{ id: string; uri: string; name: string; artUrl?: string }> }
+export interface MediaPlayRequest { contextUri?: string; uris?: string[]; offsetUri?: string; deviceId?: string }
+
+/** Iteration 5 settings (owned as noted). */
+export interface Iteration5Settings {
+  /** AP/H1: categories drive the home rows. Defaults: theatre + gaming. */
+  categories?: Array<{ id: string; label: string; builtin?: 'theatre' | 'gaming' }>;
+  /** AP: show labels on tiles */
+  showTileLabels?: boolean;
+  /** H1/AP: header layout */
+  homeHeader?: { layout: 'split' | 'centred'; showSeconds?: boolean; oledProtection?: boolean; fadeIn?: boolean };
+  /** M2: show the media widget on the home screen */
+  mediaWidget?: boolean;
 }

@@ -44,7 +44,9 @@ function readSecrets(env = process.env) {
     vibepolloHost: text('VP_HOST'),
     vibepolloIp: text('VP_IP'),
     weatherApiKey: text('WEATHER_API'),
-    steamGridDbKey: text('STEAMDB_API') || text('STEAMGRIDDB_API')
+    steamGridDbKey: text('STEAMDB_API') || text('STEAMGRIDDB_API'),
+    /** Public identifier for the Spotify PKCE flow (not a secret, but kept in .env with the other keys). */
+    spotifyClientId: text('SPOTIFY_CLIENT_ID')
   });
 }
 
