@@ -9,7 +9,7 @@ Resume point for the next session. Everything below is verified against the repo
 - Helper worktrees live in `D:\Github Repos\Home-Media-Launcher-wt\` (22 entries incl. main). Safe to delete when nothing is pending: `git worktree remove --force ../Home-Media-Launcher-wt/<name>`, then `git branch -D` the iter4/fix/i5 branches if wanted. The `q1` and `m*`/`qa` worktrees contain `node_modules` junctions to the main checkout.
 - `.env` is git-ignored (`.env.example` is committed). Keys: `VP_API`, `VP_HOST`, `VP_IP`, `WEATHER_API`, `STEAMDB_API`, `SPOTIFY_CLIENT_ID`. Read by `backend/env.js`, scrubbed from `process.env` after `readSecrets()`, never sent to the renderer.
 - Checks: `npm run check` → 409 tests, 0 failures. Run Electron with `unset ELECTRON_RUN_AS_NODE`.
-- A read-only review of `c5e4e27..HEAD` was started after the final merge; **its findings have not been applied yet** (see "Next steps").
+- A read-only review of `c5e4e27..HEAD` ran after the final merge. Fixed: media-widget checkbox id clash (setting could never change), staged categories offered in the Websites selector, `data-osk` on the icon popup input, weather country-code fallback, duplicate Spotify callback, header wake on gamepad input, weather refetch flicker, weather placeholder. **Not fixed (low/medium):** Spotify polling continues while the widget is hidden (needs a `media.setActive` handler), the icon popup ignores a reopen within ~0.6 s of closing, widget Back goes to the tile row instead of the settings button, the High Wycombe default lives in shared code (`home-header.js`, `backend/weather.js`).
 
 ## What exists
 
@@ -56,7 +56,7 @@ Iteration 5 (14 requested items):
 
 ## Next steps
 
-1. Apply the findings of the read-only review (check the latest task notification; if lost, re-run a review of `c5e4e27..HEAD`).
+1. Optionally fix the remaining review items listed above (Spotify polling while the widget is hidden is the one worth doing).
 2. Resolve known issues 1–4 (cover art for Gaming tiles, icon composition, weather default, OLED default).
 3. Ask the user to run `npm start`, set `SPOTIFY_CLIENT_ID`, and try the Spotify flow plus gamepad navigation end to end.
 4. Decide whether to merge `iter5` into `main`, push, and clean up the worktrees.

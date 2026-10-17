@@ -128,7 +128,7 @@ window.AppearanceSettings = (function () {
     const header = settings.homeHeader || {};
     headerLayout = header.layout === 'centred' ? 'centred' : 'split';
     $('#show-tile-labels').checked = settings.showTileLabels !== false;
-    $('#media-widget').checked = settings.mediaWidget !== false;
+    $('#media-widget-toggle').checked = settings.mediaWidget !== false;
     $('#header-seconds').checked = header.showSeconds === true;
     $('#header-oled').checked = header.oledProtection !== false;
     $('#header-fade').checked = header.fadeIn !== false;
@@ -143,7 +143,7 @@ window.AppearanceSettings = (function () {
     return {
       categories: Categories.normalise(categories),
       showTileLabels: $('#show-tile-labels').checked,
-      mediaWidget: $('#media-widget').checked,
+      mediaWidget: $('#media-widget-toggle').checked,
       homeHeader: {
         layout: headerLayout,
         showSeconds: $('#header-seconds').checked,
@@ -159,5 +159,8 @@ window.AppearanceSettings = (function () {
     document.querySelectorAll('#header-layout button').forEach((node) => node.addEventListener('click', () => { headerLayout = node.dataset.layout; syncLayout(); }));
   }
 
-  return { init, populate, collect };
+  /** Staged (unsaved) categories so other settings pages can offer them immediately. */
+  const getCategories = () => categories.map((category) => ({ ...category }));
+
+  return { init, populate, collect, getCategories };
 })();

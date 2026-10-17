@@ -144,7 +144,9 @@ class WeatherService {
       let place = Number.isFinite(cached?.lat) && Number.isFinite(cached?.lon) ? { name: cached.location, lat: cached.lat, lon: cached.lon } : null;
       if (!place) {
         const wanted = parseLocationQuery(text);
-        const places = await this.request('/geo/1.0/direct', { q: wanted.query, limit: 5 });
+        let places = await this.request('/geo/1.0/direct', { q: wanted.query, limit: 5 });
+        // A trailing two-letter segment may be a state ("Austin, TX"), not a country: retry by name alone.
+        if ((!Array.isArray(places) || places.length === 0) && wanted.country) places = await this.request('/geo/1.0/direct', { q: wanted.name, limit: 5 });
         place = pickPlace(places, wanted);
         if (!place) throw new Error('Location not found');
       }

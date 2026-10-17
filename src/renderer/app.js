@@ -700,6 +700,7 @@ window.ControllersPage.init({ setView: (view) => { state.view = view; } });
  * @param {'up'|'down'|'left'|'right'|'confirm'|'back'|'menu'} action
  */
 function handleAction(action) {
+  homeHeader.wake();
   if (state.locked) return;
   // Overlays with their own input: the on-screen keyboard (above everything) and the music view.
   if (window.OnScreenKeyboard.handleAction(action) || window.MediaView.handleAction(action)) return;

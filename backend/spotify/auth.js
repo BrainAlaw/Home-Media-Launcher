@@ -206,6 +206,9 @@ class SpotifyAuth {
     }
     const code = parsed.searchParams.get('code');
     if (!code) { reply(400, 'Sign-in rejected', 'No authorisation code received.'); return; }
+    // A browser retry or double request must not start a second exchange with the same single-use code.
+    if (flow.consumed) { reply(409, 'Already handled', 'This sign-in is already being completed.'); return; }
+    flow.consumed = true;
     try {
       const result = await this.#tokenRequest({ grant_type: 'authorization_code', code, redirect_uri: flow.redirectUri, code_verifier: flow.verifier });
       if (!result.ok || !result.body.access_token) throw new Error(result.body.error_description || result.body.error || `HTTP ${result.status}`);

@@ -91,6 +91,7 @@ if (typeof module === 'object' && module.exports) {
   const vpnRows = new Map();
   let weatherTimer = null;
   let weatherToken = 0;
+  let lastWeatherKey = '';
   const deferred = new Map();
 
   /** Runs `render` now, or once the quick-settings sheet has finished animating (latest call per key wins). */
@@ -314,6 +315,10 @@ if (typeof module === 'object' && module.exports) {
 
   /** Called by the header refresh; shows or hides the weather widgets and keeps them current. */
   async function updateWeather(header) {
+    const weatherKey = `${Boolean(header.showWeather)}|${header.weatherLocation || ''}`;
+    // Model refreshes (saves, remote sync) must not flicker the header or refetch when nothing changed.
+    if (weatherTimer && weatherKey === lastWeatherKey) return;
+    lastWeatherKey = weatherKey;
     clearInterval(weatherTimer);
     weatherTimer = null;
     const token = ++weatherToken;

@@ -68,7 +68,7 @@ window.SettingsDialog = (function () {
    * The choice is kept in card.dataset.category; a stored id that no longer exists stays selectable.
    */
   function createCategoryControl(card, stored) {
-    const { selected, options } = window.IconPopupModel.categoryChoices(window.IconPopupModel.readCategories(ctx.getConfig()?.settings), stored);
+    const { selected, options } = window.IconPopupModel.categoryChoices(window.IconPopupModel.readCategories({ ...ctx.getConfig()?.settings, categories: window.AppearanceSettings?.getCategories?.() ?? ctx.getConfig()?.settings?.categories }), stored);
     card.dataset.category = selected;
     const group = el('div', { className: 'category-choice' });
     group.setAttribute('role', 'group');

@@ -102,6 +102,7 @@ window.IconPopup = (function () {
     const controls = el('div', { className: 'icon-popup-controls' });
     const input = el('input', { type: 'text', className: 'icon-popup-path', placeholder: 'Image path or web address (optional)' });
     input.setAttribute('aria-label', 'Icon image path or web address');
+    input.dataset.osk = '';
     const buttons = el('div', { className: 'button-group icon-popup-actions' });
     const auto = el('button', { type: 'button', textContent: 'Auto' });
     const browse = el('button', { type: 'button', textContent: 'Browse…' });
