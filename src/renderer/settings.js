@@ -696,6 +696,7 @@ window.SettingsDialog = (function () {
     sourceInfo = new Map();
     $('#wallpaper-credit-toggle').checked = settings.wallpaperCredit !== false;
     performanceDraft = window.Perf.normalizeMode(settings.performance);
+    window.AppearanceSettings.populate(settings);
     syncPerformanceControl();
     fontDraft = settings.fontId || 'theme';
     buildWallpaperControls();
@@ -770,6 +771,7 @@ window.SettingsDialog = (function () {
         wallpaperSources: sourcesDraft,
         wallpaperCredit: $('#wallpaper-credit-toggle').checked,
         performance: performanceDraft,
+        ...window.AppearanceSettings.collect(),
         iconOverrides,
         header: {
           showText: $('#show-text').checked,
@@ -816,6 +818,7 @@ window.SettingsDialog = (function () {
 
   function init(context) {
     ctx = context;
+    window.AppearanceSettings.init();
     $('#dynamic-art').addEventListener('change', (event) => updateDraft({ dynamicArt: event.target.checked }));
     $('#live-video').addEventListener('change', (event) => updateDraft({ liveVideo: event.target.checked }));
     $('#wallpaper-shuffle').addEventListener('change', (event) => updateWallpaper({ shuffle: event.target.checked }));

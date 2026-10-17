@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="launch-transition.css">
   <link rel="stylesheet" href="appearance.css">
 <link rel="stylesheet" href="perf.css">
+  <link rel="stylesheet" href="settings-appearance.css">
 </head>
 <body>
   <div id="backdrop" aria-hidden="true"><div class="backdrop-layer"></div><div class="backdrop-layer"></div></div>
@@ -114,6 +115,25 @@
             <div id="accent-picker" class="swatch-row" role="group" aria-label="Accent colour"></div>
             <h3>Font</h3>
             <div id="font-picker" class="select-field" role="group" aria-label="Interface font"></div>
+            <h3>Home screen</h3>
+            <label class="toggle-row"><span>Show labels on tiles</span><input id="show-tile-labels" type="checkbox"></label>
+            <label class="toggle-row"><span>Show media widget</span><input id="media-widget" type="checkbox"></label>
+            <h4>Header layout</h4>
+            <div id="header-layout" class="segmented" role="group" aria-label="Header layout">
+              <button type="button" data-layout="split">Split</button>
+              <button type="button" data-layout="centred">Centred</button>
+            </div>
+            <label class="toggle-row"><span>Show seconds on the clock</span><input id="header-seconds" type="checkbox"></label>
+            <label class="toggle-row"><span>OLED protection (slow pixel drift)</span><input id="header-oled" type="checkbox"></label>
+            <label class="toggle-row"><span>Fade-in on start</span><input id="header-fade" type="checkbox"></label>
+            <h3>Categories</h3>
+            <p class="section-description">Sections shown on the home screen, in this order. Home Theatre and Gaming can be renamed but not removed.</p>
+            <div id="category-list" class="category-list" role="list" aria-label="Categories"></div>
+            <div class="field-with-button category-add">
+              <input id="category-name" type="text" maxlength="40" placeholder="New category name" aria-label="New category name" autocomplete="off" enterkeyhint="done">
+              <button type="button" id="category-add">Add category</button>
+            </div>
+            <p id="category-status" class="section-description" role="status"></p>
             <h3>Backdrop</h3>
             <label class="toggle-row"><span>Dynamic art backdrop (follows the focused item)</span><input id="dynamic-art" type="checkbox"></label>
             <label class="toggle-row"><span>Live video backgrounds</span><input id="live-video" type="checkbox"></label>
@@ -233,6 +253,8 @@
   <script src="gamepad-input.js"></script>
   <script src="remote-keymap.js"></script>
   <script src="remote-input.js"></script>
+  <script src="categories.js"></script>
+  <script src="settings-appearance.js"></script>
   <script src="settings.js"></script>
   <script src="perf.js"></script>
 <script src="menu-motion.js"></script>

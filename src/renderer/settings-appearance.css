@@ -1,0 +1,54 @@
+/* Settings dialog scale (uses --dlg-px / --hig-dialog-unit from hig.css) and the Appearance page's home-screen
+ * controls and categories editor. Loaded last, so equal-specificity rules here win. Theme tokens only. */
+
+/* ---------------------------------------------------------------- dialog geometry follows the dialog scale */
+dialog#settings-dialog { width: min(calc(1100 * var(--dlg-px)), 94vw); height: min(calc(820 * var(--dlg-px)), 92vh); }
+dialog#settings-dialog .dialog-header, dialog#settings-dialog footer { padding: calc(16 * var(--dlg-px)) calc(26 * var(--dlg-px)); }
+dialog#settings-dialog .dialog-header h2 { font: var(--hig-font-title3); }
+dialog#settings-dialog .settings-layout { grid-template-columns: clamp(calc(150 * var(--dlg-px)), 20%, calc(240 * var(--dlg-px))) minmax(0, 1fr); }
+dialog#settings-dialog .settings-layout nav { padding: calc(16 * var(--dlg-px)) calc(12 * var(--dlg-px)); }
+dialog#settings-dialog .settings-page { padding: calc(22 * var(--dlg-px)) calc(30 * var(--dlg-px)); scroll-padding: calc(24 * var(--dlg-px)); }
+dialog#settings-dialog button { padding: calc(9 * var(--dlg-px)) calc(14 * var(--dlg-px)); }
+dialog#settings-dialog input[type="text"] { padding: calc(9 * var(--dlg-px)) calc(12 * var(--dlg-px)); }
+dialog#settings-dialog .settings-page h3 { margin-bottom: calc(12 * var(--dlg-px)); }
+dialog#settings-dialog .settings-page h3:not(:first-child) { margin-top: calc(24 * var(--dlg-px)); }
+dialog#settings-dialog .settings-page label { margin-bottom: calc(14 * var(--dlg-px)); }
+dialog#settings-dialog .settings-page .toggle-row { margin-bottom: calc(8 * var(--dlg-px)); padding: calc(8 * var(--dlg-px)) calc(14 * var(--dlg-px)); }
+dialog#settings-dialog input[type="checkbox"] { width: calc(20 * var(--dlg-px)); height: calc(20 * var(--dlg-px)); }
+dialog#settings-dialog .appearance-controls { padding: calc(22 * var(--dlg-px)) calc(24 * var(--dlg-px)) calc(22 * var(--dlg-px)) calc(30 * var(--dlg-px)); scroll-padding: calc(24 * var(--dlg-px)); }
+dialog#settings-dialog .appearance-side { padding: calc(22 * var(--dlg-px)) calc(26 * var(--dlg-px)) calc(22 * var(--dlg-px)) calc(6 * var(--dlg-px)); }
+dialog#settings-dialog .settings-page.active[data-page="appearance"] { grid-template-columns: minmax(0, 1fr) minmax(calc(250 * var(--dlg-px)), calc(330 * var(--dlg-px))); }
+dialog#settings-dialog .select-trigger, dialog#settings-dialog .select-list .select-option { min-height: calc(46 * var(--dlg-px)); }
+dialog#settings-dialog .select-name { font-size: var(--hig-fs-callout); }
+dialog#settings-dialog .select-detail { font-size: var(--hig-fs-caption1); }
+dialog#settings-dialog .select-group, dialog#settings-dialog .card-label, dialog#settings-dialog .source-kind { font-size: var(--hig-fs-caption2); }
+dialog#settings-dialog .ap-title { font-size: calc(18 * var(--dlg-px)); }
+dialog#settings-dialog .ap-chip, dialog#settings-dialog .ap-caption small { font-size: var(--hig-fs-caption1); }
+dialog#settings-dialog .ap-caption strong { font-size: var(--hig-fs-callout); }
+dialog#settings-dialog .swatch { width: calc(38 * var(--dlg-px)); height: calc(38 * var(--dlg-px)); }
+dialog#settings-dialog .swatch-row .swatch { width: calc(30 * var(--dlg-px)); height: calc(30 * var(--dlg-px)); }
+dialog#settings-dialog .catalog-initial, dialog#settings-dialog .catalog-info small, dialog#settings-dialog .select-caret { font-size: var(--hig-fs-caption1); }
+dialog#settings-dialog .catalog-name { font-size: var(--hig-fs-callout); }
+
+/* ---------------------------------------------------------------- tile labels */
+/* The tile button keeps its aria-label, so assistive technology still announces the name. */
+body.tile-labels-off .tile .label { display: none; }
+
+/* ---------------------------------------------------------------- categories editor */
+.category-list { display: grid; gap: calc(8 * var(--dlg-px)); margin-bottom: calc(12 * var(--dlg-px)); }
+.category-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: calc(10 * var(--dlg-px)); padding: calc(8 * var(--dlg-px)) calc(10 * var(--dlg-px)); border-radius: var(--ui-rounding); background: var(--hig-fill-tertiary); }
+.category-row input[type="text"] { min-width: 0; }
+.category-actions { display: flex; align-items: center; gap: calc(6 * var(--dlg-px)); }
+.category-actions button { min-width: calc(44 * var(--dlg-px)); text-align: center; }
+.category-actions button:disabled { opacity: .35; }
+.category-actions .remove { color: var(--danger); }
+.category-actions .remove.armed { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 22%, var(--color-transparent)); }
+.category-tag { min-width: calc(92 * var(--dlg-px)); color: var(--hig-label-secondary); font: var(--hig-font-caption1); text-align: center; }
+.category-add { margin-bottom: calc(6 * var(--dlg-px)); }
+#category-status { min-height: 1.4em; }
+#header-layout { margin-bottom: calc(12 * var(--dlg-px)); }
+
+@media (max-width: 900px) {
+  .category-row { grid-template-columns: minmax(0, 1fr); }
+}
+.section-description + .category-list { margin-top: calc(12 * var(--dlg-px)); }
