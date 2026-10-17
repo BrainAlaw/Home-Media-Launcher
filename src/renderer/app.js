@@ -373,7 +373,12 @@ function buildArt(tile) {
     const image = document.createElement('img');
     image.alt = '';
     image.decoding = 'async';
-    image.addEventListener('load', () => art.classList.add('has-image'));
+    image.addEventListener('load', () => {
+      art.classList.add('has-image');
+      // Brand colour for the focus glow; cross-origin art taints the canvas and keeps the name-derived hue.
+      const accent = window.TileAccent.sampleImage(image);
+      if (accent) art.parentElement?.style.setProperty('--tile-accent', window.TileAccent.accentCss(accent));
+    });
     image.addEventListener('error', () => image.remove());
     image.src = assetUrl(tile.icon);
     art.append(image);
@@ -393,6 +398,8 @@ function updateTile(button, tile, rowId) {
   button.type = 'button';
   button.className = 'tile';
   button.style.removeProperty('--virtual-x');
+  button.style.removeProperty('--tile-accent');
+  button.style.setProperty('--hue', String(hueFor(tile.name))); // tints the focus glow (--tile-accent)
   tagFocusable(button, tile, rowId);
   const label = document.createElement('span');
   label.className = 'label';

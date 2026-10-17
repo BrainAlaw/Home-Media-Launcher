@@ -310,6 +310,11 @@
       const element = layoutState.pool[col - layoutState.start];
       if (!element || layoutState.indices[col - layoutState.start] !== col) return null;
       if (!focus) return element;
+      // Direction of travel drives the art parallax (-1, 0, 1 per axis); a first focus or a re-focus has none.
+      const previous = this.focusedElement && this.focusedElement !== element ? this.previousCoordinate : null;
+      element.style.setProperty('--fx', String(previous ? Math.sign(col - previous[1]) : 0));
+      element.style.setProperty('--fy', String(previous ? Math.sign(rowIndex - previous[0]) : 0));
+      this.previousCoordinate = this.coordinate;
       this.focusedElement?.classList.remove('focused');
       this.focusedElement = element;
       element.classList.add('focused');

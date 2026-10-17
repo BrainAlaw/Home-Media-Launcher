@@ -13,7 +13,7 @@ const RENDERER = path.join(__dirname, '../../src/renderer');
 const OWNED = ['styles.css', 'home.css', 'controllers.css', 'launch-transition.css', 'hig.css', 'theme.css'];
 /** Files where every transition may only touch compositor properties. */
 const COMPOSITOR_ONLY_FILES = new Set(['home.css', 'launch-transition.css']);
-const COMPOSITOR_PROPS = new Set(['transform', 'opacity', 'visibility', 'none']);
+const COMPOSITOR_PROPS = new Set(['transform', 'scale', 'translate', 'opacity', 'visibility', 'none']);
 const LAYOUT_PROPS = /^(width|height|min-|max-|top|left|right|bottom|inset|margin|padding|border(-\w+)?-width|font|line-height|letter-spacing|gap|flex|grid|display|position)/;
 
 const read = (name) => fs.readFileSync(path.join(RENDERER, name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
@@ -67,7 +67,7 @@ test('owned stylesheets never use transition: all or animate layout properties',
 });
 
 test('keyframes animate only transform, opacity and visibility', () => {
-  const allowed = new Set(['transform', 'opacity', 'visibility', 'animation-timing-function']);
+  const allowed = new Set(['transform', 'scale', 'translate', 'opacity', 'visibility', 'animation-timing-function']);
   for (const file of OWNED) {
     const css = read(file);
     const frames = /@keyframes\s+([\w-]+)\s*\{((?:[^{}]*\{[^{}]*\})*)\}/g;
@@ -90,6 +90,43 @@ test('will-change is limited to focus/open states and backdrop-filter to the sin
         const allowed = decl.value === 'none' || /\.menu-panel/.test(decl.selector);
         assert.ok(allowed, `extra live blur surface: ${file}: ${decl.selector}`);
       }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------------------------- tile motion
+
+const tileDecls = () => OWNED.flatMap((file) => declarations(read(file)).filter((d) => /\.tile/.test(d.selector)).map((d) => ({ ...d, file })));
+
+test('tile rules never use filter or blur, and tile transitions are compositor-only', () => {
+  for (const d of tileDecls()) {
+    const where = `${d.file}: ${d.selector} { ${d.prop}: ${d.value} }`;
+    if (d.prop === 'filter' || d.prop === 'backdrop-filter' || d.prop === '-webkit-backdrop-filter') {
+      assert.equal(d.value, 'none', `filter on a tile: ${where}`);
+    }
+    assert.ok(!/blur\(/.test(d.value), `blur on a tile: ${where}`);
+    if (d.prop === 'transition-property') {
+      for (const prop of splitTopLevel(d.value)) assert.ok(COMPOSITOR_PROPS.has(prop), `non-compositor tile transition in ${where}`);
+    }
+    if (d.prop === 'animation' || d.prop === 'animation-name') {
+      assert.ok(/launch-pulse|none/.test(d.value), `unexpected tile animation (use interruptible transitions): ${where}`);
+    }
+  }
+});
+
+test('tile focus has no hard outline, a bounded scale, a reserved focus pad and lite / reduced-motion variants', () => {
+  const hig = read('hig.css');
+  const scale = /--hig-focus-scale:\s*clamp\(([\d.]+),[^,]+,\s*([\d.]+)\)/.exec(hig);
+  assert.ok(scale && +scale[1] >= 1.06 && +scale[2] <= 1.08, 'focus scale clamps to 1.06-1.08');
+  assert.match(hig, /--tile-focus-pad:/, 'focus pad token defined');
+  const home = read('home.css');
+  assert.match(home, /--track-gap-y:[^;]*--tile-focus-pad/, 'rows reserve the focus pad');
+  assert.match(home, /body\.perf-lite \.tile::after/, 'lite mode drops the glow');
+  assert.match(home, /@media \(prefers-reduced-motion: reduce\)/, 'reduced-motion variant');
+  assert.match(home, /\.tile\.focused \+ \.tile/, 'neighbours recede');
+  for (const d of tileDecls()) {
+    if (/\.focused|:focus|:hover/.test(d.selector) && !/::/.test(d.selector)) {
+      assert.ok(!['outline', 'border', 'border-color'].includes(d.prop) || /^(none|0)$/.test(d.value), `hard outline on tile focus: ${d.selector}`);
     }
   }
 });
