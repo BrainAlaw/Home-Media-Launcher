@@ -15,6 +15,10 @@ const POST_COMMAND_REFRESH_MS = 350;
 /** Progress is re-emitted only when it drifts further than this from the interpolated position (seek, track change). */
 const DRIFT_EMIT_MS = 2500;
 const FRESH_STATE_MS = 1500;
+/** While the Soloist socket is up and its Spotify device is not yet active, GET /me/player/devices is checked this often. */
+const SOLOIST_DEVICE_RETRY_MS = 10_000;
+/** Transfer attempts per socket session before the Soloist hand-off gives up until the socket reconnects. */
+const SOLOIST_TRANSFER_ATTEMPTS = 6;
 
 /** Delay until the next poll: ~1 s playing, 5 s paused, 15 s idle or hidden, exponential backoff on failures, never before a 429 expires. */
 function pollInterval({ suspended, visible, playback, failures = 0, waitMs = 0 }) {
@@ -31,12 +35,21 @@ function pollInterval({ suspended, visible, playback, failures = 0, waitMs = 0 }
  * All side effects are injected so it can run under test without Electron or a network.
  */
 class MediaService {
+  /**
+   * @param {{ soloist?: null | { isConnected(): boolean, deviceName(): string, onState(cb: Function): () => void,
+   *   onConnectionChange(cb: Function): () => void } }} [options] `soloist` is the Soloist manager (backend/soloist/manager.js).
+   */
   constructor({ clientId, userData, fetch: fetchImpl = globalThis.fetch, safeStorage, openExternal, emit = () => {}, isSuspended = () => false,
-    isVisible = () => true, now = Date.now, sleep, ports, loginTimeoutMs, createServer } = {}) {
+    isVisible = () => true, now = Date.now, sleep, ports, loginTimeoutMs, createServer, soloist = null } = {}) {
     this.now = now;
     this.emit = emit;
     this.isSuspended = isSuspended;
     this.isVisible = isVisible;
+    this.soloist = soloist;
+    this.soloistUnsubscribers = [];
+    this.soloistReady = false;
+    this.soloistAttempts = 0;
+    this.deviceTimer = null;
     this.cachePath = userData ? path.join(userData, 'media-state.json') : '';
     this.lastDeviceId = '';
     this.timer = null;
@@ -67,11 +80,13 @@ class MediaService {
   async start({ autoPoll = true } = {}) {
     this.stopped = false;
     this.autoPoll = autoPoll;
+    this.#attachSoloist();
     if (!this.auth.configured) { this.authState = { status: 'unconfigured' }; return; }
     await this.#loadCache();
     if (await this.auth.init()) {
       await this.#enterSignedIn();
       if (autoPoll) this.#schedule(0);
+      this.#scheduleDevice(0);
     } else {
       this.authState = { status: 'signed-out' };
       this.playback = { playing: false, idle: true };
@@ -84,7 +99,102 @@ class MediaService {
     this.stopped = true;
     clearTimeout(this.timer);
     this.timer = null;
+    this.#clearDeviceTimer();
+    for (const off of this.soloistUnsubscribers.splice(0)) off();
     this.auth.dispose();
+  }
+
+  /* ---- Soloist (local player) integration ---- */
+
+  /** True when the Soloist socket is up and the Spotify account is signed in: Soloist then replaces Web API polling. */
+  #live() {
+    return Boolean(this.soloist && this.auth.signedIn && this.soloist.isConnected());
+  }
+
+  #attachSoloist() {
+    if (!this.soloist || this.soloistUnsubscribers.length) return;
+    this.soloistUnsubscribers.push(
+      this.soloist.onState((playback) => this.#onSoloistState(playback)),
+      this.soloist.onConnectionChange((connected) => this.#onSoloistConnection(connected))
+    );
+  }
+
+  /** Socket snapshot (already mapped to MediaState playback fields by the manager). Ignored unless the socket is live. */
+  #onSoloistState(playback) {
+    if (this.stopped || !this.#live()) return;
+    this.playback = { ...playback };
+    this.stale = false;
+    this.fetchedAt = this.now();
+    if (playback.device?.id) this.lastDeviceId = playback.device.id;
+    this.#saveCache();
+    this.#publish();
+  }
+
+  /**
+   * Socket up: Soloist becomes the playback source, the Web API poll loop stops and the device hand-off starts.
+   * Socket down: the Web API poll loop resumes immediately (fallback) when the media UI is visible.
+   */
+  #onSoloistConnection(connected) {
+    if (this.stopped) return;
+    clearTimeout(this.timer);
+    this.timer = null;
+    this.soloistReady = false;
+    this.soloistAttempts = 0;
+    if (connected && this.#live()) {
+      this.#scheduleDevice(0);
+      return;
+    }
+    this.#clearDeviceTimer();
+    if (this.auth.signedIn) this.#schedule(0);
+  }
+
+  #clearDeviceTimer() {
+    clearTimeout(this.deviceTimer);
+    this.deviceTimer = null;
+  }
+
+  /** Device hand-off timer: runs while the socket is live and the Soloist device is not yet active. Independent of the media UI. */
+  #scheduleDevice(delay) {
+    this.#clearDeviceTimer();
+    if (this.stopped || this.autoPoll === false || this.soloistReady || !this.#live()) return;
+    this.deviceTimer = setTimeout(() => {
+      this.deviceTimer = null;
+      void this.#handOffToSoloist().then((outcome) => {
+        const retry = outcome === 'absent' || (outcome === 'retry' && this.soloistAttempts < SOLOIST_TRANSFER_ATTEMPTS);
+        if (retry) this.#scheduleDevice(SOLOIST_DEVICE_RETRY_MS);
+      });
+    }, delay);
+    this.deviceTimer.unref?.();
+  }
+
+  /**
+   * Finds the Soloist device in GET /me/player/devices (matched by name) and transfers playback to it once. Never throws.
+   * Outcomes: `active` (already playing there), `transferred`, `absent` (not listed yet), `retry` (request failed).
+   */
+  async #handOffToSoloist() {
+    if (!this.#live()) return 'retry';
+    const wanted = String(this.soloist.deviceName() || '').trim().toLowerCase();
+    if (!wanted) return 'absent';
+    let listing;
+    try {
+      listing = await this.client.devices();
+    } catch {
+      return 'retry';
+    }
+    if (!listing.ok) return 'retry';
+    const target = listing.devices.find((device) => device.name.trim().toLowerCase() === wanted);
+    if (!target) return 'absent';
+    if (target.active) {
+      this.soloistReady = true;
+      this.lastDeviceId = target.id;
+      return 'active';
+    }
+    this.soloistAttempts += 1;
+    const moved = await this.client.transfer(target.id, this.playback.playing === true);
+    if (!moved.ok) return 'retry';
+    this.soloistReady = true;
+    this.lastDeviceId = target.id;
+    return 'transferred';
   }
 
   async #loadCache() {
@@ -128,12 +238,18 @@ class MediaService {
       this.fetchedAt = 0;
       clearTimeout(this.timer);
       this.timer = null;
+      this.#clearDeviceTimer();
+      this.soloistReady = false;
+      this.soloistAttempts = 0;
       this.#saveCache();
     } else if (event.status === 'signed-in') {
       await this.#enterSignedIn();
       this.failures = 0;
       this.retryNotBefore = 0;
       if (!this.stopped && this.autoPoll !== false) this.#schedule(0);
+      this.soloistReady = false;
+      this.soloistAttempts = 0;
+      this.#scheduleDevice(0);
       return;
     }
     this.emit('auth', this.authState);
@@ -165,7 +281,8 @@ class MediaService {
   #schedule(delay) {
     clearTimeout(this.timer);
     this.timer = null;
-    if (this.stopped || !this.active || !this.auth.signedIn) return;
+    // Live Soloist state is pushed over the socket: no Web API poll loop while it is connected.
+    if (this.stopped || !this.active || !this.auth.signedIn || this.#live()) return;
     this.timer = setTimeout(() => { void this.#tick(); }, delay);
     this.timer.unref?.();
   }
@@ -192,7 +309,7 @@ class MediaService {
 
   /** Fetches the playback state once (single-flight). Never throws; offline keeps the last known state and flags it stale. */
   refresh() {
-    if (!this.auth.signedIn) return Promise.resolve(this.state);
+    if (!this.auth.signedIn || this.#live()) return Promise.resolve(this.state);
     if (this.pollInflight) return this.pollInflight;
     this.pollInflight = (async () => {
       const result = await this.client.getState();
@@ -224,7 +341,7 @@ class MediaService {
   }
 
   #afterCommand(result) {
-    if (!this.stopped && this.active && this.auth.signedIn) {
+    if (!this.stopped && this.active && this.auth.signedIn && !this.#live()) {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => { void this.#tick(); }, POST_COMMAND_REFRESH_MS);
       this.timer.unref?.();

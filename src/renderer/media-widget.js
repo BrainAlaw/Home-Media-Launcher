@@ -108,7 +108,10 @@
     const progress = el('div', 'mw-progress', { role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-label': 'Track progress' });
     const progressFill = el('i');
     progress.append(progressFill);
-    text.append(title, subtitle, progress);
+    // Soloist line ("Soloist: this computer"): text comes from soloist-status.js, hidden unless the local player is live.
+    const soloistLine = el('div', 'mw-soloist');
+    soloistLine.hidden = true;
+    text.append(title, subtitle, progress, soloistLine);
     card.append(art, text);
     const ctas = el('div', 'mw-ctas', { role: 'toolbar', 'aria-label': 'Spotify' });
     const controls = el('div', 'mw-controls', { role: 'toolbar', 'aria-label': 'Playback controls' });
@@ -136,6 +139,7 @@
     /** @type {{ at: number, trackId: string } | null} */
     let pendingTrackToast = null;
     const unsubscribers = [];
+    unsubscribers.push(window.SoloistStatus ? window.SoloistStatus.subscribe(() => render()) : () => {});
 
     /* -------------------------------------------------------------- rendering */
 
@@ -252,6 +256,9 @@
       subtitle.hidden = !view.subtitle;
       card.title = view.detail || '';
       progress.hidden = !view.hasTrack;
+      const soloistText = window.SoloistStatus ? window.SoloistStatus.mediaLine(current.device) : '';
+      soloistLine.textContent = soloistText;
+      soloistLine.hidden = !soloistText;
       syncStructure();
       paintArt();
       for (const [id, button] of buttons) {

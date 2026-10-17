@@ -219,7 +219,7 @@ export interface ExtBridge {
   invoke<T = unknown>(namespace: ExtNamespace, method: string, ...args: unknown[]): Promise<T>;
   on<T = unknown>(namespace: ExtNamespace, event: string, callback: (value: T) => void): () => void;
 }
-export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input' | 'media';
+export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input' | 'media' | 'soloist';
 
 /** ns `system` (agent B). Events: `network` (NetworkStatus). Methods: `getNetwork()`. */
 export interface NetworkStatus {
@@ -351,4 +351,34 @@ export interface Iteration5Settings {
   homeHeader?: { layout: 'split' | 'centred'; showSeconds?: boolean; oledProtection?: boolean; fadeIn?: boolean };
   /** M2: show the media widget on the home screen */
   mediaWidget?: boolean;
+  /** I7 (Soloist): local Spotify Connect player, Linux only. See SoloistSettings. */
+  soloist?: SoloistSettings;
+}
+
+/* ------------------------------------------------------------------ Iteration 7: ns `soloist` (local Soloist player, Linux only)
+ * Backend: src/main/ext/soloist.js + backend/soloist/ (manager, settings). The API key (SPOTIFY_SOLOIST_API, .env) is read only in
+ * the main process and never appears in any payload, log or error.
+ * Methods: status(), detect(), start(), stop(), restart(), apply() (re-reads settings.soloist and reconciles the process).
+ * Events:  `status` (SoloistStatus, pushed on change). */
+export interface SoloistSettings {
+  /** Default false. */
+  enabled?: boolean;
+  /** Spotify Connect device name, matched case-insensitively in GET /me/player/devices. Default 'Home Media Launcher'. */
+  deviceName?: string;
+  /** Optional absolute path to the Soloist binary; empty or absent means auto-detect. */
+  binaryPath?: string;
+}
+
+/** `unsupported`: win32/darwin. `disabled`: settings.soloist.enabled is false. `not-installed`: binary not found.
+ *  `stopped`: enabled but not running. `starting`: process up, socket or login pending. `connected`: socket live, Spotify
+ *  playback is handled by Soloist. `error`: see `message`. */
+export type SoloistState = 'unsupported' | 'disabled' | 'not-installed' | 'stopped' | 'starting' | 'connected' | 'error';
+export interface SoloistStatus {
+  state: SoloistState;
+  platform: string;
+  enabled: boolean;
+  deviceName: string;
+  connected: boolean;
+  /** Sanitised (API key removed, bounded length). */
+  message?: string;
 }

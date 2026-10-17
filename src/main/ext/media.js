@@ -48,6 +48,8 @@ module.exports = {
       safeStorage,
       openExternal: (url) => shell.openExternal(url),
       emit: ctx.emit,
+      // Soloist (local player) is the preferred source while its socket is live; the manager always exists and stays inert when disabled.
+      soloist: require('./soloist').ensureManager(ctx),
       isSuspended: sessionActive,
       isVisible: () => {
         const window = ctx.getWindow();

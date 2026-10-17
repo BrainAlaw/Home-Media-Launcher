@@ -33,7 +33,7 @@ function loadEnv({ candidates = [path.join(__dirname, '..', '.env'), path.join(p
 
 /** Removes secret keys from the environment so spawned applications never inherit them. Call after `readSecrets()`. */
 function scrubSecrets(env = process.env) {
-  for (const key of ['VP_API', 'WEATHER_API', 'STEAMDB_API', 'STEAMGRIDDB_API']) delete env[key];
+  for (const key of ['VP_API', 'WEATHER_API', 'STEAMDB_API', 'STEAMGRIDDB_API', 'SPOTIFY_SOLOIST_API']) delete env[key];
 }
 
 /** Typed view of the secrets and hosts the launcher understands. Values never leave the main process. */
@@ -46,7 +46,9 @@ function readSecrets(env = process.env) {
     weatherApiKey: text('WEATHER_API'),
     steamGridDbKey: text('STEAMDB_API') || text('STEAMGRIDDB_API'),
     /** Public identifier for the Spotify PKCE flow (not a secret, but kept in .env with the other keys). */
-    spotifyClientId: text('SPOTIFY_CLIENT_ID')
+    spotifyClientId: text('SPOTIFY_CLIENT_ID'),
+    /** Soloist API key. Main process only: passed to the Soloist process, never sent to the renderer, logged or put in errors. */
+    soloistApiKey: text('SPOTIFY_SOLOIST_API')
   });
 }
 

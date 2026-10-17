@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="media-widget.css">
   <link rel="stylesheet" href="on-screen-keyboard.css">
   <link rel="stylesheet" href="media-view.css">
+  <link rel="stylesheet" href="soloist-status.css">
 <link rel="stylesheet" href="tile-art.css">
 </head>
 <body>
@@ -87,6 +88,11 @@
         <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
       </button>
       <div id="vpn-rows" class="vpn-rows"></div>
+      <button id="soloist-row" type="button" class="menu-action menu-toggle soloist-row" role="switch" aria-checked="false" aria-label="Soloist local player" data-state="off">
+        <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 9h3l4.5-3.5v13L8 15H5z"/><path d="M16 9a4 4 0 0 1 0 6M18.6 6.6a7.6 7.6 0 0 1 0 10.8"/></svg></span>
+        <span class="menu-copy"><strong>Soloist</strong><small>Off</small></span>
+        <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
+      </button>
       <button id="quit-button" class="menu-action">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-13 5 5-5 5m-5-5h13"/></svg></span>
         <span class="menu-copy"><strong>Exit launcher</strong><small>Return to your desktop</small></span>
@@ -291,6 +297,7 @@
   <script src="weather-icons.js"></script>
   <script src="menu-switch.js"></script>
   <script src="status-widgets.js"></script>
+  <script src="soloist-status.js"></script>
   <script src="launch-transition.js"></script>
   <script src="media-controls.js"></script>
   <script src="media-widget.js"></script>
