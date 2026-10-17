@@ -1,0 +1,59 @@
+/* Applications and Websites pages: icon thumbnails with a pencil badge, category choice and the shared icon popup. */
+
+/* ---------------------------------------------------------------- thumbnail + badge */
+dialog button.icon-thumb {
+  position: relative; display: grid; flex: none; place-items: center; width: 96px; height: 54px; min-height: 0; margin: 0; padding: 0;
+  overflow: visible; border-radius: var(--radius-control); background: var(--bg); border: 1px solid var(--border); text-align: center;
+}
+.icon-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; object-fit: contain; }
+.icon-thumb img:not([src]) { display: none; }
+.icon-thumb-initial { color: var(--text-dim); font-size: 22px; font-weight: 700; }
+.icon-thumb img[src] ~ .icon-thumb-initial { display: none; }
+dialog button.icon-thumb.has-icon { border-color: var(--accent); }
+.icon-badge {
+  position: absolute; right: -7px; bottom: -7px; display: grid; place-items: center; width: 24px; height: 24px; pointer-events: none;
+  border-radius: var(--radius-circle); background: var(--accent); color: var(--accent-contrast); box-shadow: var(--hig-elev-1), 0 0 0 2px var(--bg);
+}
+.icon-badge svg { width: 12px; height: 12px; }
+
+/* ---------------------------------------------------------------- discovered application rows */
+.catalog-entry { grid-template-columns: auto minmax(0, 1fr) auto; }
+.catalog-entry .icon-thumb { margin-right: 6px; }
+
+/* ---------------------------------------------------------------- custom app and website cards */
+.application-card .card-head { align-items: center; }
+.application-card .card-head .card-field { align-self: flex-end; }
+.category-choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-choice button { min-height: 44px; padding: 8px 18px; }
+
+/* ---------------------------------------------------------------- icon popup (a dialog layered above Settings) */
+dialog.icon-popup { width: min(720px, 92vw); height: fit-content; max-height: 88vh; overflow: hidden; }
+dialog.icon-popup[open] { display: flex; flex-direction: column; }
+.icon-popup-heading { display: grid; gap: 2px; min-width: 0; }
+.icon-popup-heading h2 { margin: 0; }
+.icon-popup-subject { overflow: hidden; color: var(--text-dim); text-overflow: ellipsis; white-space: nowrap; }
+.icon-popup-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 22px; min-height: 0; padding: 22px 28px; overflow-y: auto; overscroll-behavior: contain; }
+.icon-popup-previews { display: grid; align-content: start; gap: 16px; }
+.icon-popup-frame { display: grid; gap: 6px; margin: 0; }
+.icon-popup-art { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--bg); }
+.icon-popup-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.icon-popup-art img:not([src]) { display: none; }
+.tile-frame .icon-popup-art { aspect-ratio: 16 / 9; }
+.square-frame .icon-popup-art { width: 112px; aspect-ratio: 1; }
+.icon-popup-frame figcaption { color: var(--text-faint); font-size: 12px; letter-spacing: .04em; }
+.icon-popup-controls { display: grid; align-content: start; gap: 12px; min-width: 0; }
+.icon-popup-controls .icon-popup-path { width: 100%; box-sizing: border-box; }
+.icon-popup-actions button { text-align: center; }
+.icon-popup-results { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); max-height: 220px; overflow-y: auto; padding: 4px; }
+
+/* Closing mirrors the open animation: transform and opacity only. */
+dialog.icon-popup.closing { animation: icon-popup-out var(--hig-dur-fast) var(--hig-ease-standard) both; }
+dialog.icon-popup.closing::backdrop { animation: icon-popup-fade-out var(--hig-dur-fast) var(--hig-ease-standard) both; }
+@keyframes icon-popup-out { from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } to { opacity: 0; transform: translate3d(0, 10px, 0) scale(.97); } }
+@keyframes icon-popup-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  dialog.icon-popup.closing, dialog.icon-popup.closing::backdrop { animation: none; }
+}
+@media (max-width: 760px) {
+  .icon-popup-body { grid-template-columns: minmax(0, 1fr); }
+}

@@ -38,20 +38,23 @@ test('wallpaper sources editor and credit overlay are wired in the page', () => 
   assert.ok(html.indexOf('wallpaper-sources.js') < html.indexOf('settings.js'));
 });
 
-test('icon editor offers Auto, Browse, Search artwork and the size hint, and degrades when the icons namespace is missing', () => {
-  for (const label of ['Auto', 'Browse…', 'Search artwork']) assert.ok(settings.includes(`'${label}'`), label);
-  assert.match(settings, /callExt\('icons', 'resolve'/);
-  assert.match(settings, /callExt\('icons', 'searchArtwork'/);
-  assert.match(settings, /1280×720/);
-  assert.match(settings, /512×512/);
-  assert.match(settings, /600×900/);
-  assert.match(settings, /catch \{ setStatus\('Automatic icons are not available/);
+test('icon popup offers Auto, Browse, Search artwork and the size hint, and degrades when the icons namespace is missing', () => {
+  const popup = read('src/renderer/icon-popup.js');
+  for (const label of ['Auto', 'Browse…', 'Search artwork', 'Reset']) assert.ok(popup.includes(`'${label}'`), label);
+  assert.match(popup, /callExt\('icons', 'resolve'/);
+  assert.match(popup, /callExt\('icons', 'searchArtwork'/);
+  assert.match(popup, /1280×720/);
+  assert.match(popup, /512×512/);
+  assert.match(popup, /600×900/);
+  assert.match(popup, /catch \{ say\('Automatic icons are not available/);
 });
 
-test('new stylesheet only uses theme tokens for colours, radii and motion', () => {
-  const css = read('src/renderer/appearance.css').replace(/\/\*[\s\S]*?\*\//g, '');
+test('new stylesheets only use theme tokens for colours, radii and motion', () => {
+  for (const file of ['src/renderer/appearance.css', 'src/renderer/settings-apps.css']) {
+  const css = read(file).replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(css, /#[\da-f]{3,8}\b|rgba?\(/i);
   assert.doesNotMatch(css, /(?<![-\w])transparent(?![\w-])/i);
   assert.doesNotMatch(css, /border-radius\s*:\s*(?:0(?:\s|;)|[\d.]+(?:px|rem|em|%))/i);
   assert.doesNotMatch(css, /(?:transition(?:-duration)?|animation)\s*:[^;]*(?:\d+ms|\d+s)/i);
+  }
 });

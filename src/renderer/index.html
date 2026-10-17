@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="status.css">
   <link rel="stylesheet" href="launch-transition.css">
   <link rel="stylesheet" href="appearance.css">
+<link rel="stylesheet" href="settings-apps.css">
 <link rel="stylesheet" href="perf.css">
   <link rel="stylesheet" href="settings-appearance.css">
 </head>
@@ -201,7 +202,7 @@
               <div id="local-application-catalog" class="application-catalog"></div>
             </div>
           </div>
-          <div class="applications-header"><div><h3>Custom applications and shortcuts</h3><p class="section-description">Every item has its own icon: leave it empty for automatic artwork, or pick one. Icons replace every other icon source.</p></div><div class="button-group"><button id="add-local" type="button">+ Local</button><button id="add-command" type="button">+ Command</button><button id="add-moonlight" type="button">+ Moonlight</button></div></div>
+          <div class="applications-header"><div><h3>Custom applications and shortcuts</h3><p class="section-description">Select the pencil on an icon to change it, or leave it empty for automatic artwork. Icons replace every other icon source.</p></div><div class="button-group"><button id="add-local" type="button">+ Local</button><button id="add-command" type="button">+ Command</button><button id="add-moonlight" type="button">+ Moonlight</button></div></div>
           <div id="application-editor"></div>
           <label class="toggle-row"><span>Discover installed applications automatically</span><input id="scan-desktop" type="checkbox"></label>
         </section>
@@ -217,7 +218,7 @@
           <button id="refresh-remote" type="button">Refresh server list</button>
         </section>
         <section class="settings-page" data-page="websites">
-          <div class="applications-header"><div><h3>Websites</h3><p class="section-description">Open selected websites in an isolated fullscreen TV window.</p></div><button id="add-website" type="button">+ Website</button></div>
+          <div class="applications-header"><div><h3>Websites</h3><p class="section-description">Open selected websites in an isolated fullscreen TV window. Select the pencil on an icon to change it; the category decides which home row a site appears in.</p></div><button id="add-website" type="button">+ Website</button></div>
           <div id="website-editor"></div>
         </section>
         <section class="settings-page" data-page="controllers">
@@ -255,6 +256,8 @@
   <script src="remote-input.js"></script>
   <script src="categories.js"></script>
   <script src="settings-appearance.js"></script>
+  <script src="icon-popup-model.js"></script>
+  <script src="icon-popup.js"></script>
   <script src="settings.js"></script>
   <script src="perf.js"></script>
 <script src="menu-motion.js"></script>
