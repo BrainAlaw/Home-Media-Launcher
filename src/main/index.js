@@ -4,6 +4,8 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { app, BrowserWindow, dialog, ipcMain, safeStorage, shell, protocol, screen } = require('electron');
 const { loadConfig, saveConfig } = require('./config');
+const activity = require('./activity');
+const { migrateConfigPresetIcons } = require('./preset-migration');
 const { scanDesktopEntries } = require('./desktop-entry');
 const { ProcessManager } = require('./process-manager');
 const { getAutostart, setAutostart } = require('./autostart');
@@ -116,6 +118,7 @@ async function seedPresetWebsitesOnce() {
 async function assembleModel() {
   config = await loadConfig(configPath, path.join(app.getAppPath(), 'config.example.json'));
   await seedPresetWebsitesOnce();
+  config = await migrateConfigPresetIcons(config, (next) => saveConfig(configPath, next));
   menuDefinition = resolveMenu(config.menu);
   wallpaperSources?.apply(config.settings);
   await slideshow.configure(menuDefinition.slideshow);
@@ -340,6 +343,7 @@ app.whenReady().then(async () => {
     ozonePlatform: app.commandLine.getSwitchValue('ozone-platform') || app.commandLine.getSwitchValue('ozone-platform-hint'),
     // Background polling is paused while an application owns the screen and resumed (with an immediate refresh) afterwards.
     onPhase: (phase) => {
+      activity.gate.setPhase(phase);
       if (phase.phase === 'running') { hostMonitor?.stop(); hostPausedBySession = true; }
       else if (phase.phase === 'idle' && hostPausedBySession) { hostPausedBySession = false; hostMonitor?.start(); void hostMonitor?.poll(); }
     }

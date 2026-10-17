@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs');
+const { createGatedPoller } = require('../activity');
 
 /**
  * ns `input` (agent F): detects connected remote-control style input devices.
@@ -43,7 +44,7 @@ function listRemoteDevices(read = () => fs.readFileSync('/proc/bus/input/devices
   try { return parseProcInputDevices(read()); } catch { return []; }
 }
 
-let timer = null;
+let poller = null;
 let lastSignature = '';
 
 module.exports = {
@@ -60,11 +61,10 @@ module.exports = {
       lastSignature = signature;
       ctx.emit('devices', devices);
     };
-    tick();
-    timer = setInterval(tick, POLL_MS);
-    timer.unref?.();
+    poller = createGatedPoller({ intervalMs: POLL_MS, task: tick });
+    poller.start();
   },
-  stop() { clearInterval(timer); timer = null; lastSignature = ''; },
+  stop() { poller?.stop(); poller = null; lastSignature = ''; },
   parseProcInputDevices,
   listRemoteDevices
 };
