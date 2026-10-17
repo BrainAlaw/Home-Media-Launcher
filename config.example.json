@@ -28,11 +28,7 @@
   "menu": {
     "version": 1,
     "layout": "top-bar",
-    "groups": [{ "id": "main", "label": "Main", "items": [
-      { "id": "home", "label": "Home", "action": "home" },
-      { "id": "library", "label": "Library", "action": "library" },
-      { "id": "settings", "label": "Settings", "action": "settings" }
-    ] }],
+    "groups": [],
     "slideshow": { "enabled": false, "lookAhead": 4, "intervalMs": 10000, "assets": [] }
   },
   "rows": [{ "id": "custom", "title": "Applications", "tiles": [] }],

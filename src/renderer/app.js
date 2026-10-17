@@ -24,7 +24,6 @@ const state = {
   focusEl: null,
   locked: false,
   menuIndex: 0,
-  menuSelection: { id: 'home', action: 'home' },
   recents: loadRecents(),
   theme: ThemeEngine.resolve({}),
   backdropKey: '',
@@ -57,7 +56,6 @@ const bundledCredit = (entry) => window.WallpaperCredit.fromBundled(entry);
 const systemPanel = document.querySelector('#system-panel');
 const systemButton = document.querySelector('#system-button');
 const settingsDialog = document.querySelector('#settings-dialog');
-const primaryNavigation = document.querySelector('#primary-navigation');
 const vpnIndicator = document.querySelector('#vpn-indicator');
 let toastTimer;
 let cursorTimer;
@@ -113,15 +111,7 @@ const spatialGrid = new window.SpatialGrid.SpatialGrid({
   }
 });
 
-const navigationMenu = new window.NavigationMenu.MenuController({
-  element: primaryNavigation, panel: systemPanel, systemButton,
-  onFocus: (element) => { if (state.view === 'home') setFocus(element, { scroll: false }); },
-  onSelect: (item) => {
-    if (item.action === 'settings') { openSettings(); return; }
-    state.menuSelection = item;
-    if (state.model) render(state.model);
-  }
-});
+const navigationMenu = new window.NavigationMenu.MenuController({ panel: systemPanel, systemButton });
 
 /* ------------------------------------------------------------------ persistence */
 
@@ -434,14 +424,17 @@ function preloadMedia(source) {
   if (mediaPreloadCache.size > 8) mediaPreloadCache.delete(mediaPreloadCache.keys().next().value);
 }
 
+/** Focusable header controls in visual order (left to right). */
+function headerButtons() {
+  return [vpnIndicator, systemButton].filter((button) => !button.hidden);
+}
+
 function focusables() {
-  return [...document.querySelectorAll('#primary-navigation [data-menu-id], #vpn-indicator:not([hidden]), #system-button, #rows .focusable')];
+  return [...headerButtons(), ...document.querySelectorAll('#rows .focusable')];
 }
 
 function render(model) {
   state.model = model;
-  navigationMenu.setItems(model.menu);
-  state.menuSelection = navigationMenu.items.find((item) => item.id === navigationMenu.selectedId) || { id: 'home', action: 'home' };
   const overrides = model.settings?.iconOverrides || {};
   // Custom icon overrides take priority over any provider-supplied icon.
   const hostOffline = model.settings?.remote?.enabled && ['offline', 'cached'].includes(model.remoteStatus?.status);
@@ -452,12 +445,10 @@ function render(model) {
     ...(tile.isVibepolloOffline === undefined && hostOffline && (tile.provider === 'remote' || tile.remote) ? { isVibepolloOffline: true } : {})
   }));
   state.tilesById = new Map(tiles.map((tile) => [tile.id, tile]));
-  const filtered = state.menuSelection.action === 'category'
-    ? tiles.filter((tile) => window.NavigationMenu.matchesCategory(tile, state.menuSelection.category)) : tiles;
-  const isHome = state.menuSelection.action === 'home';
-  const layout = buildLayout(filtered, isHome ? state.recents : [], { showEmptyGaming: isHome && Boolean(model.settings?.remote?.enabled) });
+  const filtered = tiles;
+  const layout = buildLayout(filtered, state.recents, { showEmptyGaming: Boolean(model.settings?.remote?.enabled) });
 
-  const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row, menuId: state.focusEl.dataset.menuId };
+  const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row };
   const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles }));
   spatialGrid.setRows(gridRows);
   const empty = document.querySelector('#empty');
@@ -478,9 +469,9 @@ function render(model) {
     ? spatialGrid.focusTile(previous.id, previous.row, { scroll: true, focus: false }) : null;
   const all = focusables();
   const restored = restoredTile || (previous && (previous.element.isConnected ? previous.element
-    : previous.menuId ? all.find((el) => el.dataset.menuId === previous.menuId)
-      : previous.id ? (all.find((el) => el.dataset.tileId === previous.id && el.dataset.row === previous.row)
-        || all.find((el) => el.dataset.tileId === previous.id)) : null));
+    : previous.id ? (all.find((el) => el.dataset.tileId === previous.id && el.dataset.row === previous.row)
+      || all.find((el) => el.dataset.tileId === previous.id))
+      : (headerButtons().includes(previous.element) ? previous.element : null)));
   state.focusEl = null;
   if (state.view === 'home') setFocus(restored || all.find((el) => el.classList.contains('focusable')) || systemButton, { scroll: false });
   else state.focusEl = restored || null;
@@ -529,27 +520,18 @@ function moveFocusAmong(elements, current, direction) {
 }
 
 function moveHome(direction) {
-  if (primaryNavigation.contains(state.focusEl)) {
+  const header = headerButtons();
+  const headerIndex = header.indexOf(state.focusEl);
+  if (headerIndex !== -1) {
     if (direction === 'left' || direction === 'right') {
-      if (direction === 'right' && navigationMenu.focusedIndex === navigationMenu.buttons.length - 1) setFocus(vpnIndicator.hidden ? systemButton : vpnIndicator, { scroll: false });
-      else navigationMenu.move(direction);
-      return;
-    }
-    if (direction === 'down') {
-      navigationMenu.commitFocused();
-      setFocus(homeElement.querySelector('.focusable') || systemButton);
-      return;
-    }
-    return;
-  }
-  if (state.focusEl === systemButton && direction === 'left' && !vpnIndicator.hidden) { setFocus(vpnIndicator, { scroll: false }); return; }
-  if (state.focusEl === vpnIndicator && direction === 'right') { setFocus(systemButton, { scroll: false }); return; }
-  if ((state.focusEl === systemButton || state.focusEl === vpnIndicator) && direction === 'left') {
-    navigationMenu.buttons.at(-1)?.focus({ preventScroll: true });
+      setFocus(header[Math.max(0, Math.min(headerIndex + (direction === 'left' ? -1 : 1), header.length - 1))], { scroll: false });
+    } else if (direction === 'down') setFocus(homeElement.querySelector('.focusable') || state.focusEl);
     return;
   }
   if (state.focusEl?.dataset.tileId && spatialGrid.move(direction)) return;
-  const target = moveFocusAmong(focusables(), state.focusEl, direction);
+  // Nothing above the top tile row except the header controls.
+  if (direction === 'up') { setFocus(header.at(-1) || state.focusEl, { scroll: false }); return; }
+  const target = moveFocusAmong([...homeElement.querySelectorAll('.focusable')], state.focusEl, direction);
   if (target) setFocus(target);
 }
 
@@ -673,6 +655,8 @@ function closeSettings() {
 }
 
 function settingsControls() {
+  const popup = window.SettingsDialog.popupControls();
+  if (popup) return popup;
   return [...settingsDialog.querySelectorAll('button, input, select, textarea')]
     .filter((control) => !control.disabled && control.type !== 'hidden' && control.getClientRects().length > 0);
 }
@@ -706,7 +690,7 @@ function handleAction(action) {
   if (state.view === 'home') {
     if (isDirection) moveHome(action);
     else if (action === 'confirm') activate(state.focusEl);
-    else if (action === 'back' && !primaryNavigation.contains(state.focusEl)) navigationMenu.focusSelected();
+    else if (action === 'back' && !headerButtons().includes(state.focusEl)) setFocus(systemButton, { scroll: false });
     else toggleSystemPanel(true);
   } else if (state.view === 'system') {
     if (action === 'up' || action === 'down') focusMenu(state.menuIndex + (action === 'up' ? -1 : 1));
@@ -718,7 +702,7 @@ function handleAction(action) {
     const controls = settingsControls();
     if (isDirection) moveFocusAmong(controls, document.activeElement, action)?.focus();
     else if (action === 'confirm') document.activeElement?.click();
-    else if (action === 'back') closeSettings();
+    else if (action === 'back' && !window.SettingsDialog.dismissPopup()) closeSettings();
   }
 }
 

@@ -24,6 +24,9 @@ window.SettingsDialog = (function () {
   let fontDraft = 'theme';
   /** Staged settings.performance (auto | quality | lite). */
   let performanceDraft = 'auto';
+  /** Compact selects of the Appearance page (built in buildThemeControls / buildFontControls). */
+  let presetSelect = null;
+  let fontSelect = null;
 
   const ICON_HINT = 'Preferred sizes: tile art 1280×720 (16:9) · icon 512×512 PNG or SVG · game poster 600×900';
 
@@ -149,13 +152,27 @@ window.SettingsDialog = (function () {
     return { element: wrap, input };
   }
 
+  /** Labelled form field; the label wraps the control so a click or the D-pad focuses it. */
+  function field(labelText, control, className = '') {
+    const wrap = el('label', { className: `card-field ${className}`.trim() });
+    wrap.append(el('span', { className: 'card-label', textContent: labelText }), control);
+    return wrap;
+  }
+
+  /** Card header: the name input grows, Remove sits at the end. */
+  function cardHead(card, name) {
+    const head = el('div', { className: 'card-head' });
+    head.append(field('Name', name, 'grow'), removeButton(card));
+    return head;
+  }
+
   function addWebsiteCard(website = {}, icon = website.icon) {
     const card = el('div', { className: 'application-card website-card' });
     card.dataset.id = website.id || `website:${crypto.randomUUID()}`;
     const name = textInput('website-name', 'Name', website.name);
     const url = textInput('website-url', 'https://example.com', website.url);
-    const field = createIconField({ className: 'website-icon', value: icon, kind: 'website', describe: () => ({ name: name.value.trim(), url: url.value.trim() }) });
-    card.append(name, url, removeButton(card), field.element);
+    const iconField = createIconField({ className: 'website-icon', value: icon, kind: 'website', describe: () => ({ name: name.value.trim(), url: url.value.trim() }) });
+    card.append(cardHead(card, name), field('Address', url, 'wide'), iconField.element);
     $('#website-editor').append(card);
   }
 
@@ -164,14 +181,13 @@ window.SettingsDialog = (function () {
     card.dataset.id = tile.id || `custom:${crypto.randomUUID()}`;
     if (legacyId) card.dataset.legacyId = legacyId;
     const name = textInput('app-name', 'Name', tile.name);
-    const field = createIconField({ className: 'app-icon', value: icon, kind: 'app', describe: () => ({ name: name.value.trim() }) });
+    const iconField = createIconField({ className: 'app-icon', value: icon, kind: 'app', describe: () => ({ name: name.value.trim() }) });
     card.append(
-      name,
-      textInput('app-command', 'Command or executable path', tile.command),
-      removeButton(card),
-      textInput('app-args', 'Arguments, e.g. stream PC Desktop', (tile.args || []).join(' ')),
-      textInput('app-background', 'Tile background (optional)', tile.background),
-      field.element
+      cardHead(card, name),
+      field('Command or executable', textInput('app-command', 'Command or executable path', tile.command), 'wide'),
+      field('Arguments', textInput('app-args', 'e.g. stream PC Desktop', (tile.args || []).join(' '))),
+      field('Tile background (optional)', textInput('app-background', 'Image path or address', tile.background)),
+      iconField.element
     );
     $('#application-editor').append(card);
     return card;
@@ -193,24 +209,115 @@ window.SettingsDialog = (function () {
     window.ThemeEngine.applyFont?.(preview, fontDraft);
   }
 
-  /** Builds preset cards and accent swatches once; syncThemeControls() only flips state so focus survives. */
-  function buildThemeControls() {
-    const picker = $('#preset-picker');
-    picker.replaceChildren();
-    for (const preset of window.ThemeEngine.PRESETS) {
-      const card = el('button', { type: 'button', className: 'preset-card' });
-      card.dataset.theme = preset.id; // the card carries its own token set, so it previews itself
-      card.dataset.preset = preset.id;
-      const chips = el('span', { className: 'preset-chips' });
-      chips.append(el('i'), el('i'));
-      card.append(
-        el('span', { className: 'preset-name', textContent: preset.name }),
-        el('span', { className: 'preset-desc', textContent: preset.description }),
-        chips
-      );
-      card.addEventListener('click', () => updateDraft({ preset: preset.id }));
-      picker.append(card);
+  /* ------------------------------------------------------------------ compact select */
+
+  /** The currently expanded select, if any (only one at a time). @type {{ wrap: HTMLElement, trigger: HTMLButtonElement, list: HTMLElement } | null} */
+  let openSelect = null;
+
+  function closeSelect({ refocus = true } = {}) {
+    if (!openSelect) return false;
+    const { trigger, list } = openSelect;
+    openSelect = null;
+    list.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    if (refocus) trigger.focus();
+    return true;
+  }
+
+  /**
+   * Gamepad-operable select: a trigger button plus an inline listbox of option buttons. Native <select> popups are
+   * not reachable from the spatial navigation (click() does not open them), so options are ordinary buttons.
+   * @param {{ container: HTMLElement, label: string, groups: { title?: string, options: { value: string, name: string, detail?: string, theme?: string, font?: string }[] }[], onPick: (value: string) => void }} config
+   */
+  function createSelect({ container, label, groups, onPick }) {
+    container.replaceChildren();
+    const wrap = el('div', { className: 'select-wrap' });
+    const trigger = el('button', { type: 'button', className: 'select-trigger' });
+    trigger.setAttribute('aria-haspopup', 'listbox');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-label', label);
+    const triggerChips = el('span', { className: 'select-chips' });
+    triggerChips.append(el('i'), el('i'));
+    const triggerText = el('span', { className: 'select-text' });
+    const triggerName = el('strong', { className: 'select-name' });
+    const triggerDetail = el('small', { className: 'select-detail' });
+    triggerText.append(triggerName, triggerDetail);
+    const caret = el('span', { className: 'select-caret', textContent: '▾' });
+    caret.setAttribute('aria-hidden', 'true');
+    trigger.append(triggerChips, triggerText, caret);
+    const list = el('div', { className: 'select-list', hidden: true });
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', label);
+    /** @type {Map<string, HTMLButtonElement>} */
+    const items = new Map();
+    /** @type {Map<string, any>} */
+    const byValue = new Map();
+    for (const group of groups) {
+      if (group.title) list.append(el('h5', { className: 'select-group', textContent: group.title }));
+      for (const option of group.options) {
+        byValue.set(option.value, option);
+        const item = el('button', { type: 'button', className: 'select-option' });
+        item.setAttribute('role', 'option');
+        item.setAttribute('aria-selected', 'false');
+        item.dataset.value = option.value;
+        if (option.font) item.style.setProperty('--option-font', option.font);
+        const chips = el('span', { className: 'select-chips' });
+        if (option.theme) { chips.dataset.theme = option.theme; chips.append(el('i'), el('i')); } else chips.hidden = true;
+        const text = el('span', { className: 'select-text' });
+        text.append(el('strong', { className: 'select-name', textContent: option.name }));
+        if (option.detail) text.append(el('small', { className: 'select-detail', textContent: option.detail }));
+        item.append(chips, text);
+        item.addEventListener('click', () => { closeSelect(); onPick(option.value); });
+        items.set(option.value, item);
+        list.append(item);
+      }
     }
+    trigger.addEventListener('click', () => {
+      if (openSelect?.list === list) { closeSelect(); return; }
+      closeSelect({ refocus: false });
+      openSelect = { wrap, trigger, list };
+      list.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      (list.querySelector('[aria-selected="true"]') || list.querySelector('.select-option'))?.focus();
+    });
+    wrap.addEventListener('focusout', (event) => {
+      if (openSelect?.wrap === wrap && !wrap.contains(event.relatedTarget)) closeSelect({ refocus: false });
+    });
+    wrap.addEventListener('keydown', (event) => {
+      if (openSelect?.wrap !== wrap) return;
+      const options = [...list.querySelectorAll('.select-option')];
+      const index = options.indexOf(document.activeElement);
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        options[Math.max(0, Math.min(index + (event.key === 'ArrowDown' ? 1 : -1), options.length - 1))]?.focus();
+      } else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeSelect(); }
+    });
+    wrap.append(trigger, list);
+    container.append(wrap);
+    return {
+      /** Marks `value` as the current choice and mirrors it onto the trigger. */
+      setValue(value) {
+        const option = byValue.get(value) || byValue.values().next().value;
+        for (const [key, item] of items) item.setAttribute('aria-selected', String(key === option.value));
+        triggerName.textContent = option.name;
+        triggerDetail.textContent = option.detail || '';
+        triggerDetail.hidden = !option.detail;
+        triggerChips.hidden = !option.theme;
+        if (option.theme) triggerChips.dataset.theme = option.theme; else delete triggerChips.dataset.theme;
+        if (option.font) trigger.style.setProperty('--option-font', option.font); else trigger.style.removeProperty('--option-font');
+      }
+    };
+  }
+
+  /** Builds the theme select and accent swatches once; syncThemeControls() only flips state so focus survives. */
+  function buildThemeControls() {
+    closeSelect({ refocus: false });
+    presetSelect = createSelect({
+      container: $('#preset-picker'),
+      label: 'Theme preset',
+      groups: [{ options: window.ThemeEngine.PRESETS.map((preset) => ({ value: preset.id, name: preset.name, detail: preset.description, theme: preset.id })) }],
+      onPick: (preset) => updateDraft({ preset })
+    });
 
     const accents = $('#accent-picker');
     accents.replaceChildren();
@@ -235,9 +342,7 @@ window.SettingsDialog = (function () {
 
   function syncThemeControls() {
     const resolved = window.ThemeEngine.resolve(themeDraft);
-    for (const card of document.querySelectorAll('#preset-picker .preset-card')) {
-      card.setAttribute('aria-pressed', String(card.dataset.preset === resolved.preset));
-    }
+    presetSelect?.setValue(resolved.preset);
     for (const button of document.querySelectorAll('#accent-picker button')) {
       button.setAttribute('aria-pressed', String(button.dataset.accent === resolved.accent));
     }
@@ -263,33 +368,21 @@ window.SettingsDialog = (function () {
   const FONT_CATEGORY_LABELS = { system: 'System', sans: 'Sans-serif', rounded: 'Rounded', tech: 'Tech', mono: 'Monospace', display: 'Display', serif: 'Serif', condensed: 'Condensed' };
 
   function buildFontControls() {
-    const picker = $('#font-picker');
-    picker.replaceChildren();
+    closeSelect({ refocus: false });
     const fonts = window.ThemeEngine.FONTS || [];
-    const match = el('button', { type: 'button', className: 'font-card' });
-    match.dataset.font = 'theme';
-    match.append(el('span', { className: 'font-name', textContent: 'Match theme' }), el('span', { className: 'font-sample', textContent: 'Each theme brings its own typeface' }));
-    match.addEventListener('click', () => updateFont('theme'));
-    picker.append(match);
-    let category = '';
+    const groups = [{ options: [{ value: 'theme', name: 'Match theme', detail: 'Each theme brings its own typeface' }] }];
     for (const font of fonts) {
-      if (font.category !== category) {
-        category = font.category;
-        picker.append(el('h4', { className: 'font-category', textContent: FONT_CATEGORY_LABELS[category] || category }));
-      }
-      const card = el('button', { type: 'button', className: 'font-card' });
-      card.dataset.font = font.id;
-      card.style.setProperty('--card-font', font.stack);
-      card.append(el('span', { className: 'font-name', textContent: font.name }), el('span', { className: 'font-sample', textContent: 'The quick brown fox jumps over the lazy dog 0123456789' }));
-      card.addEventListener('click', () => updateFont(font.id));
-      picker.append(card);
+      let group = groups.at(-1);
+      const title = FONT_CATEGORY_LABELS[font.category] || font.category;
+      if (group.title !== title) { group = { title, options: [] }; groups.push(group); }
+      group.options.push({ value: font.id, name: font.name, font: font.stack });
     }
+    fontSelect = createSelect({ container: $('#font-picker'), label: 'Interface font', groups, onPick: updateFont });
   }
 
   function syncFontControls() {
     const known = (window.ThemeEngine.FONTS || []).some((font) => font.id === fontDraft);
-    const effective = known ? fontDraft : 'theme';
-    document.querySelectorAll('#font-picker .font-card').forEach((card) => card.setAttribute('aria-pressed', String(card.dataset.font === effective)));
+    fontSelect?.setValue(known ? fontDraft : 'theme');
     syncAppearancePreview();
   }
 
@@ -515,14 +608,14 @@ window.SettingsDialog = (function () {
   /* ------------------------------------------------------------------ applications */
 
   /**
-   * One checkbox row per discovered application plus an optional icon override (stored in settings.iconOverrides,
+   * One row per discovered application (icon thumbnail, name and source, enable toggle) plus an optional icon override (stored in settings.iconOverrides,
    * the same storage the former Icons page used).
    */
   function populateCatalog(overrides) {
     const apps = ctx.getModel()?.availableApps || [];
     const groups = [
-      { provider: 'remote', catalogId: 'remote-application-catalog', countId: 'remote-catalog-count', kind: 'game' },
-      { provider: 'local', catalogId: 'local-application-catalog', countId: 'local-catalog-count', kind: 'app' }
+      { provider: 'remote', catalogId: 'remote-application-catalog', countId: 'remote-catalog-count', kind: 'game', sourceLabel: 'VibePollo / Moonlight' },
+      { provider: 'local', catalogId: 'local-application-catalog', countId: 'local-catalog-count', kind: 'app', sourceLabel: 'Installed on this PC' }
     ];
     for (const group of groups) {
       const groupApps = apps.filter((app) => app.provider === group.provider);
@@ -533,27 +626,43 @@ window.SettingsDialog = (function () {
         const entry = el('div', { className: 'catalog-entry' });
         entry.dataset.appId = app.id;
         entry.dataset.icon = overrides[app.id] || '';
-        const label = el('label', { className: 'toggle-row catalog-item' });
+        // Thumbnail: opens the icon picker below the row; falls back to the app's initial.
+        const thumb = el('button', { type: 'button', className: 'catalog-thumb' });
+        thumb.setAttribute('aria-label', `Change icon for ${app.name}`);
+        thumb.setAttribute('aria-expanded', 'false');
+        const thumbImage = el('img', { alt: '' });
+        thumbImage.addEventListener('error', () => thumbImage.removeAttribute('src'));
+        const initial = el('span', { className: 'catalog-initial', textContent: (app.name || '?').trim().charAt(0).toUpperCase() });
+        initial.setAttribute('aria-hidden', 'true');
+        thumb.append(thumbImage, initial);
+        const showThumb = () => {
+          const source = entry.dataset.icon || app.icon || '';
+          if (source && window.AssetUrl.isLoadableImage(source)) thumbImage.src = window.AssetUrl.assetUrl(source);
+          else thumbImage.removeAttribute('src');
+          thumb.classList.toggle('has-icon', Boolean(entry.dataset.icon));
+        };
+        showThumb();
+        const info = el('span', { className: 'catalog-info' });
+        info.append(el('strong', { className: 'catalog-name', textContent: app.name, title: app.name }), el('small', { textContent: group.sourceLabel }));
+        const toggle = el('label', { className: 'catalog-toggle' });
         const checkbox = el('input', { type: 'checkbox', className: 'catalog-checkbox', value: app.id, checked: app.selected });
-        label.append(el('span', { textContent: app.name }), checkbox);
-        const iconButton = el('button', { type: 'button', className: 'catalog-icon-button', textContent: 'Icon' });
-        iconButton.setAttribute('aria-label', `Change icon for ${app.name}`);
-        iconButton.setAttribute('aria-expanded', 'false');
-        iconButton.classList.toggle('has-icon', Boolean(entry.dataset.icon));
+        checkbox.setAttribute('aria-label', `Show ${app.name} on the home screen`);
+        toggle.append(checkbox);
         let panel = null;
-        iconButton.addEventListener('click', () => {
+        thumb.addEventListener('click', () => {
           if (!panel) {
             panel = el('div', { className: 'catalog-icon-panel' });
-            const field = createIconField({
+            const iconField = createIconField({
               className: 'catalog-icon', value: entry.dataset.icon, kind: group.kind, describe: () => ({ name: app.name }),
-              onChange: (value) => { entry.dataset.icon = value; iconButton.classList.toggle('has-icon', Boolean(value)); }
+              onChange: (value) => { entry.dataset.icon = value; showThumb(); }
             });
-            panel.append(field.element);
+            panel.append(iconField.element);
             entry.append(panel);
           } else panel.hidden = !panel.hidden;
-          iconButton.setAttribute('aria-expanded', String(!panel.hidden));
+          entry.classList.toggle('open', !panel.hidden);
+          thumb.setAttribute('aria-expanded', String(!panel.hidden));
         });
-        entry.append(label, iconButton);
+        entry.append(thumb, info, toggle);
         catalog.append(entry);
       }
       const updateCount = () => { count.textContent = `${catalog.querySelectorAll('.catalog-checkbox:checked').length}/${groupApps.length}`; };
@@ -700,6 +809,7 @@ window.SettingsDialog = (function () {
   }
 
   function close() {
+    closeSelect({ refocus: false });
     window.ControllersPage?.setActive(false);
     if (dialog.open) dialog.close();
   }
@@ -726,7 +836,7 @@ window.SettingsDialog = (function () {
     $('#settings-close').addEventListener('click', ctx.onClose);
     $('#settings-cancel').addEventListener('click', ctx.onClose);
     dialog.addEventListener('close', ctx.onClose);
-    dialog.addEventListener('cancel', (event) => { event.preventDefault(); ctx.onClose(); });
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); if (!dismissPopup()) ctx.onClose(); });
     document.querySelectorAll('.settings-layout nav button').forEach((button) => button.addEventListener('click', () => {
       document.querySelectorAll('.settings-layout nav button, .settings-page').forEach((node) => node.classList.remove('active'));
       button.classList.add('active');
@@ -772,5 +882,13 @@ window.SettingsDialog = (function () {
     });
   }
 
-  return { init, open, close };
+  /** Collapses an open select; true when one was open (the caller then swallows the Back / Escape press). */
+  function dismissPopup() { return closeSelect(); }
+
+  /** Option buttons of the open select, so D-pad navigation stays inside the list; null when nothing is expanded. */
+  function popupControls() {
+    return openSelect ? [...openSelect.list.querySelectorAll('.select-option')] : null;
+  }
+
+  return { init, open, close, dismissPopup, popupControls };
 })();

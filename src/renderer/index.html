@@ -29,7 +29,6 @@
         <div id="date"></div>
         <div id="weather"></div>
       </div>
-      <nav id="primary-navigation" aria-label="Main navigation" data-engaged="false"></nav>
       <div class="header-actions">
         <button id="vpn-indicator" class="status-chip" type="button" data-state="unavailable" aria-label="VPN unavailable" aria-controls="system-panel" hidden></button>
         <div id="network-indicator" class="status-chip" role="img" aria-label="Network status unavailable" hidden></div>
@@ -107,28 +106,32 @@
           <label>Weather location<input id="weather-location" type="text" maxlength="80" placeholder="London"></label>
         </section>
         <section class="settings-page" data-page="appearance">
-          <div id="appearance-preview" class="appearance-preview" aria-hidden="true">
-            <div class="ap-bar"><b class="ap-title">Home</b><span class="ap-chip on">Games</span><span class="ap-chip">Apps</span><span class="ap-chip">Web</span></div>
-            <div class="ap-tiles"><i></i><i class="focus"></i><i></i><i></i></div>
-            <div class="ap-caption"><strong>The quick brown fox jumps over the lazy dog</strong><small>Live preview of your theme, accent colour and font</small></div>
+          <div class="appearance-controls">
+            <h3>Theme</h3>
+            <div id="preset-picker" class="select-field" role="group" aria-label="Theme preset"></div>
+            <h3>Accent colour</h3>
+            <div id="accent-picker" class="swatch-row" role="group" aria-label="Accent colour"></div>
+            <h3>Font</h3>
+            <div id="font-picker" class="select-field" role="group" aria-label="Interface font"></div>
+            <h3>Backdrop</h3>
+            <label class="toggle-row"><span>Dynamic art backdrop (follows the focused item)</span><input id="dynamic-art" type="checkbox"></label>
+            <label class="toggle-row"><span>Live video backgrounds</span><input id="live-video" type="checkbox"></label>
+            <h3>Performance</h3>
+            <p class="section-description">Auto switches to Lite (no blur or shadows) if the display drops below 45 fps for 5 seconds.</p>
+            <div id="performance-mode" class="segmented" role="group" aria-label="Performance mode">
+              <button type="button" data-mode="auto">Auto</button>
+              <button type="button" data-mode="quality">Quality</button>
+              <button type="button" data-mode="lite">Lite</button>
+            </div>
           </div>
-          <h3>Theme</h3>
-          <div id="preset-picker" class="preset-grid" role="group" aria-label="Theme preset"></div>
-          <h3>Accent colour</h3>
-          <div id="accent-picker" class="swatch-row" role="group" aria-label="Accent colour"></div>
-          <h3>Font</h3>
-          <p class="section-description">Match the theme or pick one font for the whole launcher. Fonts are bundled; nothing is downloaded.</p>
-          <div id="font-picker" class="font-list" role="group" aria-label="Interface font"></div>
-          <h3>Backdrop</h3>
-          <label class="toggle-row"><span>Dynamic art backdrop (follows the focused item)</span><input id="dynamic-art" type="checkbox"></label>
-          <label class="toggle-row"><span>Live video backgrounds</span><input id="live-video" type="checkbox"></label>
-          <h3>Performance</h3>
-          <p class="section-description">Auto switches to Lite (no blur or shadows) if the display drops below 45 fps for 5 seconds.</p>
-          <div id="performance-mode" class="segmented" role="group" aria-label="Performance mode">
-            <button type="button" data-mode="auto">Auto</button>
-            <button type="button" data-mode="quality">Quality</button>
-            <button type="button" data-mode="lite">Lite</button>
-          </div>
+          <aside class="appearance-side" aria-label="Live preview">
+            <h4>Preview</h4>
+            <div id="appearance-preview" class="appearance-preview" aria-hidden="true">
+              <div class="ap-bar"><b class="ap-title">Home</b><span class="ap-chip on">Games</span><span class="ap-chip">Apps</span></div>
+              <div class="ap-tiles"><i></i><i class="focus"></i><i></i><i></i></div>
+              <div class="ap-caption"><strong>The quick brown fox jumps over the lazy dog</strong><small>Live preview of your theme, accent colour and font</small></div>
+            </div>
+          </aside>
         </section>
         <section class="settings-page" data-page="wallpapers">
           <h3>Wallpaper</h3>
