@@ -90,6 +90,9 @@ if (typeof module === 'object' && module.exports) {
   let vpnList = [];
   const vpnRows = new Map();
   let weatherTimer = null;
+  let weatherLoad = null;
+  /** True while an external application owns the screen: renderer timers are paused until the session is idle again. */
+  let sessionSuspended = false;
   let weatherToken = 0;
   let lastWeatherKey = '';
   const deferred = new Map();
@@ -317,10 +320,11 @@ if (typeof module === 'object' && module.exports) {
   async function updateWeather(header) {
     const weatherKey = `${Boolean(header.showWeather)}|${header.weatherLocation || ''}`;
     // Model refreshes (saves, remote sync) must not flicker the header or refetch when nothing changed.
-    if (weatherTimer && weatherKey === lastWeatherKey) return;
+    if (weatherLoad && weatherKey === lastWeatherKey) return;
     lastWeatherKey = weatherKey;
     clearInterval(weatherTimer);
     weatherTimer = null;
+    weatherLoad = null;
     const token = ++weatherToken;
     const element = $('#weather');
     element.hidden = !header.showWeather;
@@ -332,8 +336,35 @@ if (typeof module === 'object' && module.exports) {
       if (token === weatherToken) renderWeather(snapshot);
     };
     element.textContent = 'Weather…';
+    weatherLoad = load;
+    if (sessionSuspended) return;
     weatherTimer = setInterval(load, WEATHER_REFRESH_MS);
     await load();
+  }
+
+  /* ------------------------------------------------------------------ session gate */
+
+  function armTimers() {
+    clearInterval(weatherTimer);
+    clearInterval(hostTimer);
+    weatherTimer = null;
+    hostTimer = null;
+    if (sessionSuspended) return;
+    if (weatherLoad) weatherTimer = setInterval(weatherLoad, WEATHER_REFRESH_MS);
+    hostTimer = setInterval(() => whenPanelIdle('host', paintHost), HOST_REFRESH_MS);
+    bridge.on('session', 'phase', applySessionPhase);
+    bridge.invoke('session', 'getPhase').then(applySessionPhase).catch(() => {});
+  }
+
+  /** Pauses the polling timers while a session is launching/running/closing; resumes with ONE immediate refresh. */
+  function applySessionPhase(snapshot) {
+    const next = Boolean(snapshot?.phase) && snapshot.phase !== 'idle';
+    if (next === sessionSuspended) return;
+    sessionSuspended = next;
+    armTimers();
+    if (next) return;
+    if (weatherLoad) void weatherLoad();
+    whenPanelIdle('host', paintHost);
   }
 
   /* ------------------------------------------------------------------ wiring */

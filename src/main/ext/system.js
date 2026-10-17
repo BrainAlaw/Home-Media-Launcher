@@ -1,25 +1,30 @@
 'use strict';
 
 const { readNetwork } = require('../../../backend/network-status');
+const { createGatedPoller, gate } = require('../activity');
 
 const POLL_INTERVAL_MS = 10_000;
-let timer = null;
+let poller = null;
 let current = { type: 'unknown', connected: false };
 let signature = JSON.stringify(current);
 let inflight = null;
 let primed = false;
 
 /** Non-overlapping async refresh; emits `network` only when the status actually changed. */
-function refresh(ctx) {
+function refresh(ctx, signal) {
   if (inflight) return inflight;
-  inflight = readNetwork().then((status) => {
+  const own = readNetwork().then((status) => {
+    if (signal?.aborted) return current;
     const first = !primed;
     primed = true;
     const next = JSON.stringify(status);
     if (first || next !== signature) { signature = next; current = status; ctx.emit('network', status); }
     return current;
-  }).catch(() => current).finally(() => { inflight = null; });
-  return inflight;
+  }).catch(() => current).finally(() => { if (inflight === own) inflight = null; });
+  inflight = own;
+  // An aborted probe (session started) must not block the refresh that follows the resume.
+  signal?.addEventListener('abort', () => { if (inflight === own) inflight = null; }, { once: true });
+  return own;
 }
 
 module.exports = {
@@ -27,14 +32,13 @@ module.exports = {
   handlers: {
     /** Returns the cached status once primed; the first call waits for the initial probe. */
     getNetwork: async (ctx) => {
-      if (primed) { refresh(ctx); return current; }
+      if (primed) { if (!gate.suspended) refresh(ctx); return current; }
       return refresh(ctx);
     }
   },
   start(ctx) {
-    refresh(ctx);
-    timer = setInterval(() => refresh(ctx), POLL_INTERVAL_MS);
-    timer.unref?.();
+    poller = createGatedPoller({ intervalMs: POLL_INTERVAL_MS, task: (signal) => refresh(ctx, signal) });
+    poller.start();
   },
-  stop() { clearInterval(timer); timer = null; }
+  stop() { poller?.stop(); poller = null; }
 };
