@@ -228,9 +228,7 @@ test('built-in themes keep readable text and a visible accent', () => {
 });
 
 test('renderer presets match backend themes and theme.css carries every generated token block', async () => {
-  const css = (await fs.readFile(path.join(__dirname, '../../src/renderer/theme.css'), 'utf8')).replace(/
-/g, '
-');
+  const css = (await fs.readFile(path.join(__dirname, '../../src/renderer/theme.css'), 'utf8')).replace(/\r\n/g, '\n');
   const start = css.indexOf(GENERATED_START);
   const end = css.indexOf(GENERATED_END);
   assert.ok(start >= 0 && end > start, 'generated block markers present');
