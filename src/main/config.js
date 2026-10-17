@@ -76,6 +76,7 @@ function validateConfig(config) {
   validateWallpaper(config.settings?.wallpaper);
   validateWallpaperSources(config.settings?.wallpaperSources);
   if (config.settings?.wallpaperCredit !== undefined && typeof config.settings.wallpaperCredit !== 'boolean') throw new Error('wallpaperCredit must be boolean');
+  if (config.settings?.performance !== undefined && !['auto', 'quality', 'lite'].includes(config.settings.performance)) throw new Error('performance must be "auto", "quality" or "lite"');
   if (config.settings?.fontId !== undefined && (typeof config.settings.fontId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(config.settings.fontId))) throw new Error('fontId must be a font identifier');
   const vpnProfile = config.settings?.vpn?.surfsharkWireguardProfile;
   if (config.settings?.vpn !== undefined && (!config.settings.vpn || typeof config.settings.vpn !== 'object' || Array.isArray(config.settings.vpn))) throw new Error('vpn must be an object');

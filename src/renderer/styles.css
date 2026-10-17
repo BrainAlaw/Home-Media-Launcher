@@ -16,7 +16,13 @@ button:focus { outline: none; }
 #backdrop, #background-video, .shade, #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .backdrop-layer { position: absolute; inset: 0; background: center / cover no-repeat; opacity: 0; transform: scale(1.08); will-change: opacity; transition: opacity var(--motion-backdrop) var(--ease); }
 .backdrop-layer.on { opacity: 1; }
-.backdrop-layer.art { filter: blur(var(--backdrop-blur)) saturate(var(--backdrop-saturate)); }
+/* Art backdrops are blurred on a quarter-size surface (1/16 of the pixels) and scaled back up, so the blur radius is divided by 4
+   and the GPU filters 16x fewer pixels per composited frame. translate + scale reproduce the 1.08 overscan; the blur never animates. */
+.backdrop-layer.art {
+  inset: 0 auto auto 0; width: 25%; height: 25%; transform-origin: 0 0;
+  transform: translate3d(-4vw, -4vh, 0) scale(4.32);
+  filter: blur(calc(var(--backdrop-blur) / 4)) saturate(var(--backdrop-saturate));
+}
 #background-video { object-fit: cover; opacity: 0; transition: opacity var(--motion-backdrop) var(--ease); }
 .shade {
   background:
@@ -109,7 +115,6 @@ body.host-offline .remote.tile { opacity: .7; }
 .menu-panel.open {
   transform: translate3d(0, 0, 0) scale(1);
   opacity: 1;
-  will-change: transform, opacity;
   animation: menu-spring-in var(--motion-slow) var(--ease-focus) both;
 }
 @keyframes menu-spring-in {
@@ -175,9 +180,7 @@ body.host-offline .remote.tile { opacity: .7; }
   position: relative;
   padding: 22px 14px;
   border-right: 1px solid var(--glass-border);
-  background: color-mix(in srgb, var(--glass-bg) 42%, var(--color-transparent));
-  backdrop-filter: blur(calc(var(--glass-blur) * .55));
-  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * .55));
+  background: color-mix(in srgb, var(--glass-bg) 60%, var(--color-transparent)); /* sits on the dialog's own blur; no nested backdrop-filter */
 }
 .settings-nav button {
   position: relative;
@@ -203,7 +206,7 @@ body.host-offline .remote.tile { opacity: .7; }
 input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
 
 dialog { width: min(1100px, 90vw); height: min(760px, 86vh); padding: 0; border: 1px solid var(--glass-border); border-radius: calc(var(--ui-rounding) * 1.4); color: var(--text); background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); box-shadow: var(--shadow-dialog); }
-dialog::backdrop { background: color-mix(in srgb, var(--bg) 70%, var(--color-transparent)); backdrop-filter: blur(var(--dialog-backdrop-blur)); }
+dialog::backdrop { background: color-mix(in srgb, var(--bg) 80%, var(--color-transparent)); } /* no full-screen blur: the dialog panel blurs its own area */
 #settings-form { display: flex; height: 100%; flex-direction: column; }
 .dialog-header, dialog footer { display: flex; align-items: center; justify-content: space-between; padding: 22px 28px; border-bottom: 1px solid var(--glass-border); }
 .dialog-header h2, .applications-header h3 { margin: 0; }

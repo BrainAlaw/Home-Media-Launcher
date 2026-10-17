@@ -292,6 +292,8 @@ export interface Iteration4Settings {
   wallpaperSources?: WallpaperSource[];
   /** agent D. Show the Google-TV-style credit when the wallpaper changes (default true). */
   wallpaperCredit?: boolean;
+  /** agent G. Visual cost level: `lite` drops blur/shadows/sheen; `auto` switches to lite after 5 s below 45 fps (default auto). */
+  performance?: 'auto' | 'quality' | 'lite';
   /** agent B */
   vpn?: { surfsharkWireguardProfile?: string };
 }

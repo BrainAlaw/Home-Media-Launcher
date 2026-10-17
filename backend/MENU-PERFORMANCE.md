@@ -73,3 +73,28 @@ Network interface and battery sampling runs in a separate worker approximately e
 Run `npm run check` and `node scripts/verify-backend.cjs`. Tests cover lookahead, wraparound, cancellation, bounded allocation, disk-free cached reads after source removal, mixed video ranges, independent system collection and a 1,000-hint burst. The Electron check verifies actual preloads, protocol delivery from RAM, isolated sessions, and reports separate p95 measurements for artwork IPC, indicator IPC and preload-local reads. [Electron IPC guidance](https://www.electronjs.org/docs/latest/tutorial/ipc).
 
 Sub-millisecond IPC is a measured target, not a hard real-time guarantee. Process scheduling, GPU compositing, physics/DOM work and media decoding remain outside the backend's control. For 120 fps, keep the frame loop free of awaited IPC, preload/decode adjacent images in the renderer and keep at most the required video elements active. These tests prove backend behavior; they do not certify animation frame rates or real 4K playback on target hardware.
+
+## Rendering performance pass (iteration 4, agent G)
+
+Findings (static analysis, no display available). The quick-settings sheet and nav pill already animate on the compositor through WAAPI (`CompositorScheduler`), so JS was not the bottleneck. The cost was GPU fill: a full-screen CSS `filter: blur(46px)` on `.backdrop-layer.art`, a 34px `backdrop-filter` on the sheet, a second one on the nav pill, system button and host badge, and a full-screen `dialog::backdrop` blur. Every frame drawn while the sheet animates re-evaluates all of them. Per-tile `filter: blur(26px)` shadows and `backdrop-filter` plus permanent `will-change` on device rows added more layers.
+
+Changes:
+
+- Backdrop: art layers are blurred on a quarter-size element (blur radius / 4) and scaled up 4.32x, which gives the same look with 16x fewer filtered pixels. The blur never animates (only opacity crossfades).
+- One blurred surface at a time: `body.menu-open` (set by `NavigationMenu.setOpen`) removes the blur from the nav pill, system button and host badge while the sheet is open. `will-change` on the sheet exists only during its animation (`data-animating`).
+- Removed nested or redundant blur: settings nav (inside the blurred dialog), `dialog::backdrop` (dim raised from 70% to 80%), controller device rows. Tile shadows use a radial gradient instead of `filter: blur`.
+- Clock: `updateTime` writes a text node only when the minute or day text changes (no per-second DOM writes).
+- Electron (`src/main/gpu-flags.js`, applied before ready): `enable-gpu-rasterization`, `ignore-gpu-blocklist`, `disable-renderer-backgrounding`, `enable-features=CanvasOopRasterization` and on Linux `enable-zero-copy` plus `VaapiVideoDecoder,VaapiIgnoreDriverChecks`. `disable-background-timer-throttling` is intentionally not set, so a hidden launcher still idles while a game runs. Set `HML_GPU_SAFE=1` to disable all of these on a broken driver.
+- Status widgets already poll sparingly (weather every 30 minutes); wallpaper images were already decoded with `decoding=async` and `Image.decode()`.
+
+### Performance setting
+
+`settings.performance` is `auto` (default), `quality` or `lite`, validated in `config.js` and typed in `contracts.d.ts`; the control is in Settings > Appearance.
+
+- `quality`: full glass visuals.
+- `lite`: `body.perf-lite` removes all backdrop blur, blurred backdrop filter, big shadows, tile sheen and glow, scanlines; glass surfaces become opaque.
+- `auto`: `Perf.createGovernor` accumulates frame time while the user is active (input, focus or animation). If the average over 5 s of active frames is below 45 fps, lite latches for the session. Idle gaps over 250 ms are ignored and no rAF loop runs while idle.
+
+### How to measure
+
+Start with `HML_PERF=1 npm start` (or `npm start -- --perf`) to show the meter at the bottom-left: fps, average and worst frame time, long frames (over 33 ms) out of total, and the active mode. Open and close quick settings, scrub the rows, then compare `quality` against `lite`. For GPU detail open `chrome://gpu` equivalents via `--enable-logging`, and use DevTools > Performance with "Layers" and "Paint flashing" enabled. Logic is in `src/renderer/perf.js` with tests in `test/perf.test.js`.

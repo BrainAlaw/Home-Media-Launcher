@@ -43,6 +43,14 @@ const gridElement = document.querySelector('#grid-content');
 const backdropLayers = [...document.querySelectorAll('.backdrop-layer')];
 const videoBackground = document.querySelector('#background-video');
 const toast = document.querySelector('#toast');
+/** Performance governor: mode comes from settings.performance; `?perf` shows the FPS overlay. */
+let performanceMode = 'auto';
+const perfRuntime = window.Perf.createRuntime({ document, getMode: () => performanceMode, showOverlay: new URLSearchParams(location.search).has('perf') });
+function setPerformanceMode(mode) {
+  const next = window.Perf.normalizeMode(mode);
+  if (next !== performanceMode) performanceMode = next;
+  perfRuntime.refresh();
+}
 const creditOverlay = window.WallpaperCredit.createOverlay({ root: document.querySelector('#wallpaper-credit-overlay') });
 /** Credit shown with a bundled gallery wallpaper (author, licence and source from wallpapers-data.js). */
 const bundledCredit = (entry) => window.WallpaperCredit.fromBundled(entry);
@@ -461,6 +469,7 @@ function render(model) {
   cacheTheme(model.settings?.theme);
   cacheFont(state.fontId);
   creditOverlay.setEnabled(model.settings?.wallpaperCredit !== false);
+  setPerformanceMode(model.settings?.performance);
   applyWallpaper(model.settings?.wallpaper, model.settings?.background);
   updateHostState(model.remoteStatus, model.settings?.remote);
   updateHeader();
@@ -600,10 +609,20 @@ async function updateHeader() {
   await window.StatusWidgets.updateWeather(header);
 }
 
+const clockNode = document.querySelector('#clock');
+const dateNode = document.querySelector('#date');
+const clockFormat = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
+const dateFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+let clockText = '';
+let dateText = '';
+
+/** Only touches the DOM when the minute or day actually changes, so idle seconds cause no style/layout work. */
 function updateTime() {
   const now = new Date();
-  document.querySelector('#clock').textContent = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(now);
-  document.querySelector('#date').textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+  const time = clockFormat.format(now);
+  if (time !== clockText) { clockText = time; clockNode.textContent = time; }
+  const date = dateFormat.format(now);
+  if (date !== dateText) { dateText = date; dateNode.textContent = date; }
 }
 
 /* ------------------------------------------------------------------ system panel & settings */

@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="status.css">
   <link rel="stylesheet" href="launch-transition.css">
   <link rel="stylesheet" href="appearance.css">
+<link rel="stylesheet" href="perf.css">
 </head>
 <body>
   <div id="backdrop" aria-hidden="true"><div class="backdrop-layer"></div><div class="backdrop-layer"></div></div>
@@ -121,6 +122,13 @@
           <h3>Backdrop</h3>
           <label class="toggle-row"><span>Dynamic art backdrop (follows the focused item)</span><input id="dynamic-art" type="checkbox"></label>
           <label class="toggle-row"><span>Live video backgrounds</span><input id="live-video" type="checkbox"></label>
+          <h3>Performance</h3>
+          <p class="section-description">Auto switches to Lite (no blur or shadows) if the display drops below 45 fps for 5 seconds.</p>
+          <div id="performance-mode" class="segmented" role="group" aria-label="Performance mode">
+            <button type="button" data-mode="auto">Auto</button>
+            <button type="button" data-mode="quality">Quality</button>
+            <button type="button" data-mode="lite">Lite</button>
+          </div>
         </section>
         <section class="settings-page" data-page="wallpapers">
           <h3>Wallpaper</h3>
@@ -222,7 +230,8 @@
   <script src="remote-keymap.js"></script>
   <script src="remote-input.js"></script>
   <script src="settings.js"></script>
-  <script src="menu-motion.js"></script>
+  <script src="perf.js"></script>
+<script src="menu-motion.js"></script>
   <script src="home-sections.js"></script>
   <script src="navigation-menu.js"></script>
   <script src="controller-service.js"></script>
