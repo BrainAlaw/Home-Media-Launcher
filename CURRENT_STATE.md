@@ -37,6 +37,12 @@ Iteration 5 (14 requested items):
 - Always verify visuals against the real display (`desktopCapturer.getSources({types:['screen']})` or Win32 `CopyFromScreen`), never `capturePage` alone. Display layout on the dev machine: two 2560x1440 displays at x=-2560 and x=0; the launcher opens on the x=0 display. Other agents' windows can cover captures; set the window always-on-top before capturing.
 - `scripts/bench-ui.cjs` measures windowed only; do not quote its numbers for fullscreen.
 
+## Iteration 6 (follow-up fixes, merged into `iter5`)
+
+- Done: Spotify polls only while the media UI is visible (`media.setActive`), widget Back goes to the quick-settings button, icon popup reopens reliably, personal weather default removed from shared code (set `showWeather: true` and `weatherLocation: "High Wycombe,GB"` in your config), dead CSS removed, background VPN/network/input polling paused during launched apps (`src/main/activity.js`), preset icon migration to `preset:<id>`, Gaming tile art (SteamGridDB poster for Tekken 6, glyph tiles for built-ins; host cover needs the Vibepollo token to allow `GET /api/apps/*/cover`), 12 of 16 preset icons real.
+- Verified on the real display: Home Theatre and Gaming rows, real preset icons and Tekken 6 poster, weather line shows the empty-location hint.
+- Not verified: Spotify with real credentials, gamepad flow of the widget and icon popup, Moonlight/game activity gate on a real launch.
+
 ## Known open issues
 
 1. (Fixed in i6/g1) Gaming tiles: host payload has no downloadable cover; now SteamGridDB poster / glyph / monogram tiles, see backend/ICONS.md. Cover route needs a token scope (403 today).
