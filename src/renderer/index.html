@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="menu.css">
   <link rel="stylesheet" href="controllers.css">
   <link rel="stylesheet" href="hero.css">
+<link rel="stylesheet" href="status.css">
 </head>
 <body>
   <div id="backdrop" aria-hidden="true"><div class="backdrop-layer"></div><div class="backdrop-layer"></div></div>
@@ -26,6 +27,8 @@
       </div>
       <nav id="primary-navigation" aria-label="Main navigation" data-engaged="false"></nav>
       <div class="header-actions">
+        <button id="vpn-indicator" class="status-chip" type="button" data-state="unavailable" aria-label="VPN unavailable" aria-controls="system-panel" hidden></button>
+        <div id="network-indicator" class="status-chip" role="img" aria-label="Network status unavailable" hidden></div>
         <div id="clock"></div>
         <button id="system-button" class="icon-button" aria-label="System menu" aria-expanded="false" aria-controls="system-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></button>
       </div>
@@ -40,9 +43,19 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <aside id="system-panel" class="panel menu-panel" role="dialog" aria-modal="true" aria-labelledby="system-heading" aria-hidden="true" hidden inert>
     <div class="menu-heading">
-      <span class="menu-eyebrow">VIBEPOLLO</span>
       <h2 id="system-heading">Quick settings</h2>
     </div>
+    <section class="status-cards" aria-label="Network and weather">
+      <div id="network-card" class="status-card" data-kind="network">
+        <span class="status-card-icon" aria-hidden="true"></span>
+        <span class="status-card-copy"><strong>Network</strong><small>Checking…</small></span>
+      </div>
+      <div id="weather-card" class="status-card" data-kind="weather" hidden>
+        <span class="status-card-icon" aria-hidden="true"></span>
+        <span class="status-card-copy"><strong>Weather</strong><small></small></span>
+        <ul class="forecast-strip" aria-label="Forecast"></ul>
+      </div>
+    </section>
     <div class="menu-items">
       <button id="settings-button" class="menu-action">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></span>
@@ -54,6 +67,7 @@
         <span class="menu-copy"><strong>Start at login</strong><small>Launch when your PC starts</small></span>
         <input id="autostart" type="checkbox" aria-label="Start launcher at login">
       </label>
+      <div id="vpn-rows" class="vpn-rows"></div>
       <button id="quit-button" class="menu-action">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-13 5 5-5 5m-5-5h13"/></svg></span>
         <span class="menu-copy"><strong>Exit launcher</strong><small>Return to your desktop</small></span>
@@ -209,6 +223,9 @@
   <script src="pairing-wizard-ui.js"></script>
   <script src="controllers-page.js"></script>
   <script src="launch-session.js"></script>
+  <script src="status-format.js"></script>
+  <script src="weather-icons.js"></script>
+  <script src="status-widgets.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

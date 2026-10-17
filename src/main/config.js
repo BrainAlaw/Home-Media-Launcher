@@ -5,6 +5,7 @@ const path = require('node:path');
 const { atomicWrite, serialize } = require('../../backend/storage');
 const { launchSpec } = require('../../backend/launch-spec');
 const { validateMenu } = require('../../backend/menu-config');
+const { isSafeProfileName } = require('../../backend/vpn');
 
 const DEFAULT_CONFIG = Object.freeze({
   settings: {
@@ -54,6 +55,9 @@ function validateConfig(config) {
   if (config.settings?.selectedAppIds !== undefined && (!Array.isArray(config.settings.selectedAppIds) || config.settings.selectedAppIds.some((id) => typeof id !== 'string'))) throw new Error('selectedAppIds must be an array of strings');
   validateWallpaper(config.settings?.wallpaper);
   if (config.settings?.fontId !== undefined && (typeof config.settings.fontId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(config.settings.fontId))) throw new Error('fontId must be a font identifier');
+  const vpnProfile = config.settings?.vpn?.surfsharkWireguardProfile;
+  if (config.settings?.vpn !== undefined && (!config.settings.vpn || typeof config.settings.vpn !== 'object' || Array.isArray(config.settings.vpn))) throw new Error('vpn must be an object');
+  if (vpnProfile !== undefined && vpnProfile !== '' && !isSafeProfileName(vpnProfile)) throw new Error('vpn.surfsharkWireguardProfile is not a valid connection name');
   const remote = config.settings?.remote;
   if (remote !== undefined) {
     if (!remote || typeof remote !== 'object' || Array.isArray(remote)) throw new Error('remote must be an object');
