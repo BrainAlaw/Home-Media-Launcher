@@ -99,8 +99,8 @@ test('VpnService handles missing binaries and Windows', async () => {
   const missing = async () => { throw Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }); };
   const list = await new vpn.VpnService({ platform: 'linux', exec: missing }).list();
   assert.ok(list.every((entry) => !entry.available && /not installed/.test(entry.error)));
-  const windows = await new vpn.VpnService({ platform: 'win32', exec: missing }).list();
-  assert.match(windows[1].error, /not supported on Windows/);
+  const windows = await new vpn.VpnService({ platform: 'win32', exec: missing, exists: () => false }).list();
+  assert.match(windows[1].error, /VPN\.md/);
 });
 
 const owmCurrent = { name: 'London', timezone: 0, main: { temp: 11.6, feels_like: 10.2 }, weather: [{ description: 'light rain', icon: '10n' }] };
