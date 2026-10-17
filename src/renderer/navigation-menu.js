@@ -25,9 +25,7 @@
         opacity: String(Math.max(0, Math.min(1, state.open))),
         transform: `translate3d(${(1 - state.open) * 22}px,${(1 - state.open) * -8}px,0) scale(${0.96 + state.open * 0.04})`
       }) }], { stiffness: 360, damping: 32 }, () => { delete panel.dataset.animating; if (!this.open) { panel.hidden = true; panel.classList.remove('open'); } });
-      this.systemMotion = this.motion.create({ scale: 1 }, [{ element: systemButton, style: (state) => ({ transform: `translate3d(0,0,0) scale(${state.scale})` }) }]);
-      this.listen(systemButton, 'focus', () => this.systemMotion.to({ scale: 1.1 }));
-      this.listen(systemButton, 'blur', () => this.systemMotion.to({ scale: 1 }));
+      // The header button is styled purely by CSS states (rest / focus / aria-expanded) in menu.css.
       this.listen(panel, 'focusin', (event) => this.focusPanel(event.target.closest('.menu-action')));
       this.listen(panel, 'focusout', (event) => { if (!panel.contains(event.relatedTarget)) this.clearPanelFocus(); });
       this.listen(this.query, 'change', (event) => { this.motion.setReducedMotion(event.matches); });
@@ -37,7 +35,7 @@
         this.track(action);
         this.listen(action, 'pointermove', (event) => {
           if (!this.open || event.pointerType !== 'mouse' || !(event.movementX || event.movementY)) return;
-          (action.querySelector('input') || action).focus({ preventScroll: true });
+          action.focus({ preventScroll: true });
         });
       }
     }
@@ -81,7 +79,7 @@
       this.open = open;
       this.panel.inert = !open; this.panel.setAttribute('aria-hidden', String(!open));
       document.querySelector('main').inert = open;
-      // Only one blurred surface at a time: perf.css drops the host badge and button blur while the sheet is open, and will-change lives only for the animation.
+      // Only one blurred surface at a time: perf.css drops the bar blur while the sheet is open, and will-change lives only for the animation.
       document.body.classList.toggle('menu-open', open);
       this.panel.dataset.animating = 'true';
       if (open) { this.panel.hidden = false; this.panel.classList.add('open'); }

@@ -18,19 +18,6 @@
 .row-head h2 { margin: 0; font: var(--hig-font-title3); font-weight: 650; color: var(--hig-label); letter-spacing: var(--title-tracking); }
 .row[data-row="gaming"] { margin-top: clamp(8px, 2vh, 28px); }
 
-/* Host badge: thin material (no live blur) with a status dot. */
-.host-badge { display: inline-flex; align-items: center; gap: var(--hig-space-1); max-width: 60%; padding: var(--hig-space-1) var(--hig-space-2); border: var(--hig-material-edge); border-radius: var(--hig-radius-pill); background: var(--hig-material-thin); color: var(--hig-label-secondary); font: var(--hig-font-caption1); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.host-badge[hidden] { display: none; }
-.host-badge > * { overflow: hidden; text-overflow: ellipsis; }
-.host-name { color: var(--hig-label); font-weight: 650; }
-.host-ip, .host-sync { color: var(--hig-label-secondary); }
-.host-ip::before, .host-state::before, .host-sync::before { content: '\00b7'; margin-right: var(--hig-space-1); opacity: .6; }
-.host-dot { flex: none; width: .6em; height: .6em; border-radius: var(--radius-circle); background: var(--warn); }
-.host-badge[data-state="online"] .host-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
-.host-badge[data-state="offline"] .host-dot { background: var(--danger); }
-.host-badge[data-state="cached"] .host-dot { background: var(--warn); }
-.host-badge[data-state="offline"] .host-state { color: var(--danger); }
-.host-badge[data-state="cached"] .host-state { color: var(--warn); }
 
 /* ---------------------------------------------------------------- unclipped carousels */
 /* The track clips along both axes (scroll container), so its padding must exceed the largest shadow

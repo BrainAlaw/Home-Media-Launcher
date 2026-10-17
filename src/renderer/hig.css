@@ -141,7 +141,7 @@
 
 /* Continuous (squircle) corners where the engine supports them; plain circular arcs elsewhere. */
 @supports (corner-shape: squircle) {
-  .tile, .tile .art, dialog, #toast, .host-badge, .wallpaper-credit, .menu-panel { corner-shape: squircle; }
+  .tile, .tile .art, dialog, #toast, .wallpaper-credit, .menu-panel { corner-shape: squircle; }
 }
 
 /* ---------------------------------------------------------------------------
