@@ -6,7 +6,7 @@
 .device-note { margin: 0; padding: 18px 4px; color: var(--text-dim); }
 .device-note[data-state="error"] { color: var(--danger); }
 
-dialog button.device-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; width: 100%; min-height: 84px; padding: 14px 22px; border: var(--ring-width) solid var(--glass-border); border-radius: calc(var(--ui-rounding) * 1.2); background: var(--glass-bg); backdrop-filter: blur(calc(var(--glass-blur) * .6)) saturate(var(--glass-saturate)); color: var(--text); text-align: left; will-change: transform; }
+dialog button.device-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; width: 100%; min-height: 84px; padding: 14px 22px; border: var(--ring-width) solid var(--glass-border); border-radius: calc(var(--ui-rounding) * 1.2); background: var(--glass-bg); color: var(--text); text-align: left; }
 dialog button.device-row:hover { background: var(--glass-bg); }
 dialog button.device-row:focus { border-color: var(--focus-ring); box-shadow: var(--focus-glow); }
 .device-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-circle); background: color-mix(in srgb, var(--accent) 22%, var(--color-transparent)); color: var(--accent-2); }

@@ -87,6 +87,8 @@ const controllerPairing = new ControllerPairing({
 });
 
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// GPU raster/zero-copy/VAAPI, set before ready. HML_GPU_SAFE=1 opts out. Timer throttling is deliberately left on so a hidden launcher idles.
+require('./gpu-flags').applyGpuSwitches(app);
 
 async function buildModel() {
   if (building) return building;
@@ -302,7 +304,7 @@ function createWindow() {
       sandbox: true
     }
   });
-  window.loadFile(path.join(__dirname, '../renderer/index.html'));
+  window.loadFile(path.join(__dirname, '../renderer/index.html'), process.env.HML_PERF === '1' || process.argv.includes('--perf') ? { query: { perf: '1' } } : undefined);
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event) => event.preventDefault());
   window.webContents.on('will-redirect', (event) => event.preventDefault());

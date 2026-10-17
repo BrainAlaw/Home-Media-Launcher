@@ -1,0 +1,57 @@
+/* Performance layer. Loaded last so it can cap the cost of earlier glass rules. See backend/MENU-PERFORMANCE.md. */
+
+/* will-change only while the quick-settings sheet is actually animating (set/cleared by navigation-menu.js). */
+#system-panel[data-animating="true"] { will-change: transform, opacity; }
+
+/* Deliberately no `contain` on .tile: layout containment would create a stacking context and paint the z-index:-1 shadow over the tile. */
+
+/* One live blurred surface at a time: while the quick-settings sheet is open (or animating) the header pill,
+   system button and host badge fall back to their opaque material instead of blurring a moving backdrop. */
+body.menu-open #primary-navigation::before,
+body.menu-open #system-button,
+body.menu-open .host-badge {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+body.menu-open #primary-navigation::before,
+body.menu-open #system-button { background: var(--menu-material-solid); }
+
+/* ------------------------------------------------------------------ Lite mode (settings.performance = lite, or auto after sustained low fps) */
+body.perf-lite {
+  --shadow-media: none;
+  --shadow-panel: none;
+  --shadow-menu: none;
+  --shadow-dialog: none;
+  --shadow-tile-label: none;
+  --menu-shadow: none;
+  --focus-glow: none;
+}
+body.perf-lite *,
+body.perf-lite *::before,
+body.perf-lite *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+body.perf-lite .backdrop-layer.art {
+  inset: 0; width: auto; height: auto; transform: scale(1.08); filter: none;
+}
+body.perf-lite .tile::after,
+body.perf-lite .tile .art::before { display: none; }
+body.perf-lite .tile.focused .art > img { transition: none; }
+body.perf-lite #primary-navigation::before,
+body.perf-lite #system-button,
+body.perf-lite #system-panel.menu-panel,
+body.perf-lite .panel,
+body.perf-lite dialog,
+body.perf-lite #toast,
+body.perf-lite .host-badge { background: var(--menu-material-solid); }
+body.perf-lite .navigation-lens,
+body.perf-lite .system-focus-lens { box-shadow: none; }
+body.perf-lite #fx { display: none; }
+
+/* ------------------------------------------------------------------ Opt-in meter (?perf or HML_PERF=1) */
+#perf-overlay {
+  position: fixed; z-index: 2147483000; left: 12px; bottom: 12px; padding: 6px 10px;
+  border-radius: 8px; background: rgba(0, 0, 0, .78); color: #7dff9b;
+  font: 600 13px/1.2 ui-monospace, Menlo, Consolas, monospace; pointer-events: none; white-space: pre;
+}

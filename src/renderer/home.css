@@ -46,7 +46,7 @@
 .tile.focused { will-change: transform; }
 
 /* Soft ambient shadow under the tile; fades in with focus so rest state stays cheap. */
-.tile::after { content: ''; position: absolute; z-index: -1; inset: 6% 4% -4%; border-radius: var(--ui-rounding); background: var(--shadow-tint, rgba(0, 0, 0, .55)); filter: blur(26px); opacity: 0; transform: translate3d(0, 10%, 0) scale(.96); transition: opacity var(--motion-glide) var(--ease), transform var(--motion-spring) var(--ease-spring); pointer-events: none; }
+.tile::after { content: ''; position: absolute; z-index: -1; inset: 6% 4% -4%; border-radius: var(--ui-rounding); background: radial-gradient(closest-side, var(--shadow-tint, rgba(0, 0, 0, .55)) 0%, rgba(0, 0, 0, 0) 100%); opacity: 0; transform: translate3d(0, 10%, 0) scale(.96); transition: opacity var(--motion-glide) var(--ease), transform var(--motion-spring) var(--ease-spring); pointer-events: none; }
 .tile.focused::after { opacity: .75; transform: translate3d(0, 14%, 0) scale(1); }
 
 /* Art parallax: the image drifts and zooms slightly inside its frame, plus a one-shot sheen sweep. */

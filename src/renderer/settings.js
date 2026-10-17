@@ -22,6 +22,8 @@ window.SettingsDialog = (function () {
   let infoToken = 0;
   /** Staged UI font id ('theme' follows the preset). */
   let fontDraft = 'theme';
+  /** Staged settings.performance (auto | quality | lite). */
+  let performanceDraft = 'auto';
 
   const ICON_HINT = 'Preferred sizes: tile art 1280×720 (16:9) · icon 512×512 PNG or SVG · game poster 600×900';
 
@@ -243,6 +245,13 @@ window.SettingsDialog = (function () {
     $('#dynamic-art').checked = resolved.dynamicArt;
     $('#live-video').checked = resolved.liveVideo;
     syncAppearancePreview();
+  }
+
+  function syncPerformanceControl() {
+    document.querySelectorAll('#performance-mode button').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.mode === performanceDraft));
+      button.onclick = () => { performanceDraft = button.dataset.mode; syncPerformanceControl(); };
+    });
   }
 
   function updateFont(fontId) {
@@ -577,6 +586,8 @@ window.SettingsDialog = (function () {
     wallpaperDraft = { ...wallpaperDraft, ...Sources.projectToWallpaper(wallpaperDraft, sourcesDraft) };
     sourceInfo = new Map();
     $('#wallpaper-credit-toggle').checked = settings.wallpaperCredit !== false;
+    performanceDraft = window.Perf.normalizeMode(settings.performance);
+    syncPerformanceControl();
     fontDraft = settings.fontId || 'theme';
     buildWallpaperControls();
     syncWallpaperControls();
@@ -649,6 +660,7 @@ window.SettingsDialog = (function () {
         wallpaper: ctx.gallery.resolve(wallpaperDraft, source ? 'custom' : 'slideshow'),
         wallpaperSources: sourcesDraft,
         wallpaperCredit: $('#wallpaper-credit-toggle').checked,
+        performance: performanceDraft,
         iconOverrides,
         header: {
           showText: $('#show-text').checked,
