@@ -4,7 +4,7 @@ The backend keeps rendering and spatial navigation local to the renderer. Naviga
 
 ## Menu configuration
 
-The optional root `menu` object in `config.json` is independent of `rows[].tiles`. It is validated against [menu.schema.json](menu.schema.json). Existing configurations without `menu` receive a default top bar in the returned model. Old settings clients that omit `menu` on save preserve the existing stored menu. No game tile fields or launch contracts are changed.
+The optional root `menu` object in `config.json` is independent of `rows[].tiles`. It is validated against [menu.schema.json](menu.schema.json). Existing configurations without `menu` receive a default (empty) menu in the returned model. The top navigation bar (Home / Library / Settings) was removed: `layout`, `groups` and their items are still validated so old configurations load, but the renderer ignores them. Settings opens from the quick-settings sheet. Old settings clients that omit `menu` on save preserve the existing stored menu. No game tile fields or launch contracts are changed.
 
 ```json
 {

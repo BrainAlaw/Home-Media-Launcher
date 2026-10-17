@@ -5,11 +5,8 @@ const { validateJsonSchema } = require('./theme-validation');
 
 const DEFAULT_MENU = {
   version: 1, layout: 'top-bar',
-  groups: [{ id: 'main', label: 'Main', items: [
-    { id: 'home', label: 'Home', action: 'home' },
-    { id: 'library', label: 'Library', action: 'library' },
-    { id: 'settings', label: 'Settings', action: 'settings' }
-  ] }],
+  // The top navigation bar was removed: `layout` and `groups` are still accepted so old configs load, but ignored.
+  groups: [{ id: 'main', label: 'Main', items: [] }],
   slideshow: { enabled: false, lookAhead: 4, intervalMs: 10000, assets: [] }
 };
 

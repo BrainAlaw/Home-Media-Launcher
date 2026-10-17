@@ -5,7 +5,6 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { SpringValue, MotionScheduler, CompositorScheduler } = require('../src/renderer/menu-motion');
-const { resolveItems, matchesCategory } = require('../src/renderer/navigation-menu');
 
 test('springs settle consistently at 60 and 120 Hz without losing velocity on retarget', () => {
   const simulate = (hz) => {
@@ -76,19 +75,13 @@ test('compositor springs preserve momentum, cancel stale completions and snap fo
   scheduler.dispose();
 });
 
-test('menu categories change membership without rewriting tiles or hiding empty configured tabs', () => {
-  const game = { id: 'game', provider: 'remote' };
-  const app = { id: 'app', command: '/usr/bin/editor', category: 'Work' };
-  const web = { id: 'web', type: 'website' };
-  assert.equal(matchesCategory(game, 'Games'), true);
-  assert.equal(matchesCategory(app, 'Apps'), true);
-  assert.equal(matchesCategory(web, 'Web Apps'), true);
-  assert.equal(matchesCategory(app, 'Work'), true);
-  assert.equal(matchesCategory(web, 'Games'), false);
-  const definition = { groups: [{ items: [{ id: 'empty', label: 'Empty', action: 'category', category: 'Empty' }, { id: 'hidden', visible: false }] }] };
-  assert.equal(resolveItems(definition)[0], definition.groups[0].items[0]);
-  assert.equal(resolveItems(definition).length, 1);
-  assert.ok(resolveItems().some((item) => item.action === 'settings'));
+test('the top navigation bar and its focus lens are gone from markup and styles', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../src/renderer/index.html'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../src/renderer/menu.css'), 'utf8');
+  const script = fs.readFileSync(path.join(__dirname, '../src/renderer/navigation-menu.js'), 'utf8');
+  assert.doesNotMatch(html, /primary-navigation/);
+  assert.doesNotMatch(css, /primary-navigation|navigation-lens|navigation-tab/);
+  assert.doesNotMatch(script, /navigation-tab|navigation-lens|matchesCategory/);
 });
 
 test('menu materials and spring transforms do not override game tile or hero selectors', () => {
