@@ -1,0 +1,70 @@
+/*
+ * ON-SCREEN KEYBOARD. A modal <dialog> filling the viewport with a bottom-docked sheet. Tokens come from hig.css.
+ * Only transform and opacity animate; no backdrop-filter. Keys are >= 56px tall at 1080p and scale with the canvas.
+ */
+dialog.osk {
+  position: fixed; inset: 0; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 0;
+  border: 0; background: transparent; color: var(--hig-label); overflow: hidden; outline: none;
+  display: flex; align-items: flex-end; justify-content: center;
+  --osk-key-h: max(56px, calc(66 * var(--hig-px)));
+  --osk-gap: max(6px, calc(8 * var(--hig-px)));
+}
+dialog.osk:not([open]) { display: none; }
+dialog.osk::backdrop { background: transparent; }
+
+.osk-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 30%, rgba(0, 0, 0, .94)); opacity: 0; transition: opacity var(--hig-dur-base) var(--hig-ease-standard); pointer-events: none; }
+dialog.osk.open .osk-scrim { opacity: 1; }
+
+.osk-sheet {
+  position: relative; box-sizing: border-box; width: min(calc(1320 * var(--hig-px)), 94vw);
+  margin-bottom: clamp(16px, 4.5vh, 56px); padding: var(--hig-space-3) var(--hig-space-4) var(--hig-space-2);
+  border: var(--hig-material-edge); border-radius: var(--hig-radius-xl); background: var(--hig-highlight), #0b0d12; box-shadow: var(--hig-elev-4);
+  transform: translate3d(0, 112%, 0); opacity: 0;
+  transition: transform var(--hig-dur-slow) var(--hig-ease-spring-soft), opacity var(--hig-dur-fast) var(--hig-ease-standard);
+}
+dialog.osk.open .osk-sheet { transform: translate3d(0, 0, 0); opacity: 1; will-change: transform; }
+
+.osk-field {
+  box-sizing: border-box; display: flex; align-items: center; justify-content: flex-end; position: relative;
+  min-height: max(56px, calc(72 * var(--hig-px))); margin-bottom: var(--hig-space-2); padding: 0 var(--hig-space-3);
+  border-radius: var(--hig-radius-md); background: var(--hig-fill-secondary); box-shadow: inset 0 0 0 1px var(--hig-separator);
+  font: var(--hig-font-title3); font-weight: 560; overflow: hidden; white-space: pre;
+}
+.osk-text { color: var(--hig-label); }
+.osk-placeholder { position: absolute; left: var(--hig-space-3); color: var(--hig-label-tertiary); font-weight: 500; }
+.osk-field:not([data-empty="true"]) .osk-placeholder { display: none; }
+.osk-caret { flex: none; width: max(3px, calc(3 * var(--hig-px))); height: 1.1em; margin-left: 2px; border-radius: 2px; background: var(--hig-tint); animation: osk-blink 1.05s steps(1, end) infinite; }
+.osk-field[data-empty="true"] .osk-caret { position: absolute; left: var(--hig-space-3); }
+@keyframes osk-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0; } }
+
+.osk-keys { display: flex; flex-direction: column; gap: var(--osk-gap); padding: var(--osk-gap) 0; }
+.osk-row { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); column-gap: calc(var(--osk-gap) / 2); }
+.osk-key {
+  position: relative; box-sizing: border-box; height: var(--osk-key-h); margin: 0 calc(var(--osk-gap) / 2); padding: 0; min-width: 0;
+  display: flex; align-items: center; justify-content: center; border: 0; border-radius: var(--hig-radius-sm);
+  background: var(--hig-fill-secondary); color: var(--hig-label); font: var(--hig-font-callout); font-weight: 600; cursor: pointer;
+  transition: transform var(--hig-dur-base) var(--hig-ease-spring), background-color var(--hig-dur-fast) var(--hig-ease-standard);
+}
+.osk-key.osk-shift, .osk-key.osk-backspace, .osk-key.osk-layer { background: var(--hig-fill-tertiary); color: var(--hig-label-secondary); }
+.osk-key.osk-space { color: var(--hig-label-tertiary); font-weight: 500; }
+.osk-key.osk-done { background: var(--hig-tint-fill); color: var(--hig-label); }
+.osk-key.osk-shift[data-shift="once"] { background: var(--hig-fill); color: var(--hig-label); }
+.osk-key.osk-shift[data-shift="lock"] { background: var(--hig-tint); color: var(--hig-on-tint); }
+.osk-key.focused { z-index: 1; transform: scale(1.1); background: var(--hig-tint); color: var(--hig-on-tint); box-shadow: var(--hig-focus-edge), var(--hig-elev-2); will-change: transform; }
+.osk-key.osk-shift[data-shift="lock"].focused { background: var(--hig-label); color: var(--bg); }
+.osk-key.pressed { animation: osk-press 160ms var(--hig-ease-out); }
+@keyframes osk-press { 0% { transform: scale(1.1); } 40% { transform: scale(.94); } 100% { transform: scale(1.1); } }
+.osk-key:not(.focused).pressed { animation: none; }
+
+.osk-hints { display: flex; flex-wrap: wrap; gap: var(--hig-space-1) var(--hig-space-3); justify-content: center; padding-top: var(--hig-space-1); color: var(--hig-label-tertiary); font: var(--hig-font-caption1); }
+.osk-hints b { margin-right: .35em; padding: 0 .5em; border-radius: var(--hig-radius-xs); background: var(--hig-fill-tertiary); color: var(--hig-label-secondary); font-weight: 650; }
+.osk-hints .kbd { display: none; }
+body:is([data-input-device="keyboard"], [data-input-device="remote"]) .osk-hints .kbd { display: inline; }
+body:is([data-input-device="keyboard"], [data-input-device="remote"]) .osk-hints .pad { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .osk-sheet, .osk-key, .osk-scrim { transition-duration: var(--hig-dur-fast); transition-timing-function: linear; }
+  .osk-key.focused { transform: scale(1.04); }
+  .osk-key.pressed { animation: none; }
+  .osk-caret { animation: none; }
+}
