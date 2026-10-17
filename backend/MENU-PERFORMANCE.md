@@ -98,3 +98,26 @@ Changes:
 ### How to measure
 
 Start with `HML_PERF=1 npm start` (or `npm start -- --perf`) to show the meter at the bottom-left: fps, average and worst frame time, long frames (over 33 ms) out of total, and the active mode. Open and close quick settings, scrub the rows, then compare `quality` against `lite`. For GPU detail open `chrome://gpu` equivalents via `--enable-logging`, and use DevTools > Performance with "Layers" and "Paint flashing" enabled. Logic is in `src/renderer/perf.js` with tests in `test/perf.test.js`.
+
+## Quick-settings sheet pass (agent Q1)
+
+Measured, not guessed: `scripts/bench-ui.cjs` boots the real launcher (main, preload, renderer) in a visible 1280x800 window with a throwaway profile and prints JSON (avg/p50/p95/p99/max frame time, effective fps, dropped-frame %, long-animation-frame and longtask counts, per-process CPU, `app.getGPUFeatureStatus()`) for idle, panel open/close, row focus movement and tile focus movement.
+
+```
+unset ELECTRON_RUN_AS_NODE; npx electron scripts/bench-ui.cjs [--lite] [--stress] [--uncapped] [--css=file.css] [--shot=panel.png]
+HML_BENCH_SWITCHES="--use-angle=gl" npx electron scripts/bench-ui.cjs   # A/B any Chromium switch
+```
+
+Root cause on the reference Windows host (RTX 3080 plus Sunshine, Parsec and SudoMaker virtual displays, 165 Hz primary): with the default out-of-process GPU service ANY animated content, even one `will-change: transform` square in an empty page, presented at a hard ~27-30 fps (36.4 ms, one frame per 6 vsyncs). The CSS was not the bottleneck: removing the backdrop, `#fx`, every animation and transition left tile focus at 30 fps. Software compositing and `--in-process-gpu` both reached 165 fps; ANGLE Vulkan silently fell back to software compositing, and every D3D11/DirectComposition/vsync switch tried (`use-angle=gl|d3d11on12`, `disable-direct-composition`, `DXGIWaitableSwapChain`, `DelegatedCompositing`, `disable-gpu-sandbox`, EcoQoS, occlusion) changed nothing. `gpu-flags.js` therefore adds `in-process-gpu` on win32 (`HML_GPU_PROCESS=separate` opts out, `HML_GPU_SAFE=1` still disables everything) plus `disable-features=CalculateNativeWinOcclusion`. GPU compositing and rasterisation stay enabled (`gpu_compositing: enabled`, `rasterization: enabled_force`). The main window is opaque (`backgroundColor`, no `transparent: true`), so there is no transparent-window software fallback.
+
+The sheet itself (menu.css, status.css, perf.css):
+
+- No `backdrop-filter` at all on the sheet; the wallpaper behind is already blurred once by `.backdrop-layer.art`, so the glass look is a 95% opaque surface, a static top sheen and a hairline. Nothing is re-blurred per frame.
+- Permanently promoted layer (`will-change: transform, opacity`; the sheet is `display: none` while closed) with `contain: layout paint style`. Only transform and opacity animate (CompositorScheduler/WAAPI); box-shadow is static.
+- One sliding highlight lens (transform only) replaces per-row backgrounds. It is an accent-tinted solid (`--panel-lens-mix`, 36%) with a 2 px inset ring and white text, red-tinted for the danger row via `:has()`.
+- While `body.menu-open`: the `#fx` scanline multiply layer is hidden, tile animations are paused, other blurred chrome is solid (existing rule).
+- status-widgets.js defers network/VPN/weather DOM writes until `#system-panel[data-animating]` clears (latest render per key wins), so polling results never land mid-animation.
+
+Legibility: white primary text, 90% caption text on the dark surface, 18 px titles and 14 px captions, two-line subtitles instead of ellipsis (`vpnSubtitle` shortens long host names and errors), disabled providers at 78% opacity with the reason written out. `test/menu-legibility.test.js` checks WCAG AA (4.5:1) for every theme accent and danger token against the lens and the surface (worst case: over a white wallpaper pixel).
+
+Known limits: the machine's 27 fps cap with a separate GPU process is a platform issue worked around, not fixed; `in-process-gpu` removes GPU-process isolation (a GPU driver crash takes the launcher down, `HML_GPU_PROCESS=separate` restores it). `navigation-menu.js` hard-codes the lens base height 64 px (`offsetHeight / 64`), so two-line rows stretch the lens vertically (corner radius distorts slightly); it should read `lens.offsetHeight`.

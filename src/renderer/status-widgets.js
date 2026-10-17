@@ -3,7 +3,45 @@
  * All data arrives through the namespaced ext bridge (`system`, `vpn`, `weather`); no secrets or network
  * access live in the renderer. Every widget degrades silently when its provider is unavailable.
  */
-(function () {
+/** Longest subtitle we show on one quick-settings line before it is shortened (the row may still wrap to two lines). */
+const SUBTITLE_MAX = 44;
+
+/** Shortens `text` to `max` characters, keeping both ends so host names and addresses stay recognisable. */
+function shortenMiddle(text, max = SUBTITLE_MAX) {
+  const value = String(text ?? '').trim();
+  if (value.length <= max) return value;
+  const keep = max - 1;
+  const head = Math.ceil(keep * 0.6);
+  return `${value.slice(0, head)}…${value.slice(value.length - (keep - head))}`;
+}
+
+/** First sentence of a provider error, capped at two lines of the row, so the cause stays readable. */
+function shortenError(text) {
+  const first = String(text ?? '').trim().split(/(?<=[.!?])\s/)[0];
+  const clean = first.replace(/[.!?]$/, '');
+  return clean.length > 84 ? `${clean.slice(0, 83)}…` : clean;
+}
+
+/**
+ * Subtitle for a VPN row. Always explains the state: connected (with a shortened host/address), working, off, or why a
+ * provider is unavailable. Never returns an empty string.
+ * @param {{ available?: boolean, connected?: boolean, busy?: boolean, detail?: string, error?: string }} entry
+ */
+function vpnSubtitle(entry) {
+  if (entry?.error) return shortenError(entry.error);
+  if (entry?.busy) return 'Working…';
+  if (entry?.connected) {
+    const detail = String(entry.detail ?? '').split(/\s*·\s*/).filter(Boolean);
+    // Tailscale reports "host · address"; the address is the useful part on a TV, the host name is shortened.
+    const text = detail.length > 1 ? `${shortenMiddle(detail[0], 22)} · ${detail[detail.length - 1]}` : shortenMiddle(detail[0] || '', SUBTITLE_MAX);
+    return text ? `Connected · ${text}` : 'Connected';
+  }
+  return entry?.available ? 'Off' : 'Not available on this PC';
+}
+
+if (typeof module === 'object' && module.exports) {
+  module.exports = { shortenMiddle, shortenError, vpnSubtitle };
+} else (function () {
   'use strict';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -18,6 +56,21 @@
   const vpnRows = new Map();
   let weatherTimer = null;
   let weatherToken = 0;
+  const deferred = new Map();
+
+  /** Runs `render` now, or once the quick-settings sheet has finished animating (latest call per key wins). */
+  function whenPanelIdle(key, render) {
+    const panel = $('#system-panel');
+    if (panel?.dataset.animating !== 'true') { deferred.delete(key); render(); return; }
+    const pending = deferred.has(key);
+    deferred.set(key, render);
+    if (pending) return;
+    const retry = () => {
+      if (panel.dataset.animating === 'true') { setTimeout(retry, 120); return; }
+      const next = deferred.get(key); deferred.delete(key); next?.();
+    };
+    setTimeout(retry, 120);
+  }
 
   function svg(markup, className) {
     const template = document.createElement('template');
@@ -38,7 +91,9 @@
     return svg(bars + slash, 'status-glyph');
   }
 
-  function renderNetwork(status) {
+  function renderNetwork(status) { whenPanelIdle('network', () => paintNetwork(status)); }
+
+  function paintNetwork(status) {
     const indicator = $('#network-indicator');
     if (indicator) {
       indicator.hidden = false;
@@ -96,7 +151,9 @@
     catch (error) { input.checked = !wanted; showToast(`VPN: ${error.message}`); }
   }
 
-  function applyVpnList(list) {
+  function applyVpnList(list) { whenPanelIdle('vpn', () => paintVpnList(list)); }
+
+  function paintVpnList(list) {
     vpnList = Array.isArray(list) ? list : [];
     const host = $('#vpn-rows');
     if (host) {
@@ -105,7 +162,8 @@
         if (!row) { row = createVpnRow(entry); vpnRows.set(entry.id, row); host.append(row); }
         const input = row.querySelector('input');
         row.querySelector('strong').textContent = entry.label;
-        row.querySelector('small').textContent = entry.error || (entry.busy ? 'Working…' : entry.connected ? `Connected${entry.detail ? ` · ${entry.detail}` : ''}` : entry.available ? 'Off' : 'Unavailable');
+        row.querySelector('small').textContent = vpnSubtitle(entry);
+        row.title = entry.error || entry.detail || '';
         row.dataset.state = entry.busy ? 'busy' : entry.connected ? 'on' : entry.available ? 'off' : 'unavailable';
         row.setAttribute('aria-busy', String(Boolean(entry.busy)));
         input.checked = entry.connected;
@@ -136,7 +194,9 @@
     };
   }
 
-  function renderWeather(snapshot) {
+  function renderWeather(snapshot) { whenPanelIdle('weather', () => paintWeather(snapshot)); }
+
+  function paintWeather(snapshot) {
     const header = $('#weather');
     const card = $('#weather-card');
     if (!snapshot) {
