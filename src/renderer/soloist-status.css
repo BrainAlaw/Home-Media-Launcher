@@ -1,17 +1,7 @@
-/* Soloist local player: quick-settings row state and the media widget line (see soloist-status.js). */
+/* Soloist local player: the media widget line (see soloist-status.js). */
 
-.soloist-row[aria-disabled="true"] {
-  opacity: 0.55;
-  cursor: default;
-}
 
-.soloist-row[data-state="unavailable"] .menu-copy small {
-  opacity: 0.8;
-}
 
-.soloist-row[data-state="busy"] .menu-copy small {
-  opacity: 0.7;
-}
 
 .mw-soloist {
   margin-top: 4px;

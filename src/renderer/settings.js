@@ -598,6 +598,11 @@ window.SettingsDialog = (function () {
     $('#show-time').checked = header.showTime !== false;
     $('#show-weather').checked = header.showWeather === true;
     $('#weather-location').value = header.weatherLocation || '';
+    const soloist = settings.soloist || {};
+    $('#soloist-enabled').checked = soloist.enabled === true;
+    $('#soloist-device-name').value = soloist.deviceName || '';
+    $('#soloist-binary').value = soloist.binaryPath || '';
+    window.SoloistStatus?.paint();
     $('#wallpaper').value = settings.background?.source || '';
     resetDraft(settings.theme || {});
     wallpaperDraft = { ...settings.wallpaper };
@@ -684,6 +689,11 @@ window.SettingsDialog = (function () {
         performance: performanceDraft,
         ...window.AppearanceSettings.collect(),
         iconOverrides,
+        soloist: {
+          enabled: $('#soloist-enabled').checked,
+          deviceName: $('#soloist-device-name').value.trim() || 'Home Media Launcher',
+          binaryPath: $('#soloist-binary').value.trim()
+        },
         header: {
           showText: $('#show-text').checked,
           text: $('#header-text').value.trim(),
@@ -713,6 +723,7 @@ window.SettingsDialog = (function () {
     const nextModel = await window.launcher.saveSettings(nextConfig);
     ctx.setConfig(nextConfig);
     ctx.onModel(nextModel);
+    void window.SoloistStatus?.reapply();
     return nextModel;
   }
 

@@ -88,11 +88,6 @@
         <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
       </button>
       <div id="vpn-rows" class="vpn-rows"></div>
-      <button id="soloist-row" type="button" class="menu-action menu-toggle soloist-row" role="switch" aria-checked="false" aria-label="Soloist local player" data-state="off">
-        <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 9h3l4.5-3.5v13L8 15H5z"/><path d="M16 9a4 4 0 0 1 0 6M18.6 6.6a7.6 7.6 0 0 1 0 10.8"/></svg></span>
-        <span class="menu-copy"><strong>Soloist</strong><small>Off</small></span>
-        <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
-      </button>
       <button id="quit-button" class="menu-action">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-13 5 5-5 5m-5-5h13"/></svg></span>
         <span class="menu-copy"><strong>Exit launcher</strong><small>Return to your desktop</small></span>
@@ -128,6 +123,12 @@
           <label class="toggle-row"><span>Time</span><input id="show-time" type="checkbox"></label>
           <label class="toggle-row"><span>Weather</span><input id="show-weather" type="checkbox"></label>
           <label>Weather location<input id="weather-location" type="text" data-osk maxlength="80" placeholder="City, Country code (e.g. London,GB)"></label>
+          <h3>Spotify Soloist</h3>
+          <p class="section-description">Optional local Spotify player for a Linux HTPC (needs Spotify Premium and SPOTIFY_SOLOIST_API in .env). See backend/SOLOIST.md.</p>
+          <p id="soloist-status" class="section-description" data-state="off">Off</p>
+          <label class="toggle-row"><span>Use Soloist as a local player</span><input id="soloist-enabled" type="checkbox"></label>
+          <label>Device name<input id="soloist-device-name" type="text" data-osk maxlength="64" placeholder="Home Media Launcher"></label>
+          <label>Soloist binary<input id="soloist-binary" type="text" data-osk maxlength="260" placeholder="soloist (found on PATH)"></label>
         </section>
         <section class="settings-page" data-page="appearance">
           <div class="appearance-controls">

@@ -1,6 +1,21 @@
-# Current state (17 October 2026, end of iteration 5)
+# Current state (17 October 2026, after iteration 7: Soloist)
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
+
+## Working rules from the user (apply to every future plan)
+
+- Work **sequentially**: one step at a time, at most **2-3 agents at once**, usually one. Merge small tasks into one agent; no agent for something describable in 2-3 lines of code.
+- After each step: merge, run `npm run check`, verify on the real display, then **ask the user before the next step**. Do not spawn parallel waves of 6-8 agents again (the user stopped one for token cost and merge conflicts).
+
+## Iteration 7 (Spotify Soloist, merged into `iter5`)
+
+- Soloist = headless Spotify Connect client (Linux only; x86_64/aarch64/armv7), local WebSocket API, API key from the Spotify for Developers dashboard (`SPOTIFY_SOLOIST_API` in `.env`), builds expire after 90 days (exit code 10), binary is not redistributable (user installs it; see `backend/SOLOIST.md`).
+- Code: `backend/soloist/process.js` (supervisor), `ws-client.js` + `protocol.js` + `state.js` (socket client, MediaState mapping), `manager.js` (glue, adapted to the real X1/X2 APIs), `src/main/ext/soloist.js` (ns `soloist`), preference of the Soloist device in `backend/spotify/service.js` (state from the socket instead of polling `/me/player` when connected), `settings.soloist = { enabled (default false), deviceName, binaryPath }`.
+- **UI:** Soloist options live in **Settings > General > Spotify Soloist** (switch, device name, binary path, status line). It was removed from Quick settings on request. The media widget shows a "Soloist: this computer" line when connected. On Windows the feature reports "Not available on this PC".
+- **Regression fixed:** the merge of the Soloist UI made the home screen render black (only the header chips). Cause: `soloist-status.js` re-declared the global `SUBTITLE_MAX` that `status-widgets.js` already declares (classic scripts share one global scope), so the file failed to load and `app.js` threw on `window.SoloistStatus.init`. Fixed by renaming; guarded by `test/renderer-globals.test.js` (no duplicate top-level names across the scripts in `index.html`, every referenced file exists).
+- Verified on the real display after the fix: Home Theatre and Gaming rows, header, clock, Spotify "Connect Spotify" widget (client id is set in `.env`).
+- **Unverified:** the whole Soloist path on Linux (flags, `soloist --version` output, `ws.port`/`ws.addr` files, `timestamp_ms` clock base, device handoff via `PUT /me/player`), the new Settings > General Soloist controls visually, Spotify login with the real account.
+- Open step list (sequential, ask before each): (1) home screen check on the real display (OLED shift/dim/fade-in, widget slot, header alignment, small visual fixes) - an agent for this was started and stopped by the user, nothing from it is committed, worktree `../Home-Media-Launcher-wt/home8` (branch `i8/home`) can be deleted; (2) one music agent for Spotify + Soloist on the HTPC; (3) one UI agent for settings/popups/gamepad flow; (4) review, merge `iter5` into `main`, push, delete worktrees.
 
 ## Git
 

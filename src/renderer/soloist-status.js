@@ -4,14 +4,14 @@
  * Pure helpers are exported for tests; the DOM wiring runs only in the browser.
  */
 
-/** Longest subtitle shown on the quick-settings row. */
-const SUBTITLE_MAX = 84;
+/** Longest status text shown in Settings (unique name: classic scripts share one global scope). */
+const SOLOIST_SUBTITLE_MAX = 84;
 const DEFAULT_DEVICE_NAME = 'Home Media Launcher';
 
 /** First sentence of a main-process message, capped so the row stays on two lines. */
 function shortenMessage(text) {
   const first = String(text ?? '').trim().split(/(?<=[.!?])\s/)[0].replace(/[.!?]$/, '');
-  return first.length > SUBTITLE_MAX ? `${first.slice(0, SUBTITLE_MAX - 1)}…` : first;
+  return first.length > SOLOIST_SUBTITLE_MAX ? `${first.slice(0, SOLOIST_SUBTITLE_MAX - 1)}…` : first;
 }
 
 const sameName = (left, right) => String(left ?? '').trim().toLowerCase() === String(right ?? '').trim().toLowerCase();
@@ -57,22 +57,17 @@ if (typeof module === 'object' && module.exports) {
   const ext = () => window.launcher?.ext;
   const listeners = new Set();
   let status = null;
-  let busy = false;
-  let showToast = () => {};
 
-  const row = () => document.getElementById('soloist-row');
-
+  /** Settings > General: status line under the Soloist options; the switch is locked off on unsupported platforms. */
   function paint() {
-    const element = row();
-    if (!element) return;
     const view = soloistRowView(status);
-    window.MenuSwitch.setSwitch(element, view.checked, { busy });
-    element.dataset.state = view.state;
-    element.setAttribute('aria-disabled', String(view.disabled));
-    element.setAttribute('aria-label', `Soloist local player: ${view.subtitle}`);
-    element.title = view.subtitle;
-    const label = element.querySelector('small');
-    if (label) label.textContent = view.subtitle;
+    const line = document.getElementById('soloist-status');
+    if (line) {
+      line.textContent = view.subtitle;
+      line.dataset.state = view.state;
+    }
+    const toggle = document.getElementById('soloist-enabled');
+    if (toggle) toggle.disabled = status?.state === 'unsupported';
   }
 
   function apply(next) {
@@ -82,44 +77,23 @@ if (typeof module === 'object' && module.exports) {
     for (const listener of listeners) listener(status);
   }
 
-  /** Persists `settings.soloist.enabled` through the normal settings save, then reconciles the process. */
-  async function toggle() {
-    const element = row();
-    if (!element || busy || !status) return;
-    const view = soloistRowView(status);
-    if (view.disabled) { showToast(view.subtitle); return; }
-    const wanted = !view.checked;
-    busy = true;
-    window.MenuSwitch.setSwitch(element, wanted, { busy: true });
-    try {
-      const config = await window.launcher.getSettings();
-      const settings = config?.settings || {};
-      await window.launcher.saveSettings({ ...config, settings: { ...settings, soloist: { ...(settings.soloist || {}), enabled: wanted } } });
-      apply(await ext().invoke('soloist', 'apply'));
-    } catch (error) {
-      showToast(`Soloist: ${shortenMessage(error?.message) || 'could not change the setting'}`);
-    } finally {
-      busy = false;
-      paint();
-    }
+  /** Re-reads settings.soloist in the main process (after Save) and reconciles the Soloist process. */
+  async function reapply() {
+    try { apply(await ext().invoke('soloist', 'apply')); } catch { /* status stays as it was */ }
   }
 
-  function init(options = {}) {
-    showToast = options.showToast || showToast;
-    const element = row();
-    if (element) element.addEventListener('click', () => { void toggle(); });
+  function init() {
     const bridge = ext();
     if (!bridge) return;
     bridge.on('soloist', 'status', apply);
     // Settings are read by the main process at apply time: run once the model (and therefore the config) is ready.
-    window.launcher.getModel()
-      .then(() => bridge.invoke('soloist', 'apply'))
-      .then(apply)
-      .catch(() => {});
+    window.launcher.getModel().then(reapply).catch(() => {});
   }
 
   window.SoloistStatus = {
     init,
+    reapply,
+    paint,
     subscribe(listener) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     mediaLine: (device) => soloistMediaLine(status, device)
   };

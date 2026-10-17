@@ -19,3 +19,11 @@ The design philosophy merges the premium, fluid aesthetics of Apple's tvOS (Appl
   - Keep code clean, strictly typed (TypeScript preferred), and highly modular.
   - All code, variables, and inline comments MUST be strictly in English.
   - Use UK spelling in user-facing documentation where applicable.
+
+## 4. Agent Orchestration & Anti-Token-Bleed Rules
+To prevent extreme API costs, context pollution, and Git merge conflicts, the following multi-agent execution constraints are **strictly mandatory**:
+- **Strict Sequential Queue (No Parallelization):** Running multiple execution agents concurrently is kategorycznie forbidden. Tasks must be executed in a strict linear queue (FIFO).
+- **Task Consolidation:** Never spawn micro-agents for single prompts or tiny adjustments (e.g., small CSS tweaks, individual button radiuses). Group related sub-tasks into a single, long-lived domain agent (e.g., one unified agent for all Spotify/Music tasks instead of separate sessions for auth, UI, and widgets).
+- **The Lifecycle Loop:** A sub-agent must complete its task, output its diff, and the coordinator must merge the branch *before* the next queued agent is allowed to spin up.
+- **Prompt Caching Optimization:** Ensure the repository state remains stable during a sub-agent's lifecycle to maximize Anthropic's Prompt Caching efficacy. Do not trigger global workspace unifications mid-task.
+- **Ignored Paths:** Always respect the `.claudecodeignore` file. Never scan, index, or pipe binary assets, heavy graphics, pre-built distribution folders (`dist/`, `build/`), or node modules into the LLM context.
