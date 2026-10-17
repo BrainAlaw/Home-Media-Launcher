@@ -60,13 +60,13 @@ h1 { font: var(--hig-font-title2); font-weight: var(--title-weight); margin: 0; 
 .track.virtual-track::-webkit-scrollbar { display: none; }
 .track.virtual-track::after { content: ''; display: block; width: var(--virtual-content-width, 0px); height: 1px; pointer-events: none; }
 
-.tile { position: relative; flex: none; width: var(--tile-width); aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: var(--hig-radius-lg); background: none; color: var(--text); transform: translateZ(0) scale(1); transition: transform var(--hig-dur-slow) var(--hig-ease-spring); }
-.virtual-track .tile { position: absolute; left: var(--gutter); top: 0; transform: translate3d(var(--virtual-x, 0px), var(--virtual-y, 44px), 0) translateZ(0) scale(1); }
-.virtual-track .tile.focused { transform: translate3d(var(--virtual-x, 0px), var(--virtual-y, 44px), 0) translateZ(0) scale(var(--hig-focus-scale)); }
-.tile.focused { transform: translateZ(0) scale(var(--hig-focus-scale)); z-index: 2; }
-/* tvOS focus: no hard outline (--hig-focus-scale clamps the theme's --focus-scale to 1.08-1.1). A hairline edge lives on a pseudo-element so only opacity animates (compositor-only). */
-.tile::before { content: ''; position: absolute; z-index: 2; inset: 0; border-radius: inherit; box-shadow: var(--hig-focus-edge); opacity: 0; pointer-events: none; transition: opacity var(--hig-dur-base) var(--hig-ease-standard); }
-.tile.focused::before { opacity: 1; }
+.tile { position: relative; flex: none; width: var(--tile-width); aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: var(--hig-radius-lg); background: none; color: var(--text); transform: translateZ(0); }
+/* Grid position uses the `translate` property: it is applied before `scale`, so focus scale never shifts a tile along the row. Lift and nudges use `transform`. */
+.virtual-track .tile { position: absolute; left: var(--gutter); top: 0; translate: var(--virtual-x, 0px) var(--virtual-y, 44px); }
+/* --hig-focus-scale clamps the theme's --focus-scale. Focus motion (scale, lift, nudges) lives in home.css. */
+.tile.focused { z-index: 2; }
+/* tvOS focus: no hard outline. The specular edge is a gradient hairline (masked ring) on a pseudo-element, so only opacity animates (compositor-only). */
+.tile::before { content: ''; position: absolute; z-index: 2; inset: 0; box-sizing: border-box; padding: var(--hig-edge-width); border-radius: inherit; background: var(--hig-focus-specular); -webkit-mask: linear-gradient(var(--hig-mask-solid) 0 0) content-box, linear-gradient(var(--hig-mask-solid) 0 0); -webkit-mask-composite: xor; mask: linear-gradient(var(--hig-mask-solid) 0 0) content-box exclude, linear-gradient(var(--hig-mask-solid) 0 0); opacity: 0; pointer-events: none; }
 .tile .art { border-radius: inherit; overflow: hidden; box-shadow: inset 0 0 0 1px var(--hig-separator); }
 .tile .art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--art-overlay), var(--color-transparent) 62%); pointer-events: none; }
 .tile .label { position: absolute; z-index: 1; left: var(--hig-space-2); right: var(--hig-space-2); bottom: calc(var(--hig-space-1) * 1.5); text-align: left; font: var(--hig-font-callout); color: var(--hig-label); letter-spacing: var(--label-tracking); text-transform: var(--label-transform); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: var(--shadow-tile-label); }
@@ -83,7 +83,7 @@ h1 { font: var(--hig-font-title2); font-weight: var(--title-weight); margin: 0; 
 
 /* ---------------------------------------------------------------- neon: angled geometry */
 [data-theme="neon"] .tile .art { border-radius: var(--radius-none); clip-path: var(--neon-cut); box-shadow: none; }
-[data-theme="neon"] .tile::before { z-index: -1; inset: calc(var(--ring-width) * -1); border: 0; border-radius: var(--radius-none); box-shadow: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); clip-path: polygon(0 0, calc(100% - var(--cut) - 2px) 0, 100% calc(var(--cut) + 2px), 100% 100%, calc(var(--cut) + 2px) 100%, 0 calc(100% - var(--cut) - 2px)); }
+[data-theme="neon"] .tile::before { -webkit-mask: none; mask: none; padding: 0; z-index: -1; inset: calc(var(--ring-width) * -1); border: 0; border-radius: var(--radius-none); box-shadow: none; background: linear-gradient(135deg, var(--accent), var(--accent-2)); clip-path: polygon(0 0, calc(100% - var(--cut) - 2px) 0, 100% calc(var(--cut) + 2px), 100% 100%, calc(var(--cut) + 2px) 100%, 0 calc(100% - var(--cut) - 2px)); }
 [data-theme="neon"] .tile.focused::before { filter: none; }
 
 /* ---------------------------------------------------------------- host state, toast */

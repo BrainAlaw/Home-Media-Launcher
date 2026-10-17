@@ -8,9 +8,11 @@
   --ease-spring: var(--hig-ease-spring);
   --motion-spring: var(--hig-dur-slow);
   --motion-glide: var(--hig-dur-base);
-  /* Reserve more than the largest lift shadow plus the focus scale so nothing clips (see --hig-clip-safe). */
+  /* Reserve more than the largest lift shadow plus the focus scale so nothing clips (see --hig-clip-safe).
+   * The gap between a row title and its tiles includes --tile-focus-pad (hig.css) so a focused tile's scale, lift and
+   * glow never touch the title above or the next row below. */
   --track-pad-y: clamp(64px, 9vh, 104px);
-  --track-gap-y: 14px;
+  --track-gap-y: calc(14px + var(--tile-focus-pad));
 }
 
 /* ---------------------------------------------------------------- section headers */
@@ -25,42 +27,105 @@
 .track { padding-block: var(--track-pad-y); margin-block: calc(var(--track-gap-y) - var(--track-pad-y)); }
 .row { position: relative; }
 
-/* ---------------------------------------------------------------- tile motion (transform + opacity only) */
-.tile { transition: transform var(--hig-dur-slow) var(--hig-ease-spring); backface-visibility: hidden; }
-.tile::before { transition: opacity var(--hig-dur-base) var(--hig-ease-standard); }
-.tile.focused { will-change: transform; }
-
-/* Lift: a soft tinted shadow under the tile. It is a single gradient layer (no blur filter, no box-shadow blur)
- * that fades and rises with focus, so the rest state costs nothing. */
-.tile::after { content: ''; position: absolute; z-index: -1; inset: 8% 2% -10%; border-radius: var(--hig-radius-lg); background: radial-gradient(closest-side, color-mix(in srgb, var(--hig-focus-lift) 70%, transparent) 0%, transparent 100%); opacity: 0; transform: translate3d(0, 8%, 0) scale(.94); transition: opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-slow) var(--hig-ease-spring); pointer-events: none; }
-.tile.focused::after { opacity: .85; transform: translate3d(0, 14%, 0) scale(1); }
-
-/* Parallax: the image drifts and zooms inside its frame; a one-shot specular sheen sweeps across on focus. */
-.tile .art > img, .tile .art > .fallback { transition: transform var(--hig-dur-slow) var(--hig-ease-spring); }
-.tile.focused .art > .fallback { transform: translate3d(0, -2%, 0) scale(var(--hig-parallax)); }
-.tile.focused .art > img { transform: translate(-50%, -50%) scale(var(--hig-parallax)); }
-.remote.tile.focused .art > img { transform: scale(var(--hig-parallax)) translate3d(0, -1.5%, 0); }
-.tile .art::before { content: ''; position: absolute; z-index: 1; inset: -20% auto -20% 0; width: 55%; background: linear-gradient(105deg, transparent 0%, var(--hig-focus-sheen) 50%, transparent 100%); opacity: 0; transform: translate3d(-130%, 0, 0) skewX(-12deg); pointer-events: none; }
-.tile.focused .art::before { animation: tile-sheen 900ms var(--hig-ease-out) 90ms 1 both; }
-@keyframes tile-sheen { 0% { opacity: 0; transform: translate3d(-130%, 0, 0) skewX(-12deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate3d(260%, 0, 0) skewX(-12deg); } }
-
-/* Label rises into place on focus. */
-.tile .label { transform: translate3d(0, 6px, 0); opacity: .86; transition: transform var(--hig-dur-slow) var(--hig-ease-spring), opacity var(--hig-dur-base) var(--hig-ease-standard); }
-.tile.focused .label { transform: translate3d(0, -2px, 0); opacity: 1; }
-
-/* Gentle mouse hover; the focused tile keeps its stronger state. */
-@media (hover: hover) {
-  .virtual-track .tile:hover:not(.focused) { transform: translate3d(var(--virtual-x, 0px), var(--virtual-y, 44px), 0) translateZ(0) scale(1.03); }
-  .tile:hover:not(.focused)::before { opacity: .45; }
-  .tile:hover:not(.focused)::after { opacity: .4; transform: translate3d(0, 12%, 0) scale(.98); }
-  .tile:hover:not(.focused) .label { transform: translate3d(0, 0, 0); opacity: 1; }
-  .tile:hover:not(.focused) .art > .fallback { transform: scale(1.03); }
+/* ---------------------------------------------------------------- tile motion (scale / translate / opacity only)
+ * One visual language for keyboard/gamepad focus and mouse hover (hover is the lighter variant).
+ * Every state is a plain CSS transition on a compositor property, so a new target simply retargets the running
+ * transition from its current value: no restart, no jitter during rapid D-pad moves. Springs are only used for
+ * scale/translate (they may overshoot); opacity always eases without overshoot.
+ *
+ *   tile            `scale` + lift via `transform` (grid position lives in the `translate` property, applied before scale)
+ *   ::before        specular gradient edge (masked ring), opacity
+ *   ::after         ambient glow tinted by --tile-accent (pre-rendered radial gradient), opacity
+ *   .art > *        parallax: drifts toward the direction of travel (--fx / --fy set by SpatialGrid)
+ *   .art::before    soft top-left light, opacity
+ *   .label          rises into place, opacity
+ *   neighbours      recede (scale, nudge outwards, dim) to build depth                                          */
+.tile {
+  --tile-accent: hsl(var(--hue, var(--art-hue-fallback)) 72% 54%);
+  scale: 1;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  transition:
+    scale var(--hig-tile-dur-out) var(--hig-ease-spring-soft),
+    transform var(--hig-tile-dur-out) var(--hig-ease-spring-soft),
+    opacity var(--hig-tile-dur-out) var(--hig-ease-standard);
+}
+.tile.focused {
+  scale: var(--hig-focus-scale);
+  transform: translate3d(0, var(--hig-tile-lift), 0);
+  will-change: scale, transform;
+  transition:
+    scale var(--hig-tile-dur-in) var(--hig-ease-spring),
+    transform var(--hig-tile-dur-in) var(--hig-ease-spring),
+    opacity var(--hig-tile-dur-in) var(--hig-ease-standard);
 }
 
+/* Specular edge. */
+.tile::before { transition: opacity var(--hig-tile-dur-out) var(--hig-ease-standard); }
+.tile.focused::before { opacity: 1; transition-duration: var(--hig-dur-base); }
+
+/* Ambient glow: a single pre-rendered radial gradient sitting behind the tile. Only its opacity animates (never a
+ * blur filter or a box-shadow), so the resting state costs nothing and the focused state is one composited layer. */
+.tile::after {
+  content: ''; position: absolute; z-index: -1; inset: -22% -16% -34%; border-radius: var(--hig-radius-xl);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--tile-accent) calc(var(--hig-glow-alpha) * 100%), transparent) 0%, color-mix(in srgb, var(--tile-accent) calc(var(--hig-glow-alpha) * 78%), transparent) 50%, color-mix(in srgb, var(--tile-accent) calc(var(--hig-glow-alpha) * 38%), transparent) 72%, color-mix(in srgb, var(--tile-accent) calc(var(--hig-glow-alpha) * 12%), transparent) 88%, transparent 100%);
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--hig-tile-dur-out) var(--hig-ease-standard);
+}
+.tile.focused::after { opacity: 1; transition-duration: var(--hig-tile-dur-in); }
+
+/* Parallax: the art leans toward the direction of travel while it scales a touch beyond the tile. */
+.tile .art > img, .tile .art > .fallback {
+  scale: 1; translate: 0 0;
+  transition: scale var(--hig-tile-dur-out) var(--hig-ease-spring-soft), translate var(--hig-tile-dur-out) var(--hig-ease-spring-soft);
+}
+.tile.focused .art > img, .tile.focused .art > .fallback {
+  scale: var(--hig-parallax);
+  translate: calc(var(--fx, 0) * var(--hig-parallax-shift-x)) calc(var(--fy, 0) * var(--hig-parallax-shift-y));
+  transition-duration: var(--hig-tile-dur-in); transition-timing-function: var(--hig-ease-spring);
+}
+
+/* Soft top-left light (static gradient, opacity only): a sheen that never sweeps. */
+.tile .art::before {
+  content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(150deg, color-mix(in srgb, var(--text) 13%, transparent) 0%, transparent 46%);
+  transition: opacity var(--hig-tile-dur-out) var(--hig-ease-standard);
+}
+.tile.focused .art::before { opacity: 1; transition-duration: var(--hig-tile-dur-in); }
+
+/* Label rises into place and brightens. */
+.tile .label { translate: 0 7px; opacity: .8; transition: translate var(--hig-tile-dur-out) var(--hig-ease-spring-soft), opacity var(--hig-tile-dur-out) var(--hig-ease-standard); }
+.tile.focused .label { translate: 0 -1px; opacity: 1; transition-duration: var(--hig-tile-dur-in); transition-timing-function: var(--hig-ease-spring), var(--hig-ease-standard); }
+
+/* Depth: the immediate neighbours of the focused tile recede and ease away. Tiles are in column order in the DOM. */
+.tile.focused + .tile, .tile:has(+ .tile.focused) { scale: var(--hig-tile-neighbour-scale); opacity: var(--hig-tile-neighbour-opacity); }
+.tile.focused + .tile { transform: translate3d(var(--hig-tile-neighbour-nudge), 0, 0); }
+.tile:has(+ .tile.focused) { transform: translate3d(calc(var(--hig-tile-neighbour-nudge) * -1), 0, 0); }
+
+/* Press / activate: a quick squeeze before the launch cover takes over. */
+.tile.focused:active, .tile.focused.launching { scale: var(--hig-tile-press-scale); transition-duration: var(--hig-tile-dur-press); transition-timing-function: var(--hig-ease-out); }
+.tile.focused.launching::after { opacity: 1; }
+.tile.launching { animation-delay: var(--hig-dur-fast); }
+
+/* Mouse hover: the same language at roughly 40 percent strength. Focus (when present) keeps the stronger state. */
+@media (hover: hover) {
+  .tile:hover:not(.focused) { scale: var(--hig-tile-hover-scale); transform: translate3d(0, calc(var(--hig-tile-lift) * .4), 0); opacity: 1; transition-duration: var(--hig-dur-base); }
+  .tile:hover:not(.focused)::before { opacity: .5; }
+  .tile:hover:not(.focused)::after { opacity: .45; }
+  .tile:hover:not(.focused) .label { translate: 0 2px; opacity: 1; }
+  .tile:hover:not(.focused) .art > img, .tile:hover:not(.focused) .art > .fallback { scale: calc(1 + (var(--hig-parallax) - 1) * .5); }
+}
+
+/* Lite performance mode: only scale + edge. No glow, parallax, neighbour recession or label travel. */
+body.perf-lite .tile.focused { transform: translate3d(0, 0, 0); will-change: scale; }
+body.perf-lite .tile::after,
+body.perf-lite .tile .art::before { display: none; }
+body.perf-lite .tile .art > img, body.perf-lite .tile .art > .fallback { scale: 1 !important; translate: 0 0 !important; transition: none; }
+body.perf-lite .tile.focused + .tile, body.perf-lite .tile:has(+ .tile.focused) { scale: 1; transform: translate3d(0, 0, 0); opacity: 1; }
+body.perf-lite .tile .label { translate: 0 0; opacity: 1; transition: none; }
+
 @media (prefers-reduced-motion: reduce) {
-  .tile, .tile::before, .tile::after, .tile .art > img, .tile .art > .fallback, .tile .label { transition-duration: var(--motion-instant) !important; transition-timing-function: linear !important; }
-  .tile.focused .art::before { animation: none !important; }
-  .tile.focused .art > img, .tile.focused .art > .fallback, .remote.tile.focused .art > img { transform: none; }
-  .tile.focused .art > img { transform: translate(-50%, -50%); }
-  .remote.tile.focused .art > img { transform: none; }
+  .tile, .tile::before, .tile::after, .tile .art > img, .tile .art > .fallback, .tile .art::before, .tile .label { transition-timing-function: linear !important; }
+  .tile .art > img, .tile .art > .fallback, .tile.focused .art > img, .tile.focused .art > .fallback { scale: 1; translate: 0 0; }
+  .tile .label, .tile.focused .label { translate: 0 0; }
 }

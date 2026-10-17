@@ -33,7 +33,7 @@ The launcher follows Apple's Human Interface Guidelines (tvOS first, with vision
 
 **Motion.** Durations are 200 / 350 / 500 ms. Springs are sampled damped oscillators via `linear()`, with a cubic-bezier fallback. Reduced motion collapses durations to 1 to 160 ms, removes overshoot and parallax, and lowers the focus scale to 1.04.
 
-**Focus (tvOS).** The focused tile scales to 1.08 to 1.1, rises on a tinted lift shadow, shows image parallax and a one-shot specular sheen, and keeps a hairline edge (for WCAG 2.4.7) instead of a hard outline. Only the focused tile carries `will-change`.
+**Focus (tvOS / visionOS).** The focused tile springs to scale 1.06 to 1.08 with a small lift (individual `scale` property plus `transform`; grid position lives in `translate`, which is applied before scale so scale never shifts a tile along its row), shows a tinted ambient glow (pre-rendered radial gradient, opacity only, colour sampled from the icon by `tile-accent.js` with a name-hue fallback), a masked gradient specular edge, art parallax toward the direction of travel, and its immediate neighbours recede (scale .98, dim, nudge outwards). Press squeezes to 95.5 percent of the focus scale. Mouse hover is the same language at about 40 percent. Lite mode keeps scale and edge only. `--tile-focus-pad` reserves the vertical room rows need so a focused tile never touches the title above.
 
 **Alerts, sheets, lists, buttons.** Sheets sit on a scrim with the thick material and spring in. List rows and buttons use fill levels; focus raises the fill, adds the edge and a 2 percent scale. Destructive actions use `--hig-destructive`.
 

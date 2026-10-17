@@ -107,14 +107,34 @@
   --hig-ease-spring: cubic-bezier(.34, 1.36, .5, 1);
   --hig-ease-spring-soft: cubic-bezier(.3, 1.15, .5, 1);
 
-  /* ------------------------------------------------------------------ focus (tvOS)
-   * Lift, scale, parallax and a specular sheen. No hard outline: a hairline edge keeps focus visible against
-   * busy artwork and satisfies WCAG 2.4.7 without looking like a selection box. */
-  --hig-focus-scale: clamp(1.08, var(--focus-scale, 1.08), 1.1);
+  /* ------------------------------------------------------------------ focus (tvOS / visionOS)
+   * Spring lift (scale + tiny rise), a tinted ambient glow, a gradient specular edge, art parallax and a neighbour
+   * recession build depth. No hard outline: the hairline satisfies WCAG 2.4.7 without looking like a selection box.
+   * Everything below is consumed by transform/scale/translate/opacity only. */
+  --hig-focus-scale: clamp(1.06, var(--focus-scale, 1.07), 1.08);
+  --hig-tile-height: calc(var(--tile-width) * 9 / 16);
+  --hig-tile-lift: -2.4%;                                           /* translate percentage of the tile height */
+  --hig-tile-hover-scale: 1.03;
+  --hig-tile-neighbour-scale: .98;
+  --hig-tile-neighbour-opacity: .9;
+  --hig-tile-neighbour-nudge: 2.2%;                                 /* neighbours ease away by this share of their width */
+  --hig-tile-press-scale: calc(var(--hig-focus-scale) * .955);
+  /* Vertical room a focused tile needs above and below its resting box: half of the scale growth plus the lift plus
+   * glow reach. Rows reserve it as padding/gap so scale and lift never clip or collide with the section title. */
+  --tile-focus-pad: calc(var(--hig-tile-height) * ((var(--hig-focus-scale) - 1) / 2 + .024 + .06));
+  --hig-mask-solid: black;
+  --hig-edge-width: max(1.5px, calc(var(--ring-width) * 1.1));
+  --hig-focus-specular: linear-gradient(150deg, color-mix(in srgb, var(--text) 62%, transparent) 0%, color-mix(in srgb, var(--text) 14%, transparent) 38%, color-mix(in srgb, var(--text) 4%, transparent) 62%, color-mix(in srgb, var(--text) 22%, transparent) 100%);
   --hig-focus-edge: 0 0 0 max(1px, calc(var(--ring-width) * .8)) color-mix(in srgb, var(--focus-ring) 70%, transparent);
   --hig-focus-lift: color-mix(in srgb, var(--accent) 38%, #000);
   --hig-focus-sheen: color-mix(in srgb, var(--text) 24%, transparent);
-  --hig-parallax: 1.08;
+  --hig-glow-alpha: .6;                                              /* peak glow opacity: subtle on OLED */
+  --hig-parallax: 1.07;
+  --hig-parallax-shift-x: 5px;
+  --hig-parallax-shift-y: 3px;
+  --hig-tile-dur-in: 460ms;
+  --hig-tile-dur-out: 300ms;
+  --hig-tile-dur-press: 90ms;
 }
 
 @supports (transition-timing-function: linear(0, 1)) {
@@ -136,6 +156,15 @@
     --hig-ease-out: linear;
     --hig-focus-scale: 1.04;
     --hig-parallax: 1;
+    --hig-parallax-shift-x: 0px;
+    --hig-parallax-shift-y: 0px;
+    --hig-tile-neighbour-scale: 1;
+    --hig-tile-neighbour-nudge: 0%;
+    --hig-tile-neighbour-opacity: 1;
+    --hig-tile-lift: 0%;
+    --hig-tile-dur-in: 140ms;
+    --hig-tile-dur-out: 120ms;
+    --hig-tile-dur-press: 1ms;
   }
 }
 
