@@ -58,6 +58,11 @@
     return event.target instanceof Element && event.target.matches(EDITABLE);
   }
 
+  /** Native dialogs (Settings, pairing) handle Enter/Escape themselves; replaying synthetic keys there would do nothing. */
+  function ownsKeyboard(event) {
+    return event.target instanceof Element && event.target.closest('dialog[open]') !== null;
+  }
+
   document.addEventListener('keydown', (event) => {
     if (!event.isTrusted) return;
     const resolved = resolveKey(event);
@@ -67,7 +72,7 @@
     } else if (!resolved) {
       setDevice('keyboard');
     }
-    if (isEditableTarget(event)) return;
+    if (isEditableTarget(event) || ownsKeyboard(event)) return;
     if (tracker.keyDown(event)) {
       event.preventDefault();
       event.stopImmediatePropagation();

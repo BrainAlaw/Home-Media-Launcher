@@ -92,7 +92,7 @@ test('select: tap emits select on release, hold emits context once', () => {
   assert.deepEqual(h.out, ['context:long']);
 });
 
-test('home: tap and hold; Super chords are not Home', () => {
+test('home: android keycode taps and holds; plain Home/Super keys are not remote Home', () => {
   let h = harness();
   const home = { key: 'Unidentified', code: '', keyCode: 3 };
   assert.equal(h.tracker.keyDown(home), true);
@@ -101,16 +101,11 @@ test('home: tap and hold; Super chords are not Home', () => {
   assert.deepEqual(h.out, ['home:long']);
 
   h = harness();
-  const meta = { key: 'Meta', code: 'MetaLeft' };
-  assert.equal(h.tracker.keyDown(meta), false);
-  h.tracker.keyDown({ key: 'd', code: 'KeyD', metaKey: true });
-  h.tracker.keyUp(meta);
+  for (const key of ['Meta', 'Home']) {
+    assert.equal(h.tracker.keyDown({ key, code: key }), false);
+    h.tracker.keyUp({ key, code: key });
+  }
   assert.deepEqual(h.out, []);
-
-  h = harness();
-  h.tracker.keyDown(meta);
-  h.tracker.keyUp(meta);
-  assert.deepEqual(h.out, ['home']);
 });
 
 test('once keys ignore OS auto-repeat; releaseAll cancels timers', () => {

@@ -40,7 +40,7 @@
     Enter: def('select', 'long'), NumpadEnter: def('select', 'long'), Select: def('select', 'long', true),
     Escape: def('back', 'once'), Backspace: def('back', 'once'),
     BrowserBack: def('back', 'once', true), GoBack: def('back', 'once', true), Exit: def('back', 'once', true),
-    BrowserHome: def('home', 'long', true), Home: def('home', 'long'), Meta: def('home', 'long'),
+    BrowserHome: def('home', 'long', true),
     ContextMenu: def('menu', 'once'), Menu: def('menu', 'once', true), F1: def('menu', 'once'), Info: def('menu', 'once', true),
     MediaPlayPause: def('playpause', 'once', true), MediaPlay: def('playpause', 'once', true), MediaPause: def('playpause', 'once', true),
     MediaStop: def('stop', 'once', true),
