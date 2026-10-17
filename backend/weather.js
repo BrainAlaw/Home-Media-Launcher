@@ -57,9 +57,6 @@ function buildSnapshot(place, current, forecast, now = Date.now()) {
 
 const cacheKey = (location) => String(location).trim().replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ').toLowerCase();
 
-/** Location used when settings.header.weatherLocation is empty (OpenWeatherMap "name,country" query form). */
-const DEFAULT_LOCATION = 'High Wycombe,GB';
-
 /**
  * Splits "High Wycombe,GB" / "Paris, FR" / "London" into a place name and an optional ISO 3166 country code.
  * A trailing two-letter segment is treated as the country; anything else stays part of the name.
@@ -134,7 +131,8 @@ class WeatherService {
   /** Fresh cache hit, else live fetch, else stale cache. Rejects only when nothing is available at all. */
   async get(location) {
     if (!this.available) throw new Error('Weather API key is not configured');
-    const text = (typeof location === 'string' && location.trim()) || DEFAULT_LOCATION;
+    const text = (typeof location === 'string' && location.trim()) || '';
+    if (!text) throw new Error('Weather location is not set');
     if (text.length > 80) throw new Error('Invalid weather location');
     const key = cacheKey(text);
     const cached = (await this.readCache().catch(() => ({})))[key];
@@ -162,4 +160,4 @@ class WeatherService {
   }
 }
 
-module.exports = { WeatherService, DEFAULT_LOCATION, parseLocationQuery, pickPlace, buildSnapshot, summariseForecast, sanitizeIcon, titleCase };
+module.exports = { WeatherService, parseLocationQuery, pickPlace, buildSnapshot, summariseForecast, sanitizeIcon, titleCase };

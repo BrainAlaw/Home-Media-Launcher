@@ -28,6 +28,7 @@ window.IconPopup = (function () {
   let session = null;
   /** True while the exit animation runs: Back / Escape presses in that window must not fall through to Settings. */
   let closing = false;
+  const pendingClose = Model.createPendingClose();
 
   function el(tag, props = {}) {
     const node = document.createElement(tag);
@@ -255,6 +256,8 @@ window.IconPopup = (function () {
   /** @param {{ value?: string, kind: 'app' | 'website' | 'game', describe: () => { name: string, url?: string }, fallback?: string, opener?: HTMLElement, onSave: (value: string) => void }} options */
   function open(options) {
     const { dialog, parts } = build();
+    // A reopen during the exit animation completes the pending close first (dialog.close + focus return), then opens afresh.
+    pendingClose.flush();
     if (dialog.open) return;
     dialog.classList.remove('closing');
     session = { kind: options.kind, describe: options.describe, fallback: options.fallback || '', opener: options.opener || null, onSave: options.onSave, draft: '' };
@@ -276,20 +279,18 @@ window.IconPopup = (function () {
     const { opener } = session;
     session = null;
     closing = true;
-    const finish = () => {
+    const run = pendingClose.arm(() => {
       // Chrome may deliver the same Escape to the dialog underneath right after this one closes; keep swallowing Back briefly.
       setTimeout(() => { closing = false; }, SWALLOW_MS);
       if (dialog.open) dialog.close();
       dialog.classList.remove('closing');
       if (opener?.isConnected) opener.focus();
-    };
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { finish(); return true; }
+    });
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { run(); return true; }
     // The CSS exit animation (transform and opacity) ends the close; the timer only covers a missing animationend.
-    let done = false;
-    const once = () => { if (done) return; done = true; finish(); };
-    dialog.addEventListener('animationend', (event) => { if (event.target === dialog) once(); }, { once: true });
+    dialog.addEventListener('animationend', (event) => { if (event.target === dialog) run(); }, { once: true });
     dialog.classList.add('closing');
-    setTimeout(once, CLOSE_FALLBACK_MS);
+    setTimeout(run, CLOSE_FALLBACK_MS);
     return true;
   }
 

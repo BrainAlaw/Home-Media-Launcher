@@ -2254,13 +2254,6 @@
 }
 /* ==== GENERATED THEMES END ==== */
 
-/* Theme picker: many presets, so the grid reflows and scrolls instead of growing the dialog. */
-.preset-grid#preset-picker { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); max-height: 52vh; overflow-y: auto; padding: 4px; scroll-padding: 8px; overscroll-behavior: contain; }
-.preset-grid#preset-picker .preset-card { min-height: 104px; }
-.preset-grid#preset-picker .preset-card .preset-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.preset-card .preset-chips i { width: 28px; height: 10px; }
-.preset-card .preset-chips::before { content: ''; width: 28px; height: 10px; border-radius: var(--radius-chip); background: var(--surface-hover); border: 1px solid var(--border); }
-
 /* Accessibility: honour the OS reduced-motion preference in every preset. Must stay last. */
 @media (prefers-reduced-motion: reduce) {
   :root, [data-theme] {

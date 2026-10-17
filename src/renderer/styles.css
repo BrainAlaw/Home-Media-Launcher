@@ -257,19 +257,10 @@ dialog button.primary { background: var(--accent); color: var(--accent-contrast)
 .icon-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 
 /* Appearance: preset cards preview themselves by carrying their own data-theme token set. */
-.preset-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
-.preset-card { position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 132px; padding: 14px !important; border: 2px solid var(--border) !important; background: linear-gradient(145deg, var(--bg), var(--surface)) !important; color: var(--text) !important; font-family: var(--font-ui); overflow: hidden; }
-.preset-card .preset-name { font-weight: 700; letter-spacing: var(--label-tracking); text-transform: var(--label-transform); }
-.preset-card .preset-desc { font: var(--hig-font-caption2); color: var(--hig-label-secondary); }
-.preset-card .preset-chips { display: flex; gap: 6px; margin-top: auto; }
-.preset-card .preset-chips i { width: 22px; height: 8px; border-radius: var(--radius-chip); background: var(--accent); }
-.preset-card .preset-chips i + i { background: var(--accent-2); }
-.preset-card[aria-pressed="true"] { border-color: var(--accent) !important; box-shadow: 0 0 0 2px var(--accent); }
-.preset-card[aria-pressed="true"] .preset-name::after { content: ' ✓'; color: var(--accent); }
 .swatch-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 18px; }
 .swatch { width: 44px; height: 44px; padding: 0 !important; border-radius: var(--radius-circle) !important; border: 3px solid var(--color-transparent) !important; background: var(--swatch) !important; }
 .swatch[aria-pressed="true"] { border-color: var(--focus-ring) !important; }
-dialog button[aria-pressed="true"]:not(.preset-card):not(.swatch) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 24%, var(--color-transparent)); }
+dialog button[aria-pressed="true"]:not(.swatch) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 24%, var(--color-transparent)); }
 
 /* Wallpaper picker */
 .segmented { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -306,7 +297,6 @@ label > .field-with-button { display: grid; }
 .application-card > input { min-width: 0; }
 .icon-row { grid-template-columns: 72px minmax(80px, 1fr) minmax(120px, 2fr) auto auto; }
 .icon-row > * { min-width: 0; }
-.preset-grid#preset-picker { max-height: none; overflow: visible; padding: 4px; }
 .application-catalog { max-height: 260px; }
 .catalog-settings { margin-bottom: 26px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border); }
 .settings-page .segmented button { flex: none; }
@@ -321,8 +311,6 @@ label > .field-with-button { display: grid; }
 #online-status { flex: 1 1 200px; }
 
 /* Font picker */
-.font-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
-.font-list .font-category { grid-column: 1 / -1; margin: 12px 0 0; }
 dialog .font-card { display: grid; gap: 6px; min-width: 0; padding: 14px 16px; }
 .font-card .font-name { font-family: var(--card-font, var(--font-ui)); font-size: 20px; font-weight: 600; }
 .font-card .font-sample { overflow: hidden; color: var(--hig-label-secondary); font-family: var(--card-font, var(--font-ui)); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
@@ -334,5 +322,4 @@ dialog .font-card[aria-pressed="true"] { border-color: var(--accent); background
 }
 
 dialog#settings-dialog { height: min(820px, 92vh); }
-.font-list { margin-top: 14px; }
 .font-card[data-font="theme"] { grid-column: 1 / -1; }

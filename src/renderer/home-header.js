@@ -9,8 +9,6 @@
   'use strict';
 
   const LAYOUTS = Object.freeze(['split', 'centred']);
-  /** Location used when settings.header.weatherLocation is empty (OpenWeatherMap "name,country" form). */
-  const DEFAULT_WEATHER_LOCATION = 'High Wycombe,GB';
   const SHIFT_AMPLITUDE_PX = 4;
   const SHIFT_STEP_MS = 30 * 1000;
   const DIM_AFTER_MS = 2 * 60 * 1000;
@@ -31,10 +29,10 @@
     };
   }
 
-  /** Header settings with the weather location defaulted for the UK user. */
+  /** Header settings with a trimmed weather location; an empty one stays empty (the header then shows a hint). */
   function headerWithDefaults(header) {
     const value = header && typeof header === 'object' ? header : {};
-    return { ...value, weatherLocation: (typeof value.weatherLocation === 'string' && value.weatherLocation.trim()) || DEFAULT_WEATHER_LOCATION };
+    return { ...value, weatherLocation: typeof value.weatherLocation === 'string' ? value.weatherLocation.trim() : '' };
   }
 
   const pad = (number) => String(number).padStart(2, '0');
@@ -170,7 +168,7 @@
   }
 
   return {
-    LAYOUTS, DEFAULT_WEATHER_LOCATION, SHIFT_AMPLITUDE_PX, DIM_AFTER_MS,
+    LAYOUTS, SHIFT_AMPLITUDE_PX, DIM_AFTER_MS,
     normaliseHeaderSettings, headerWithDefaults, formatClock, formatDateParts, pixelShift, msUntilTick, create
   };
 });
