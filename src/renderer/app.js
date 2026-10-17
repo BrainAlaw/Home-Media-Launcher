@@ -43,6 +43,9 @@ const gridElement = document.querySelector('#grid-content');
 const backdropLayers = [...document.querySelectorAll('.backdrop-layer')];
 const videoBackground = document.querySelector('#background-video');
 const toast = document.querySelector('#toast');
+const creditOverlay = window.WallpaperCredit.createOverlay({ root: document.querySelector('#wallpaper-credit-overlay') });
+/** Credit shown with a bundled gallery wallpaper (author, licence and source from wallpapers-data.js). */
+const bundledCredit = (entry) => window.WallpaperCredit.fromBundled(entry);
 const systemPanel = document.querySelector('#system-panel');
 const systemButton = document.querySelector('#system-button');
 const settingsDialog = document.querySelector('#settings-dialog');
@@ -206,7 +209,7 @@ async function buildPlaylist(resolved, token) {
 
 /** Resolves one slide to a loadable source. Remote slides are decoded first so broken files resolve to null (skipped). */
 function loadSlide(item) {
-  if (item.kind === 'bundled') return Promise.resolve({ source: gallery.urlFor(item.entry, document.baseURI), type: 'image' });
+  if (item.kind === 'bundled') return Promise.resolve({ source: gallery.urlFor(item.entry, document.baseURI), type: 'image', credit: bundledCredit(item.entry) });
   let pending = state.slideCache.get(item.index);
   if (!pending) {
     const request = state.slideRequest;
@@ -218,7 +221,7 @@ function loadSlide(item) {
         probe.src = slide.url;
         await probe.decode();
       }
-      return { source: slide.url, type: slide.kind };
+      return { source: slide.url, type: slide.kind, credit: slide.credit || null };
     }).catch(() => null);
     state.slideCache.set(item.index, pending);
     if (state.slideCache.size > 4) state.slideCache.delete(state.slideCache.keys().next().value);
@@ -242,7 +245,7 @@ async function showSlide(index, token) {
   }
   if (token !== slideToken) return;
   const fallback = gallery.entries[0];
-  state.currentSlide = fallback ? { source: gallery.urlFor(fallback, document.baseURI), type: 'image' } : null;
+  state.currentSlide = fallback ? { source: gallery.urlFor(fallback, document.baseURI), type: 'image', credit: bundledCredit(fallback) } : null;
   refreshBackdrop();
 }
 
@@ -258,7 +261,7 @@ function globalBackground() {
   const { mode, id } = state.wallpaper;
   if (mode === 'slideshow' && state.currentSlide) return state.currentSlide;
   const entry = mode === 'bundled' ? gallery.get(id) : null;
-  if (entry) return { source: gallery.urlFor(entry, document.baseURI), type: 'image' };
+  if (entry) return { source: gallery.urlFor(entry, document.baseURI), type: 'image', credit: bundledCredit(entry) };
   return mode === 'slideshow' ? null : state.model?.settings.background;
 }
 
@@ -299,11 +302,11 @@ function pickBackdrop(tile) {
   if (tile?.background) candidates.push({ source: tile.background, art: false });
   // Only game cover art (remote tiles) makes a good blurred backdrop; app logos fall through to the wallpaper.
   if (dynamicArt && (tile?.provider === 'remote' || tile?.remote) && isLoadableImage(tile?.icon)) candidates.push({ source: tile.icon, art: true });
-  if (global?.source) candidates.push({ source: global.source, type: global.type, art: false });
+  if (global?.source) candidates.push({ source: global.source, type: global.type, art: false, credit: global.credit || null });
   for (const candidate of candidates) {
     const type = candidate.type || videoType(candidate.source);
     if (type === 'video' && !liveVideo) continue;
-    return { type, source: candidate.source, art: candidate.art };
+    return { type, source: candidate.source, art: candidate.art, credit: candidate.credit || null };
   }
   return null;
 }
@@ -322,6 +325,7 @@ async function showBackdrop(choice) {
   if (!choice) {
     backdropLayers.forEach((layer) => layer.classList.remove('on'));
     hideVideo();
+    creditOverlay.show(null);
     return;
   }
   if (choice.type === 'video') {
@@ -332,6 +336,7 @@ async function showBackdrop(choice) {
     }
     videoBackground.style.opacity = '1';
     videoBackground.play().catch(() => showToast('Unable to play the video background'));
+    creditOverlay.show(choice.credit);
     return;
   }
   const url = assetUrl(choice.source);
@@ -346,6 +351,7 @@ async function showBackdrop(choice) {
   next.classList.add('on');
   backdropLayers[activeLayer].classList.remove('on');
   activeLayer = 1 - activeLayer;
+  creditOverlay.show(choice.credit);
 }
 
 /** Debounced so rapid D-pad scrubbing does not decode a new backdrop on every step. */
@@ -454,6 +460,7 @@ function render(model) {
   applyTheme(model.settings?.theme);
   cacheTheme(model.settings?.theme);
   cacheFont(state.fontId);
+  creditOverlay.setEnabled(model.settings?.wallpaperCredit !== false);
   applyWallpaper(model.settings?.wallpaper, model.settings?.background);
   updateHostState(model.remoteStatus, model.settings?.remote);
   updateHeader();

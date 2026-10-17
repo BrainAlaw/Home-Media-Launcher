@@ -13,12 +13,14 @@
   <link rel="stylesheet" href="home.css">
   <link rel="stylesheet" href="status.css">
   <link rel="stylesheet" href="launch-transition.css">
+  <link rel="stylesheet" href="appearance.css">
 </head>
 <body>
   <div id="backdrop" aria-hidden="true"><div class="backdrop-layer"></div><div class="backdrop-layer"></div></div>
   <video id="background-video" aria-hidden="true" muted loop playsinline></video>
   <div class="shade" aria-hidden="true"></div>
   <div id="fx" aria-hidden="true"></div>
+  <div id="wallpaper-credit-overlay" class="wallpaper-credit" aria-hidden="true"></div>
   <main>
     <header>
       <div id="header-content">
@@ -86,14 +88,12 @@
       <div class="settings-layout">
         <nav class="settings-nav" aria-label="Settings sections">
           <button type="button" data-page="general" class="active">General</button>
-          <button type="button" data-page="themes">Themes</button>
-          <button type="button" data-page="fonts">Fonts</button>
+          <button type="button" data-page="appearance">Appearance</button>
           <button type="button" data-page="wallpapers">Wallpapers</button>
           <button type="button" data-page="applications">Applications</button>
           <button type="button" data-page="remote">Remote host</button>
           <button type="button" data-page="websites">Websites</button>
           <button type="button" data-page="controllers">Controllers</button>
-          <button type="button" data-page="icons">Icons</button>
         </nav>
         <div class="settings-pages">
         <section class="settings-page active" data-page="general">
@@ -105,18 +105,22 @@
           <label class="toggle-row"><span>Weather</span><input id="show-weather" type="checkbox"></label>
           <label>Weather location<input id="weather-location" type="text" maxlength="80" placeholder="London"></label>
         </section>
-        <section class="settings-page" data-page="themes">
+        <section class="settings-page" data-page="appearance">
+          <div id="appearance-preview" class="appearance-preview" aria-hidden="true">
+            <div class="ap-bar"><b class="ap-title">Home</b><span class="ap-chip on">Games</span><span class="ap-chip">Apps</span><span class="ap-chip">Web</span></div>
+            <div class="ap-tiles"><i></i><i class="focus"></i><i></i><i></i></div>
+            <div class="ap-caption"><strong>The quick brown fox jumps over the lazy dog</strong><small>Live preview of your theme, accent colour and font</small></div>
+          </div>
           <h3>Theme</h3>
           <div id="preset-picker" class="preset-grid" role="group" aria-label="Theme preset"></div>
           <h3>Accent colour</h3>
           <div id="accent-picker" class="swatch-row" role="group" aria-label="Accent colour"></div>
-          <label class="toggle-row"><span>Dynamic art backdrop (follows the focused item)</span><input id="dynamic-art" type="checkbox"></label>
-          <label class="toggle-row"><span>Live video backgrounds</span><input id="live-video" type="checkbox"></label>
-        </section>
-        <section class="settings-page" data-page="fonts">
           <h3>Font</h3>
           <p class="section-description">Match the theme or pick one font for the whole launcher. Fonts are bundled; nothing is downloaded.</p>
           <div id="font-picker" class="font-list" role="group" aria-label="Interface font"></div>
+          <h3>Backdrop</h3>
+          <label class="toggle-row"><span>Dynamic art backdrop (follows the focused item)</span><input id="dynamic-art" type="checkbox"></label>
+          <label class="toggle-row"><span>Live video backgrounds</span><input id="live-video" type="checkbox"></label>
         </section>
         <section class="settings-page" data-page="wallpapers">
           <h3>Wallpaper</h3>
@@ -140,12 +144,18 @@
             <label class="toggle-row"><span>Shuffle</span><input id="wallpaper-shuffle" type="checkbox"></label>
           </div>
           <p id="wallpaper-credit" class="section-description"></p>
-          <h3>My wallpaper folders</h3>
-          <div class="applications-header"><p class="section-description">Images and videos in these folders can feed the slideshow. Sub-folders two levels deep are included.</p><button id="add-wallpaper-folder" type="button">+ Add folder</button></div>
-          <div id="wallpaper-folders" class="folder-list"></div>
-          <h3>Online wallpapers</h3>
-          <label class="toggle-row"><span>Stream wallpapers from the internet</span><input id="online-wallpapers" type="checkbox"></label>
-          <p id="online-note" class="section-description">Off by default. Only image files are downloaded and cached on this device; nothing about you is sent or tracked. When offline, the launcher quietly uses the bundled wallpapers.</p>
+          <label class="toggle-row"><span>Show a credit (title, author, licence) when the wallpaper changes</span><input id="wallpaper-credit-toggle" type="checkbox"></label>
+          <h3>Wallpaper sources</h3>
+          <p class="section-description">Everything the slideshow can draw from. Switch a source off to skip it without losing it. Folders include sub-folders two levels deep.</p>
+          <div id="wallpaper-sources" class="source-list" role="group" aria-label="Wallpaper sources"></div>
+          <div class="applications-header">
+            <div class="button-group"><button id="add-wallpaper-folder" type="button">+ Add folder</button></div>
+            <div id="known-providers" class="button-group" role="group" aria-label="Known online providers"></div>
+          </div>
+          <label>Online catalogue address
+            <span class="field-with-button"><input id="online-source-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://example.com/wallpapers.json"><button id="add-online-source" type="button">Add</button></span>
+          </label>
+          <p id="online-note" class="section-description">Online sources are opt-in. A catalogue is a small JSON list of https image addresses with optional title, author and licence. Only image files are downloaded and cached on this device; nothing about you is sent or tracked, and when offline the launcher quietly uses the bundled wallpapers. Changes to online sources apply when you save.</p>
           <div class="applications-header"><span id="online-status" class="section-description"></span><button id="clear-online-wallpapers" type="button">Clear downloaded cache</button></div>
         </section>
         <section class="settings-page" data-page="applications">
@@ -159,7 +169,7 @@
               <div id="local-application-catalog" class="application-catalog"></div>
             </div>
           </div>
-          <div class="applications-header"><h3>Custom applications and shortcuts</h3><div class="button-group"><button id="add-local" type="button">+ Local</button><button id="add-command" type="button">+ Command</button><button id="add-moonlight" type="button">+ Moonlight</button></div></div>
+          <div class="applications-header"><div><h3>Custom applications and shortcuts</h3><p class="section-description">Every item has its own icon: leave it empty for automatic artwork, or pick one. Icons replace every other icon source.</p></div><div class="button-group"><button id="add-local" type="button">+ Local</button><button id="add-command" type="button">+ Command</button><button id="add-moonlight" type="button">+ Moonlight</button></div></div>
           <div id="application-editor"></div>
           <label class="toggle-row"><span>Discover installed applications automatically</span><input id="scan-desktop" type="checkbox"></label>
         </section>
@@ -193,10 +203,6 @@
           </div>
           <p id="controller-hint" class="section-description"></p>
         </section>
-        <section class="settings-page" data-page="icons">
-          <div class="applications-header"><div><h3>Icons</h3><p class="section-description">Give any shortcut, game or web app a custom image. An override replaces every other icon source.</p></div></div>
-          <div id="icon-editor"></div>
-        </section>
         </div>
       </div>
       <footer><button type="button" id="settings-cancel">Cancel</button><button type="submit" class="primary">Save</button></footer>
@@ -207,6 +213,8 @@
   <script src="theme.js"></script>
   <script src="wallpapers-data.js"></script>
   <script src="wallpapers.js"></script>
+  <script src="wallpaper-sources.js"></script>
+  <script src="wallpaper-credit.js"></script>
   <script src="spatial-nav.js"></script>
   <script src="spatial-grid.js"></script>
   <script src="tile-model.js"></script>

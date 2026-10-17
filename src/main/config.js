@@ -6,6 +6,7 @@ const { atomicWrite, serialize } = require('../../backend/storage');
 const { launchSpec } = require('../../backend/launch-spec');
 const { validateMenu } = require('../../backend/menu-config');
 const { isSafeProfileName } = require('../../backend/vpn');
+const WallpaperSources = require('../renderer/wallpaper-sources');
 
 const DEFAULT_CONFIG = Object.freeze({
   settings: {
@@ -48,12 +49,33 @@ function validateWallpaper(wallpaper) {
   }
 }
 
+/** settings.wallpaperSources: folders by absolute path, online sources by built-in provider or https catalogue URL. */
+function validateWallpaperSources(sources) {
+  if (sources === undefined) return;
+  if (!Array.isArray(sources) || sources.length > WallpaperSources.MAX_SOURCES) throw new Error(`wallpaperSources must be an array of at most ${WallpaperSources.MAX_SOURCES} sources`);
+  sources.forEach((source, index) => {
+    const location = `wallpaperSources[${index}]`;
+    if (!source || typeof source !== 'object' || Array.isArray(source)) throw new Error(`${location} must be an object`);
+    if (typeof source.id !== 'string' || !/^[a-z0-9][a-z0-9:_.-]{0,63}$/i.test(source.id)) throw new Error(`${location}.id is invalid`);
+    if (source.label !== undefined && (typeof source.label !== 'string' || source.label.length > 80)) throw new Error(`${location}.label must be a string of at most 80 characters`);
+    if (typeof source.enabled !== 'boolean') throw new Error(`${location}.enabled must be boolean`);
+    if (source.kind === 'folder') {
+      if (typeof source.location !== 'string' || !path.isAbsolute(source.location) || /[\x00-\x1f]/.test(source.location) || source.location.length > 4096) throw new Error(`${location}.location must be an absolute path`);
+    } else if (source.kind === 'online') {
+      const parsed = WallpaperSources.parseOnlineLocation(source.location);
+      if (!parsed.ok) throw new Error(`${location}.location: ${parsed.error}`);
+    } else throw new Error(`${location}.kind must be "folder" or "online"`);
+  });
+}
+
 function validateConfig(config) {
   if (!config || typeof config !== 'object') throw new Error('Configuration root must be an object');
   if (config.menu !== undefined) validateMenu(config.menu);
   if (config.settings !== undefined && (!config.settings || typeof config.settings !== 'object' || Array.isArray(config.settings))) throw new Error('settings must be an object');
   if (config.settings?.selectedAppIds !== undefined && (!Array.isArray(config.settings.selectedAppIds) || config.settings.selectedAppIds.some((id) => typeof id !== 'string'))) throw new Error('selectedAppIds must be an array of strings');
   validateWallpaper(config.settings?.wallpaper);
+  validateWallpaperSources(config.settings?.wallpaperSources);
+  if (config.settings?.wallpaperCredit !== undefined && typeof config.settings.wallpaperCredit !== 'boolean') throw new Error('wallpaperCredit must be boolean');
   if (config.settings?.fontId !== undefined && (typeof config.settings.fontId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(config.settings.fontId))) throw new Error('fontId must be a font identifier');
   const vpnProfile = config.settings?.vpn?.surfsharkWireguardProfile;
   if (config.settings?.vpn !== undefined && (!config.settings.vpn || typeof config.settings.vpn !== 'object' || Array.isArray(config.settings.vpn))) throw new Error('vpn must be an object');
@@ -110,4 +132,4 @@ async function saveConfig(configPath, config) {
   return config;
 }
 
-module.exports = { DEFAULT_CONFIG, loadConfig, saveConfig, validateConfig, validateWallpaper };
+module.exports = { DEFAULT_CONFIG, loadConfig, saveConfig, validateConfig, validateWallpaper, validateWallpaperSources };

@@ -191,10 +191,25 @@ export interface WallpaperLauncherAPI {
   inspectWallpaperFolder(folder: string): Promise<WallpaperFolderInfo>;
   getWallpaperCount(request: WallpaperRequest): Promise<{ count: number }>;
   /** Registers exactly one slide; null when the file vanished or could not be fetched. */
-  getWallpaperSlide(request: WallpaperRequest, index: number): Promise<{ url: string; kind: 'image' | 'video'; name: string } | null>;
+  getWallpaperSlide(request: WallpaperRequest, index: number): Promise<{ url: string; kind: 'image' | 'video'; name: string; credit: WallpaperCredit | null } | null>;
   getOnlineWallpaperStatus(): Promise<{ available: boolean; count: number }>;
   clearOnlineWallpapers(): Promise<boolean>;
+  /** Wallpaper source editor (iteration 4, agent D). */
+  wallpaperSources(action: 'inspect', payload: { sources: WallpaperSource[] }): Promise<WallpaperSourcesReport>;
+  wallpaperSources(action: 'probe', payload: { location: string }): Promise<WallpaperSourceProbe>;
+  wallpaperSources(action: 'clearCache'): Promise<{ removed: number }>;
 }
+/** Attribution for the wallpaper on screen. Empty strings mean "unknown" and are skipped by the overlay. */
+export interface WallpaperCredit { title: string; author: string; license: string; source: string; location: string; origin: 'bundled' | 'online' | 'local' }
+/**
+ * An entry of settings.wallpaperSources. Folder: `location` is an absolute path. Online: `location` is a known provider
+ * (`builtin:wikimedia-commons`) or an https URL of a JSON catalogue (`[{ title, url, thumbUrl?, author?, license?, source?, location? }]`
+ * or `{ name?, wallpapers: [...] }`; at most 1 MB / 500 items; only https image URLs on public hosts are fetched, 12 MB per image).
+ */
+export interface WallpaperSource { id: string; label: string; kind: 'folder' | 'online'; location: string; enabled: boolean }
+export interface WallpaperSourceInfo { id: string; kind: 'folder' | 'online'; count: number; available: boolean; cacheBytes: number; error: string; host?: string; images?: number; videos?: number }
+export interface WallpaperSourcesReport { sources: WallpaperSourceInfo[]; cacheBytes: number; onlineAvailable: boolean }
+export interface WallpaperSourceProbe { ok: boolean; error: string; count: number; name: string; location: string }
 
 /* ------------------------------------------------------------------ Iteration 4 extension contracts
  * Reached through `window.launcher.ext.invoke(namespace, method, ...args)` / `.on(namespace, event, cb)`.
@@ -273,8 +288,10 @@ export type RemoteAction = 'up' | 'down' | 'left' | 'right' | 'select' | 'back' 
 
 /** Config additions (Settings.* in config.json), owned as noted. */
 export interface Iteration4Settings {
-  /** agent D */
-  wallpaperSources?: Array<{ id: string; label: string; kind: 'folder' | 'online'; location: string; enabled: boolean }>;
+  /** agent D. When absent it is migrated from settings.wallpaper.folders / .online; on save the legacy fields are kept in sync. */
+  wallpaperSources?: WallpaperSource[];
+  /** agent D. Show the Google-TV-style credit when the wallpaper changes (default true). */
+  wallpaperCredit?: boolean;
   /** agent B */
   vpn?: { surfsharkWireguardProfile?: string };
 }

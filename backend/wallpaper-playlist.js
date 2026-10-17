@@ -67,6 +67,9 @@ class WallpaperPlaylist {
     this.now = now;
     /** @type {Set<string>} */
     this.allowed = new Set();
+    /** Folders switched off in settings.wallpaperSources: never part of a playlist even if a request names them. */
+    /** @type {Set<string>} */
+    this.disabled = new Set();
     /** @type {Map<string, { at: number, files: { path: string, kind: 'image' | 'video' }[] }>} */
     this.scans = new Map();
   }
@@ -77,6 +80,17 @@ class WallpaperPlaylist {
   allow(folders) {
     this.allowed = new Set((folders || []).filter(isAbsolutePath).map((folder) => path.resolve(folder)));
     for (const key of this.scans.keys()) if (!this.allowed.has(key)) this.scans.delete(key);
+  }
+
+  /**
+   * Applies settings.wallpaperSources: every folder source may be inspected, only enabled ones are played.
+   * @param {unknown} sources
+   * @param {string[]} [extraFolders] legacy settings.wallpaper.folders, kept allowed for older configurations
+   */
+  configureSources(sources, extraFolders = []) {
+    const folderSources = (Array.isArray(sources) ? sources : []).filter((source) => source && source.kind === 'folder' && isAbsolutePath(source.location));
+    this.allow([...extraFolders, ...folderSources.map((source) => source.location)]);
+    this.disabled = new Set(folderSources.filter((source) => source.enabled === false).map((source) => path.resolve(source.location)));
   }
 
   /** Adds a folder just chosen through the native dialog, before the configuration is saved. */
@@ -126,9 +140,11 @@ class WallpaperPlaylist {
   async items({ folders, online }) {
     const list = [];
     for (const folder of this.validateFolders(folders)) {
+      if (this.disabled.has(folder)) continue;
       for (const file of await this.files(folder)) list.push({ type: 'file', path: file.path, kind: file.kind });
     }
     if (online === true && this.online) {
+      await this.online.ready?.();
       for (const entry of this.online.catalog()) list.push({ type: 'online', id: entry.id });
     }
     return list;
@@ -144,7 +160,7 @@ class WallpaperPlaylist {
    * so the renderer can skip it.
    * @param {{ folders?: unknown, online?: unknown }} request
    * @param {unknown} index
-   * @returns {Promise<{ url: string, kind: 'image' | 'video', name: string } | null>}
+   * @returns {Promise<{ url: string, kind: 'image' | 'video', name: string, credit: object | null } | null>}
    */
   async slide(request, index) {
     if (!Number.isInteger(index) || index < 0) throw new Error('Invalid wallpaper index');
@@ -152,13 +168,13 @@ class WallpaperPlaylist {
     if (!item) return null;
     try {
       if (item.type === 'file') {
-        return { url: await this.mediaAssets.register(item.path, item.kind), kind: item.kind, name: path.basename(item.path) };
+        return { url: await this.mediaAssets.register(item.path, item.kind), kind: item.kind, name: path.basename(item.path), credit: null };
       }
       const cached = await Promise.race([
         this.online.ensureCached(item.id),
         new Promise((_resolve, reject) => setTimeout(() => reject(new Error('timeout')), ONLINE_TIMEOUT_MS).unref())
       ]);
-      return { url: await this.mediaAssets.register(cached, 'image'), kind: 'image', name: item.id };
+      return { url: await this.mediaAssets.register(cached, 'image'), kind: 'image', name: item.id, credit: this.online.credit?.(item.id) ?? null };
     } catch {
       return null;
     }

@@ -23,6 +23,7 @@ const { NavigationHints } = require('../../backend/navigation-hints');
 const { resolveMenu } = require('../../backend/menu-config');
 const { ControllerPairing } = require('./controller-pairing');
 const { WallpaperPlaylist } = require('../../backend/wallpaper-playlist');
+const { WallpaperSourceService } = require('../../backend/wallpaper-source-service');
 const { loadEnv, readSecrets } = require('../../backend/env');
 const { registerExtensions } = require('./ext-registry');
 const remoteExt = require('./ext/remote');
@@ -61,6 +62,7 @@ let slideshow;
 let menuDefinition;
 let navigationHints;
 let wallpaperPlaylist;
+let wallpaperSources;
 let onlineWallpapers = null;
 let focusedAppId = null;
 let hostPausedBySession = false;
@@ -111,7 +113,7 @@ async function assembleModel() {
   config = await loadConfig(configPath, path.join(app.getAppPath(), 'config.example.json'));
   await seedPresetWebsitesOnce();
   menuDefinition = resolveMenu(config.menu);
-  wallpaperPlaylist?.allow((config.settings?.wallpaper?.folders || []).map((folder) => folder.path));
+  wallpaperSources?.apply(config.settings);
   await slideshow.configure(menuDefinition.slideshow);
   const customTiles = config.rows.flatMap((row) => row.tiles.map((tile, index) => ({ ...tile, id: tile.id || `custom:${row.id || 'row'}:${index}` })));
   const discoveredTiles = [];
@@ -347,6 +349,7 @@ app.whenReady().then(async () => {
     } catch (error) { console.warn('Online wallpapers unavailable:', error.message); onlineWallpapers = null; }
   }
   wallpaperPlaylist = new WallpaperPlaylist({ mediaAssets, online: onlineWallpapers });
+  wallpaperSources = new WallpaperSourceService({ playlist: wallpaperPlaylist, online: onlineWallpapers });
   mediaAssets.setMemoryCache(slideshow);
   slideshow.on('warning', (error) => console.warn('Slideshow cache:', error.message));
   slideshow.on('changed', (state) => { if (window && !window.isDestroyed()) window.webContents.send('launcher:slideshow-state', state); });
@@ -456,7 +459,7 @@ handle('launcher:choose-file', async (_event, kind) => {
   const filters = kind === 'sound'
     ? [{ name: 'UI sounds', extensions: ['mp3', 'wav', 'ogg'] }]
     : kind === 'icon'
-    ? [{ name: 'Icons', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'ico'] }]
+    ? [{ name: 'Icons', extensions: ['png', 'svg', 'jpg', 'jpeg', 'webp', 'gif', 'ico'] }]
     : kind === 'wallpaper'
     ? [{ name: 'Media', extensions: ['png', 'jpg', 'jpeg', 'webp', 'mp4', 'webm'] }]
     : [{ name: 'Applications and scripts', extensions: process.platform === 'win32' ? ['exe', 'cmd', 'bat', 'ps1', 'lnk'] : ['AppImage', 'sh', 'bin'] }];
@@ -475,6 +478,7 @@ handle('launcher:inspect-wallpaper-folder', (_event, folder) => {
 handle('launcher:get-wallpaper-count', (_event, request) => wallpaperPlaylist.count(request));
 handle('launcher:get-wallpaper-slide', (_event, request, index) => wallpaperPlaylist.slide(request, index));
 handle('launcher:get-online-wallpaper-status', () => ({ available: Boolean(onlineWallpapers), count: onlineWallpapers ? onlineWallpapers.catalog().length : 0 }));
+handle('launcher:wallpaper-sources', (_event, action, payload) => wallpaperSources.handle(action, payload));
 handle('launcher:clear-online-wallpapers', async () => { await onlineWallpapers?.clear(); return Boolean(onlineWallpapers); });
 handle('launcher:get-autostart', () => getAutostart(app));
 handle('launcher:set-autostart', (_event, enabled) => setAutostart(app, enabled === true));
