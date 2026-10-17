@@ -1,0 +1,78 @@
+{
+  "note": "Synthetic frames written from the documented Soloist WebSocket shapes (not captured from a real run). Timestamps are Unix epoch ms.",
+  "trackA": {
+    "uri": "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+    "entity_type": "track",
+    "decorations": {
+      "identity": { "name": "Song A" },
+      "visual_identity": {
+        "cover": [
+          { "url": "https://i.scdn.co/image/small", "width": 64, "height": 64 },
+          { "url": "https://i.scdn.co/image/medium", "width": 300, "height": 300 },
+          { "url": "https://i.scdn.co/image/large", "width": 640, "height": 640 }
+        ]
+      },
+      "parent": {
+        "entity": {
+          "uri": "spotify:album:1xAlbumX",
+          "entity_type": "album",
+          "decorations": { "identity": { "name": "Album X" } }
+        }
+      },
+      "creators": [
+        { "uri": "spotify:artist:1artistOne", "entity_type": "artist", "decorations": { "identity": { "name": "Artist One" } } },
+        { "uri": "spotify:artist:1artistTwo", "entity_type": "artist", "decorations": { "identity": { "name": "Artist Two" } } }
+      ],
+      "playback": { "duration_ms": 215000 }
+    }
+  },
+  "trackB": {
+    "uri": "spotify:track:7bTrackB",
+    "entity_type": "track",
+    "decorations": {
+      "identity": { "name": "Song B" },
+      "visual_identity": { "cover": [{ "url": "https://i.scdn.co/image/b-640", "width": 640, "height": 640 }] },
+      "parent": { "entity": { "uri": "spotify:album:1xAlbumY", "entity_type": "album", "decorations": { "identity": { "name": "Album Y" } } } },
+      "creators": [{ "uri": "spotify:artist:1artistThree", "entity_type": "artist", "decorations": { "identity": { "name": "Artist Three" } } }],
+      "playback": { "duration_ms": 180000 }
+    }
+  },
+  "trackC": {
+    "uri": "spotify:track:9cTrackC",
+    "entity_type": "track",
+    "decorations": {
+      "identity": { "name": "Song C" },
+      "visual_identity": { "cover": [] },
+      "parent": { "entity": { "uri": "spotify:album:1xAlbumZ", "entity_type": "album", "decorations": { "identity": { "name": "Album Z" } } } },
+      "creators": [{ "uri": "spotify:artist:1artistFour", "entity_type": "artist", "decorations": { "identity": { "name": "Artist Four" } } }],
+      "playback": { "duration_ms": 200000 }
+    }
+  },
+  "context": {
+    "uri": "spotify:album:1xAlbumX",
+    "entity_type": "album",
+    "decorations": { "identity": { "name": "Album X" } }
+  },
+  "frames": [
+    { "type": "auth_state", "logged_in": true, "is_active": true, "device_name": "Living Room PC" },
+    {
+      "type": "playback_state",
+      "status": "playing",
+      "item": "TRACK_A",
+      "context": "CONTEXT",
+      "position": { "position_ms": 30000, "timestamp_ms": 1760000000000, "speed": 1 },
+      "volume": 40,
+      "is_active": true,
+      "options": { "shuffle": false, "repeat": "off", "playback_speed": 1, "modes": {} },
+      "available_actions": ["pause", "skip_next", "skip_prev", "seek", "set_volume", "set_shuffle", "set_repeat_context", "set_repeat_track"]
+    },
+    { "type": "position_sync", "position": { "position_ms": 31000, "timestamp_ms": 1760000001000, "speed": 1 } },
+    { "type": "playback_changed", "status": "paused" },
+    { "type": "track_changed", "item": "TRACK_B" },
+    { "type": "volume_changed", "volume": 55 },
+    { "type": "options_changed", "options": { "shuffle": true, "repeat": "track", "playback_speed": 1, "modes": {} } },
+    { "type": "queue_changed", "previous": [{ "uid": "q-0", "source": "CONTEXT", "item": "TRACK_A" }], "upcoming": [{ "uid": "q-1", "source": "CONTEXT", "item": "TRACK_B" }, { "uid": "q-2", "source": "CONTEXT", "item": "TRACK_C" }] },
+    { "type": "command_result", "command": "pause" },
+    { "type": "error", "message": "Command rejected" }
+  ]
+}
