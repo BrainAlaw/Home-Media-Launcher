@@ -116,11 +116,11 @@
         <section class="settings-page active" data-page="general">
           <h3>Header</h3>
           <label class="toggle-row"><span>Custom text</span><input id="show-text" type="checkbox"></label>
-          <label>Text<input id="header-text" type="text" maxlength="80" placeholder="Home"></label>
+          <label>Text<input id="header-text" type="text" data-osk maxlength="80" placeholder="Home"></label>
           <label class="toggle-row"><span>Date</span><input id="show-date" type="checkbox"></label>
           <label class="toggle-row"><span>Time</span><input id="show-time" type="checkbox"></label>
           <label class="toggle-row"><span>Weather</span><input id="show-weather" type="checkbox"></label>
-          <label>Weather location<input id="weather-location" type="text" maxlength="80" placeholder="London"></label>
+          <label>Weather location<input id="weather-location" type="text" data-osk maxlength="80" placeholder="London"></label>
         </section>
         <section class="settings-page" data-page="appearance">
           <div class="appearance-controls">
@@ -145,7 +145,7 @@
             <p class="section-description">Sections shown on the home screen, in this order. Home Theatre and Gaming can be renamed but not removed.</p>
             <div id="category-list" class="category-list" role="list" aria-label="Categories"></div>
             <div class="field-with-button category-add">
-              <input id="category-name" type="text" maxlength="40" placeholder="New category name" aria-label="New category name" autocomplete="off" enterkeyhint="done">
+              <input id="category-name" type="text" data-osk maxlength="40" placeholder="New category name" aria-label="New category name" autocomplete="off" enterkeyhint="done">
               <button type="button" id="category-add">Add category</button>
             </div>
             <p id="category-status" class="section-description" role="status"></p>
@@ -176,7 +176,7 @@
             <button type="button" data-mode="bundled">Gallery</button>
             <button type="button" data-mode="slideshow">Slideshow</button>
           </div>
-          <div id="wallpaper-custom" class="field-with-button"><input id="wallpaper" type="text" placeholder="PNG, JPG, MP4 or WebM path"><button id="browse-wallpaper" type="button">Browse</button></div>
+          <div id="wallpaper-custom" class="field-with-button"><input id="wallpaper" type="text" data-osk placeholder="PNG, JPG, MP4 or WebM path"><button id="browse-wallpaper" type="button">Browse</button></div>
           <div id="wallpaper-gallery" class="wallpaper-grid" role="group" aria-label="Bundled wallpapers" hidden></div>
           <div id="slideshow-options" hidden>
             <h4>Interval</h4>
@@ -200,7 +200,7 @@
             <div id="known-providers" class="button-group" role="group" aria-label="Known online providers"></div>
           </div>
           <label>Online catalogue address
-            <span class="field-with-button"><input id="online-source-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://example.com/wallpapers.json"><button id="add-online-source" type="button">Add</button></span>
+            <span class="field-with-button"><input id="online-source-url" type="text" data-osk inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://example.com/wallpapers.json"><button id="add-online-source" type="button">Add</button></span>
           </label>
           <p id="online-note" class="section-description">Online sources are opt-in. A catalogue is a small JSON list of https image addresses with optional title, author and licence. Only image files are downloaded and cached on this device; nothing about you is sent or tracked, and when offline the launcher quietly uses the bundled wallpapers. Changes to online sources apply when you save.</p>
           <div class="applications-header"><span id="online-status" class="section-description"></span><button id="clear-online-wallpapers" type="button">Clear downloaded cache</button></div>
@@ -223,12 +223,12 @@
         <section class="settings-page" data-page="remote">
           <div class="applications-header"><h3>VibePollo / Moonlight</h3><span id="remote-status"></span></div>
           <label class="toggle-row"><span>Fetch applications from server</span><input id="remote-enabled" type="checkbox"></label>
-          <label>Server address or hostname<input id="remote-host" type="text" placeholder="192.168.1.10 or gaming-pc"></label>
-          <label>VibePollo API URL<input id="remote-api-url" type="text" placeholder="https://192.168.1.10:47990"></label>
+          <label>Server address or hostname<input id="remote-host" type="text" data-osk placeholder="192.168.1.10 or gaming-pc"></label>
+          <label>VibePollo API URL<input id="remote-api-url" type="text" data-osk placeholder="https://192.168.1.10:47990"></label>
           <label>API token<input id="remote-token" type="password" autocomplete="off" placeholder="Enter a new token"></label>
           <div id="token-status"></div>
           <label class="toggle-row warning-toggle"><span>Allow a self-signed certificate</span><input id="allow-self-signed" type="checkbox"></label>
-          <label>Moonlight executable<span class="field-with-button"><input id="moonlight-path" type="text" placeholder="moonlight"><button id="browse-moonlight" type="button">Browse</button></span></label>
+          <label>Moonlight executable<span class="field-with-button"><input id="moonlight-path" type="text" data-osk placeholder="moonlight"><button id="browse-moonlight" type="button">Browse</button></span></label>
           <button id="refresh-remote" type="button">Refresh server list</button>
         </section>
         <section class="settings-page" data-page="websites">

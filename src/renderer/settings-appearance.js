@@ -48,6 +48,7 @@ window.AppearanceSettings = (function () {
 
       const input = document.createElement('input');
       input.type = 'text';
+      input.dataset.osk = '';
       input.value = category.label;
       input.maxLength = Categories.MAX_LABEL;
       input.autocomplete = 'off';

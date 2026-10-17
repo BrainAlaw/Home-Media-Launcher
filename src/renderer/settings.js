@@ -36,7 +36,9 @@ window.SettingsDialog = (function () {
   }
 
   function textInput(className, placeholder, value) {
-    return el('input', { type: 'text', className, placeholder, value: value || '' });
+    const input = el('input', { type: 'text', className, placeholder, value: value || '' });
+    input.dataset.osk = '';
+    return input;
   }
 
   function removeButton(card) {
