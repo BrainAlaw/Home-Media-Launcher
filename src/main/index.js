@@ -23,6 +23,10 @@ const { NavigationHints } = require('../../backend/navigation-hints');
 const { resolveMenu } = require('../../backend/menu-config');
 const { ControllerPairing } = require('./controller-pairing');
 const { WallpaperPlaylist } = require('../../backend/wallpaper-playlist');
+const { loadEnv, readSecrets } = require('../../backend/env');
+const { registerExtensions } = require('./ext-registry');
+
+loadEnv();
 
 /** Optional module: streamed wallpapers are an opt-in feature and the launcher must start without it. */
 function loadOnlineWallpapers() {
@@ -270,6 +274,8 @@ app.whenReady().then(async () => {
   configPath = testProfile ? path.join(app.getPath('userData'), 'config.json') : process.env.HOME_MEDIA_LAUNCHER_CONFIG || path.join(app.getPath('userData'), 'config.json');
   tokenPath = path.join(app.getPath('userData'), 'remote-token.json');
   localState = new LocalState(app.getPath('userData'));
+  // EXT-HOOK: feature modules in src/main/ext/*.js register their namespaced IPC here.
+  registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets: readSecrets(), config: () => model?.settings || {} });
   themeService = new ThemeService(app.getPath('userData'), mediaAssets);
   contextArtwork = new ContextArtwork(app.getPath('userData'), mediaAssets);
   slideshow = new SlideshowCache(mediaAssets);

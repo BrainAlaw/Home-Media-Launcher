@@ -113,11 +113,20 @@ const appAPI = {
   onSyncStatus: (callback) => subscribe('launcher:sync-status', callback)
 };
 
+/** Namespaced extension bridge; see src/main/ext-registry.js. Only allowlisted namespaces can be reached. */
+const EXT_NAMESPACES = new Set(['system', 'vpn', 'icons', 'session', 'remote', 'weather', 'input']);
+const assertNamespace = (namespace) => { if (!EXT_NAMESPACES.has(namespace)) throw new Error(`Unknown extension namespace: ${namespace}`); };
+const extAPI = {
+  invoke: (namespace, method, ...args) => { assertNamespace(namespace); return ipcRenderer.invoke(`ext:${namespace}:${String(method)}`, ...args); },
+  on: (namespace, event, callback) => { assertNamespace(namespace); return subscribe(`ext:${namespace}:${String(event)}`, callback); }
+};
+
 contextBridge.exposeInMainWorld('api', appAPI);
 contextBridge.exposeInMainWorld('launcher', {
   ...themeAPI,
   ...menuAPI,
   ...controllerAPI,
+  ext: extAPI,
   getModel: async () => {
     const started = artworkRevision;
     const model = await ipcRenderer.invoke('launcher:get-model');

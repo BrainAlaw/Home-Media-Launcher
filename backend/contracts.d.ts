@@ -195,3 +195,77 @@ export interface WallpaperLauncherAPI {
   getOnlineWallpaperStatus(): Promise<{ available: boolean; count: number }>;
   clearOnlineWallpapers(): Promise<boolean>;
 }
+
+/* ------------------------------------------------------------------ Iteration 4 extension contracts
+ * Reached through `window.launcher.ext.invoke(namespace, method, ...args)` / `.on(namespace, event, cb)`.
+ * Each namespace is implemented by exactly one file in src/main/ext/. */
+
+export interface ExtBridge {
+  invoke<T = unknown>(namespace: ExtNamespace, method: string, ...args: unknown[]): Promise<T>;
+  on<T = unknown>(namespace: ExtNamespace, event: string, callback: (value: T) => void): () => void;
+}
+export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input';
+
+/** ns `system` (agent B). Events: `network` (NetworkStatus). Methods: `getNetwork()`. */
+export interface NetworkStatus {
+  type: 'ethernet' | 'wifi' | 'none' | 'unknown';
+  connected: boolean;
+  ssid?: string;
+  /** 0-100, wifi only */
+  signal?: number;
+  ip?: string;
+}
+
+/** ns `vpn` (agent B). Events: `status` (VpnStatus[]). Methods: `list()`, `toggle(id, enabled)`. */
+export interface VpnStatus {
+  id: 'tailscale' | 'surfshark';
+  label: string;
+  available: boolean;
+  connected: boolean;
+  busy: boolean;
+  detail?: string;
+  error?: string;
+}
+
+/** ns `weather` (agent B). Methods: `get(location)`. Provider: OpenWeatherMap, key from WEATHER_API. */
+export interface WeatherSnapshot {
+  location: string;
+  temperature: number;
+  feelsLike: number;
+  condition: string;
+  /** OpenWeatherMap icon code, e.g. "10d" */
+  icon: string;
+  forecast: Array<{ day: string; min: number; max: number; icon: string }>;
+  fetchedAt: number;
+}
+
+/** ns `remote` (agent A). Methods: `getHostInfo()`. Events: `host` (VibepolloHostInfo). Values come from VP_HOST / VP_IP / VP_API. */
+export interface VibepolloHostInfo {
+  hostname: string;
+  ip: string;
+  status: 'online' | 'offline' | 'cached' | 'disabled';
+  lastSyncAt?: number;
+}
+
+/** ns `icons` (agent C). Methods: `resolve(request)`, `listPresets()`, `searchArtwork(query)`. */
+export interface IconRequest { kind: 'website' | 'game' | 'app'; name: string; url?: string; steamAppId?: number }
+export interface IconResult { source: 'preset' | 'site' | 'steamgriddb' | 'playnite' | 'letter'; url: string; width?: number; height?: number }
+export interface WebPreset { id: string; name: string; url: string; icon: string; color: string; category: 'video' | 'music' | 'other' }
+
+/** ns `session` (agent E). Events: `phase` (SessionPhase). Methods: `closeActive()`. */
+export type SessionPhase =
+  | { phase: 'idle' }
+  | { phase: 'launching'; tileId: string; name: string }
+  | { phase: 'running'; tileId: string; name: string }
+  | { phase: 'closing'; tileId: string; name: string };
+
+/** ns `input` (agent F). Events: `key` ({ action }). Remote buttons mapped to launcher actions. */
+export type RemoteAction = 'up' | 'down' | 'left' | 'right' | 'select' | 'back' | 'home' | 'menu' | 'playpause' | 'context';
+
+/** Config additions (Settings.* in config.json), owned as noted. */
+export interface Iteration4Settings {
+  /** agent D */
+  wallpaperSources?: Array<{ id: string; label: string; kind: 'folder' | 'online'; location: string; enabled: boolean }>;
+  /** agent B */
+  vpn?: { surfsharkWireguardProfile?: string };
+}
