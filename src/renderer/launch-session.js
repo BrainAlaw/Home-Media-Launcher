@@ -77,6 +77,17 @@
     };
   }
 
+  /**
+   * Strips Electron's "Error invoking remote method '...': Error: " IPC wrapper so toasts stay readable.
+   * @param {unknown} error
+   * @returns {string}
+   */
+  function describeLaunchError(error) {
+    const raw = String(error?.message ?? error ?? '').trim();
+    const message = raw.replace(/^Error invoking remote method '[^']*':\s*/i, '').replace(/^(?:\w*Error):\s*/, '');
+    return message || 'Unknown error';
+  }
+
   const NO_HANDLER = /No handler registered/i;
 
   /**
@@ -153,5 +164,5 @@
     };
   }
 
-  return { createHeroBinding, buildLaunchConfig, createLaunchSession };
+  return { createHeroBinding, buildLaunchConfig, createLaunchSession, describeLaunchError };
 });

@@ -73,6 +73,7 @@ function validateConfig(config) {
   if (config.menu !== undefined) validateMenu(config.menu);
   if (config.settings !== undefined && (!config.settings || typeof config.settings !== 'object' || Array.isArray(config.settings))) throw new Error('settings must be an object');
   if (config.settings?.selectedAppIds !== undefined && (!Array.isArray(config.settings.selectedAppIds) || config.settings.selectedAppIds.some((id) => typeof id !== 'string'))) throw new Error('selectedAppIds must be an array of strings');
+  if (config.settings?.hiddenAppIds !== undefined && (!Array.isArray(config.settings.hiddenAppIds) || config.settings.hiddenAppIds.some((id) => typeof id !== 'string'))) throw new Error('hiddenAppIds must be an array of strings');
   validateWallpaper(config.settings?.wallpaper);
   validateWallpaperSources(config.settings?.wallpaperSources);
   if (config.settings?.wallpaperCredit !== undefined && typeof config.settings.wallpaperCredit !== 'boolean') throw new Error('wallpaperCredit must be boolean');

@@ -138,6 +138,13 @@
         track.setAttribute('aria-label', data.title);
         section.setAttribute('aria-label', data.title);
         section.append(head, track);
+        if (!data.items.length && data.emptyMessage) {
+          const note = document.createElement('p');
+          note.className = 'row-empty';
+          note.textContent = data.emptyMessage;
+          note.style.cssText = 'margin:8px var(--gutter);opacity:.7;font-size:clamp(14px,1.2vw,22px)';
+          section.append(note);
+        }
         this.container.append(section);
 
         const layout = {

@@ -1,7 +1,7 @@
 'use strict';
 
 const { findNext, toRect } = window.SpatialNav;
-const { buildLayout, pushRecent, hueFor } = window.TileModel;
+const { buildLayout, describeEmptyGaming, pushRecent, hueFor } = window.TileModel;
 const { assetUrl, isLoadableImage } = window.AssetUrl;
 const ThemeEngine = window.ThemeEngine;
 const gallery = window.Wallpapers.createGallery(window.WALLPAPER_ENTRIES || []);
@@ -455,10 +455,14 @@ function render(model) {
   const filtered = state.menuSelection.action === 'category'
     ? tiles.filter((tile) => window.NavigationMenu.matchesCategory(tile, state.menuSelection.category)) : tiles;
   const isHome = state.menuSelection.action === 'home';
-  const layout = buildLayout(filtered, isHome ? state.recents : [], { showEmptyGaming: isHome && Boolean(model.settings?.remote?.enabled) });
+  const hiddenRemote = (model.availableApps || []).filter((entry) => entry.provider === 'remote' && !entry.selected).length;
+  const layout = buildLayout(filtered, isHome ? state.recents : [], {
+    showEmptyGaming: isHome && Boolean(model.settings?.remote?.enabled),
+    gamingEmptyMessage: describeEmptyGaming(model.remoteStatus, model.settings?.remote, hiddenRemote)
+  });
 
   const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row, menuId: state.focusEl.dataset.menuId };
-  const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles }));
+  const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles, ...(row.emptyMessage ? { emptyMessage: row.emptyMessage } : {}) }));
   spatialGrid.setRows(gridRows);
   const empty = document.querySelector('#empty');
   empty.hidden = filtered.length > 0;
@@ -573,7 +577,7 @@ async function activate(element) {
     element.classList.remove('launching');
     // Animate back to the launcher and tell the user why nothing started.
     void launchTransition.reveal(tile.id);
-    showToast(`Launch failed: ${error.message}`);
+    showToast(`Launch failed: ${window.LaunchSession.describeLaunchError(error)}`);
   }
 }
 

@@ -9,7 +9,8 @@ const { ProcessManager } = require('./process-manager');
 const { getAutostart, setAutostart } = require('./autostart');
 const { listRemoteApps } = require('./remote-apps');
 const { scanWindowsApplications } = require('./windows-apps');
-const { buildAppCatalog } = require('./app-catalog');
+const { buildAppCatalog, computeHiddenAppIds } = require('./app-catalog');
+const { launchIdFrom } = require('./launch-request');
 const { hasToken, loadCredential, saveToken, saveCredential } = require('./secret-store');
 const { LibraryService } = require('../../backend/library-service');
 const { LocalState } = require('../../backend/local-state');
@@ -134,7 +135,7 @@ async function assembleModel() {
     onProgress
   }));
   discoveredTiles.push(...remoteResult.tiles.map((tile) => ({ ...tile, provider: 'remote' })));
-  const catalog = buildAppCatalog(customTiles, discoveredTiles, config.settings?.selectedAppIds);
+  const catalog = buildAppCatalog(customTiles, discoveredTiles, config.settings?.selectedAppIds, config.settings?.hiddenAppIds);
   const selectedTiles = catalog.visibleTiles.filter((tile) => tile.provider);
   if (process.platform === 'win32') {
     await Promise.all(selectedTiles.filter((tile) => tile.provider === 'local').map(async (tile) => {
@@ -194,7 +195,7 @@ async function refreshHost() {
   if (config !== snapshot) return null;
   const previous = model.availableApps.filter((tile) => tile.provider !== 'remote');
   const tiles = result.tiles.map((tile) => ({ ...tile, provider: 'remote', ...(Object.hasOwn(icons, tile.id) ? { icon: icons[tile.id] } : {}) }));
-  const catalog = buildAppCatalog([], [...previous, ...tiles], config.settings?.selectedAppIds);
+  const catalog = buildAppCatalog([], [...previous, ...tiles], config.settings?.selectedAppIds, config.settings?.hiddenAppIds);
   model.availableApps = catalog.availableApps;
   model.rows[0].tiles = [...model.rows[0].tiles.filter((tile) => tile.provider !== 'remote'), ...catalog.visibleTiles.filter((tile) => tile.provider === 'remote')];
   model.remoteStatus = remoteStatus(result);
@@ -454,11 +455,18 @@ handle('launcher:set-icon-override', async (_event, tileId, source) => {
 handle('launcher:reload-config', async () => buildModel());
 handle('launcher:refresh-remote', async () => buildModel());
 handle('launcher:open-config', () => shell.openPath(configPath));
+/** The settings page only submits checked apps; derive which remote apps the user switched off. */
+function withHiddenApps(next) {
+  if (!next?.settings || !Array.isArray(next.settings.selectedAppIds)) return next;
+  const hiddenAppIds = computeHiddenAppIds(config.settings?.hiddenAppIds, model?.availableApps || [], next.settings.selectedAppIds);
+  return { ...next, settings: { ...next.settings, hiddenAppIds } };
+}
 handle('launcher:save-settings', async (_event, nextConfig) => {
   if (building) await building;
   const preserved = nextConfig && typeof nextConfig === 'object' && nextConfig.menu === undefined && config.menu !== undefined
     ? { ...nextConfig, menu: config.menu } : nextConfig;
-  await saveConfig(configPath, preserved);
+  const toSave = withHiddenApps(preserved);
+  await saveConfig(configPath, toSave);
   return buildModel();
 });
 handle('launcher:choose-file', async (_event, kind) => {
@@ -532,7 +540,7 @@ async function launchTile(tileId) {
 
 handle('launcher:launch', (_event, tileId) => launchTile(tileId));
 // The renderer only names a catalogue entry; commands and arguments always come from trusted configuration.
-handle('launcher:launch-app', (_event, appConfig) => launchTile(appConfig?.id ?? appConfig?.tileId));
+handle('launcher:launch-app', (_event, appConfig) => launchTile(launchIdFrom(appConfig)));
 handle('launcher:get-game-library', () => library.getGameLibrary());
 handle('launcher:force-sync', async () => {
   await hostMonitor?.poll();
