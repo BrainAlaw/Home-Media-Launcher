@@ -92,8 +92,24 @@ async function buildModel() {
   return building;
 }
 
+/** One-time: adds the bundled streaming presets (Netflix, YouTube, ...) without touching existing websites. */
+async function seedPresetWebsitesOnce() {
+  const marker = path.join(path.dirname(configPath), 'presets-seeded');
+  const fsp = require('node:fs/promises');
+  try { await fsp.access(marker); return; } catch { /* not seeded yet */ }
+  const { addPresetWebsites, FIRST_RUN_PRESET_IDS } = require('../../backend/web-presets');
+  const existing = new Set((config.websites || []).map((site) => { try { return new URL(site.url).hostname.replace(/^www\./, ''); } catch { return ''; } }));
+  const wanted = FIRST_RUN_PRESET_IDS.filter((id) => !existing.has(new URL(require('../../backend/web-presets').getPreset(id).url).hostname.replace(/^www\./, '')));
+  if (wanted.length) {
+    config = { ...config, websites: addPresetWebsites(config.websites || [], wanted) };
+    await saveConfig(configPath, config);
+  }
+  await fsp.writeFile(marker, new Date().toISOString());
+}
+
 async function assembleModel() {
   config = await loadConfig(configPath, path.join(app.getAppPath(), 'config.example.json'));
+  await seedPresetWebsitesOnce();
   menuDefinition = resolveMenu(config.menu);
   wallpaperPlaylist?.allow((config.settings?.wallpaper?.folders || []).map((folder) => folder.path));
   await slideshow.configure(menuDefinition.slideshow);
@@ -319,7 +335,7 @@ app.whenReady().then(async () => {
       else if (phase.phase === 'idle' && hostPausedBySession) { hostPausedBySession = false; hostMonitor?.start(); void hostMonitor?.poll(); }
     }
   });
-  registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets, config: () => model?.settings || {} });
+  registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets, config: () => ({ ...(model?.settings || {}), websites: config?.websites || [] }) });
   themeService = new ThemeService(app.getPath('userData'), mediaAssets);
   contextArtwork = new ContextArtwork(app.getPath('userData'), mediaAssets);
   slideshow = new SlideshowCache(mediaAssets);
