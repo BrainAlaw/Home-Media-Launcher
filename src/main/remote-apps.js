@@ -10,6 +10,14 @@ const { cacheArtwork, pruneArtwork } = require('../../backend/artwork');
 const { moonlightCommand } = require('../../backend/moonlight');
 
 const inFlight = new Map();
+/** Hosts whose API token may not read covers (HTTP 403): skipped for ten minutes to avoid a failing request per tile. */
+const coverDenied = new Map();
+const COVER_DENIED_MS = 10 * 60 * 1000;
+
+/** Sunshine/Vibepollo ship their own placeholder images as relative paths (`assets/`, `remote-session/`): host built-ins, not games. */
+function isBuiltinImage(imagePath) {
+  return typeof imagePath === 'string' && /^(assets|remote-session)[\\/]/i.test(imagePath.trim());
+}
 
 function parseCsvLine(line) {
   const values = [];
@@ -53,7 +61,10 @@ function parseApiApps(payload, remote) {
     .map((item) => ({
       ...createRemoteTile(remote, item.name || item.title, item.id ?? item.uuid ?? item.name ?? item.title, item.cover || item.icon || (/^https?:\/\//i.test(item['image-path'] || '') ? item['image-path'] : '')),
       ...(typeof item.hero_image === 'string' ? { hero_image: item.hero_image } : {}),
-      ...(typeof item.fanart === 'string' ? { fanart: item.fanart } : {})
+      ...(typeof item.fanart === 'string' ? { fanart: item.fanart } : {}),
+      ...(Number.isSafeInteger(item.index) && item.index >= 0 ? { appIndex: item.index } : {}),
+      artHint: item['remote-session'] || isBuiltinImage(item['image-path']) ? 'builtin' : 'game',
+      hasHostCover: typeof item['image-path'] === 'string' && item['image-path'].trim() !== ''
     }));
 }
 
@@ -123,6 +134,12 @@ async function syncRemoteApps(remote, cachePath, options) {
           for (const tile of tiles) if (!tile.icon) tile.icon = artworkByName.get(tile.name) || '';
         } catch { /* API metadata stays available even when the client has not paired yet. */ }
       }
+      // The app list only carries server-local `image-path` values; the cover bytes come from the authenticated cover route
+      // (needs a token scope that allows it; a 403 simply leaves the tile to the SteamGridDB/monogram fallback).
+      const deniedAt = coverDenied.get(apiUrl);
+      if (!deniedAt || Date.now() - deniedAt > COVER_DENIED_MS) {
+        for (const tile of tiles) if (!tile.icon && tile.hasHostCover && Number.isSafeInteger(tile.appIndex)) tile.icon = `${apiUrl.replace(/\/$/, '')}/api/apps/${tile.appIndex}/cover`;
+      }
     } else {
       tiles = await moonlightTiles(normalized, options);
     }
@@ -153,7 +170,8 @@ async function syncRemoteApps(remote, cachePath, options) {
         });
         tile.iconSource = source;
         tile.iconCachedAt = Date.now();
-      } catch {
+      } catch (error) {
+        if (/HTTP 403/.test(error?.message) && apiUrl && source.startsWith(`${apiUrl.replace(/\/$/, '')}/api/apps/`)) coverDenied.set(apiUrl, Date.now());
         tile.icon = previous?.icon || '';
         if (previous?.icon && previous.iconSource) Object.assign(tile, { iconSource: previous.iconSource, iconCachedAt: previous.iconCachedAt });
       }
@@ -179,7 +197,8 @@ async function syncRemoteApps(remote, cachePath, options) {
     const tiles = normalized ? cached.map((tile) => ({
       ...createRemoteTile(normalized, tile.name, tile.id, tile.icon), id: tile.id,
       ...(typeof tile.hero_image === 'string' ? { hero_image: tile.hero_image } : {}),
-      ...(typeof tile.fanart === 'string' ? { fanart: tile.fanart } : {})
+      ...(typeof tile.fanart === 'string' ? { fanart: tile.fanart } : {}),
+      ...(tile.artHint === 'builtin' || tile.artHint === 'game' ? { artHint: tile.artHint } : {})
     })) : [];
     return { tiles, status: tiles.length ? 'cached' : 'offline', host: remote.host.trim(), error: error.message };
   }

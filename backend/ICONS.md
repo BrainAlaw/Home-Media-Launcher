@@ -46,6 +46,10 @@ HTTPS only, at most 3 redirects (each HTTPS and re-checked), 6 s timeout, 2 MB i
 | `sizes()` | `IconSizes` |
 | `hasSteamGridDb()` | boolean |
 
+## Host application tiles (Vibepollo / Sunshine)
+
+The `/api/apps` payload carries only server-local `image-path` values (`assets/desktoppc.png`, `remote-session/remote-input.png`, `C:...config/covers/igdb_1236.png`), never a URL, so there was nothing to download and every tile showed a letter. Fields seen: `id`, `uuid`, `index`, `name`, `image-path`, `image-version`, `remote-session`, `cmd`, ... (no `cover`, `icon`, `hero_image`, `fanart`). Playnite sync is disabled on the host. Sync now (1) tries the authenticated cover route `GET <api>/api/apps/<index>/cover` (the route exists, but the current API token gets HTTP 403: grant it the cover path in the Vibepollo token settings; denials are skipped for 10 minutes), (2) otherwise the renderer asks ns `icons` `gameTile({ name, builtin? })`: host built-ins (relative `assets/`, `remote-session` paths, stored as `artHint: builtin`) get a glyph tile, other names a SteamGridDB poster composed on a gradient (hero crop as second choice, 600 KB embed cap, cached in `icon-cache/games` for 14 days, pruned), else a monogram tile. Event `art-updated` (`{ kind: preset, id, url }` or `{ kind: game, name, url }`) lets the renderer swap finished art in live.
+
 ## Preset tile art
 
 Presets are stored in `config.websites` with `icon: "preset:<id>"` (no install-path dependent URL). Older configs that hold an absolute `file:///.../icons/presets/<id>.svg` keep working: `asset-url.js` maps both forms to the same preset, and `migratePresetIcons(websites)` in `backend/web-presets.js` can rewrite them in the config.
@@ -58,21 +62,23 @@ Presets are stored in `config.websites` with `icon: "preset:<id>"` (no install-p
 
 | Preset | Icon source | Result |
 | --- | --- | --- |
-| Netflix | page links: apple-touch-icon is 64 px, ico is BMP only | below 128 px: monogram |
+| Netflix | page links and assets.nflxext.com nficon2016.png are 64 px | below 128 px: monogram |
 | YouTube | page `favicon_144x144.png` | real icon (144 px) |
 | YouTube Music | page `favicon_144.png` | real icon (144 px) |
-| Spotify | `www.spotify.com/apple-touch-icon.png`, favicons 32 px | too small: monogram |
+| Spotify | `www.scdn.co/i/_global/touch-icon-144.png` (official CDN; www.spotify.com answers 301) | real icon (144 px) |
 | Disney+ | page `msftpwa-512x512` | real icon (512 px) |
 | Prime Video | page `favicon-196x196.png` | real icon (196 px) |
 | Max | `apple-touch-icon.png` on hbomax.com | real icon (180 px) |
 | Twitch | `/apple-touch-icon.png` | real icon (180 px) |
 | Plex | page `icon-ipad@2x.png` | real icon (144 px) |
-| Jellyfin | jellyfin.org offers only BMP ICO | monogram |
+| Jellyfin | official jellyfin-ux `icon-transparent.svg` on raw.githubusercontent.com | real icon (SVG) |
 | Apple TV+ | `/apple-touch-icon.png`, `favicon-180.png` | real icon (180 px) |
 | Player | page `android-web-app-icon-512x512.png` | real icon (512 px) |
-| Canal+ | HTTP 403 for bots | monogram |
+| Canal+ | HTTP 403 for bots (only a 1 KB favicon.ico is served) | monogram |
 | SkyShowtime | page apple-touch-icon 180 px | real icon (180 px) |
-| Crunchyroll | page has no icon links (client rendered), 404 on defaults | monogram |
+| Crunchyroll | HTTP 403 for bots on every URL | monogram |
 | Tidal | HTTP 403 for bots | monogram |
+
+12 of 16 presets now get a real icon (re-checked 2026-10-17, plain Node HTTPS, no User-Agent spoofing).
 
 No browser User-Agent is spoofed, so sites that block the launcher keep the monogram.
