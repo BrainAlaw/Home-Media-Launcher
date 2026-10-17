@@ -240,6 +240,8 @@ export interface VpnStatus {
   busy: boolean;
   detail?: string;
   error?: string;
+  /** Surfshark only: the strategy in use (`rasdial`, `wireguard-service`, `openvpn-gui` or `nmcli`). Additive. */
+  mode?: string;
 }
 
 /** ns `weather` (agent B). Methods: `get(location)`. Provider: OpenWeatherMap, key from WEATHER_API. */
@@ -295,5 +297,12 @@ export interface Iteration4Settings {
   /** agent G. Visual cost level: `lite` drops blur/shadows/sheen; `auto` switches to lite after 5 s below 45 fps (default auto). */
   performance?: 'auto' | 'quality' | 'lite';
   /** agent B */
-  vpn?: { surfsharkWireguardProfile?: string };
+  vpn?: {
+    /** Strategy; `auto` tries Windows VPN (rasdial), WireGuard service, OpenVPN GUI on Windows and nmcli on Linux. */
+    surfsharkMode?: 'auto' | 'wireguard-service' | 'openvpn-gui' | 'rasdial' | 'nmcli';
+    /** Profile / tunnel / config name for the chosen strategy. */
+    surfsharkProfile?: string;
+    /** Legacy alias of `surfsharkProfile`, still honoured. */
+    surfsharkWireguardProfile?: string;
+  };
 }

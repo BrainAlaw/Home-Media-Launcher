@@ -1,6 +1,6 @@
 'use strict';
 
-const { VpnService } = require('../../../backend/vpn');
+const { VpnService, resolveSurfsharkSettings } = require('../../../backend/vpn');
 
 const POLL_INTERVAL_MS = 15_000;
 let service = null;
@@ -38,7 +38,7 @@ module.exports = {
     }
   },
   start(ctx) {
-    service = new VpnService({ getProfile: () => ctx.config()?.vpn?.surfsharkWireguardProfile || undefined });
+    service = new VpnService({ getSettings: () => resolveSurfsharkSettings(ctx.config()?.vpn) });
     poll(ctx);
     timer = setInterval(() => poll(ctx), POLL_INTERVAL_MS);
     timer.unref?.();

@@ -5,7 +5,7 @@ const path = require('node:path');
 const { atomicWrite, serialize } = require('../../backend/storage');
 const { launchSpec } = require('../../backend/launch-spec');
 const { validateMenu } = require('../../backend/menu-config');
-const { isSafeProfileName } = require('../../backend/vpn');
+const { isSafeProfileName, isValidSurfsharkMode } = require('../../backend/vpn');
 const WallpaperSources = require('../renderer/wallpaper-sources');
 
 const DEFAULT_CONFIG = Object.freeze({
@@ -78,9 +78,14 @@ function validateConfig(config) {
   if (config.settings?.wallpaperCredit !== undefined && typeof config.settings.wallpaperCredit !== 'boolean') throw new Error('wallpaperCredit must be boolean');
   if (config.settings?.performance !== undefined && !['auto', 'quality', 'lite'].includes(config.settings.performance)) throw new Error('performance must be "auto", "quality" or "lite"');
   if (config.settings?.fontId !== undefined && (typeof config.settings.fontId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(config.settings.fontId))) throw new Error('fontId must be a font identifier');
-  const vpnProfile = config.settings?.vpn?.surfsharkWireguardProfile;
-  if (config.settings?.vpn !== undefined && (!config.settings.vpn || typeof config.settings.vpn !== 'object' || Array.isArray(config.settings.vpn))) throw new Error('vpn must be an object');
-  if (vpnProfile !== undefined && vpnProfile !== '' && !isSafeProfileName(vpnProfile)) throw new Error('vpn.surfsharkWireguardProfile is not a valid connection name');
+  const vpn = config.settings?.vpn;
+  if (vpn !== undefined) {
+    if (!vpn || typeof vpn !== 'object' || Array.isArray(vpn)) throw new Error('vpn must be an object');
+    for (const key of ['surfsharkProfile', 'surfsharkWireguardProfile']) {
+      if (vpn[key] !== undefined && vpn[key] !== '' && !isSafeProfileName(vpn[key])) throw new Error(`vpn.${key} is not a valid connection name`);
+    }
+    if (vpn.surfsharkMode !== undefined && !isValidSurfsharkMode(vpn.surfsharkMode)) throw new Error('vpn.surfsharkMode must be auto, wireguard-service, openvpn-gui, rasdial or nmcli');
+  }
   const remote = config.settings?.remote;
   if (remote !== undefined) {
     if (!remote || typeof remote !== 'object' || Array.isArray(remote)) throw new Error('remote must be an object');
