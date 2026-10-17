@@ -23,7 +23,7 @@
     return `${Math.round(hours / 24)} d ago`;
   }
 
-  /** Pure view model for the Gaming header badge. */
+  /** Pure view model for the game host chip and quick-settings host card. */
   function describeHost(info, now = Date.now()) {
     const status = info?.status;
     if (!info || !(status in STATUS_LABELS) || !(info.hostname || info.ip)) {
@@ -40,42 +40,5 @@
     };
   }
 
-  /** Builds the host badge element; `update(info)` re-renders it without recreating nodes. */
-  function createHostBadge(doc = document) {
-    const element = doc.createElement('div');
-    element.className = 'host-badge';
-    element.setAttribute('role', 'status');
-    element.hidden = true;
-    const dot = doc.createElement('span');
-    dot.className = 'host-dot';
-    dot.setAttribute('aria-hidden', 'true');
-    const name = doc.createElement('strong');
-    name.className = 'host-name';
-    const ip = doc.createElement('span');
-    ip.className = 'host-ip';
-    const state = doc.createElement('span');
-    state.className = 'host-state';
-    const sync = doc.createElement('span');
-    sync.className = 'host-sync';
-    element.append(dot, name, ip, state, sync);
-    let current = null;
-
-    function render(now = Date.now()) {
-      const view = describeHost(current, now);
-      element.hidden = view.hidden;
-      element.dataset.state = view.state;
-      name.textContent = view.name;
-      ip.textContent = view.ip;
-      ip.hidden = !view.ip;
-      state.textContent = view.statusLabel;
-      sync.textContent = view.syncLabel;
-    }
-    return {
-      element,
-      update(info) { current = info || null; render(); },
-      refresh() { render(); }
-    };
-  }
-
-  return { formatAge, describeHost, createHostBadge, STATUS_LABELS };
+  return { formatAge, describeHost, STATUS_LABELS };
 });

@@ -33,8 +33,12 @@
         <div id="weather"></div>
       </div>
       <div class="header-actions">
-        <button id="vpn-indicator" class="status-chip" type="button" data-state="unavailable" aria-label="VPN unavailable" aria-controls="system-panel" hidden></button>
-        <div id="network-indicator" class="status-chip" role="img" aria-label="Network status unavailable" hidden></div>
+        <div id="header-status" class="header-status">
+          <button id="host-indicator" class="status-chip" type="button" data-target="host" data-state="disabled" aria-label="Game host status" aria-controls="system-panel" hidden></button>
+          <button id="tailscale-indicator" class="status-chip" type="button" data-target="tailscale" data-state="unavailable" aria-label="Tailscale unavailable" aria-controls="system-panel" hidden></button>
+          <button id="surfshark-indicator" class="status-chip" type="button" data-target="surfshark" data-state="unavailable" aria-label="Surfshark unavailable" aria-controls="system-panel" hidden></button>
+          <div id="network-indicator" class="status-chip" role="img" aria-label="Network status unavailable" hidden></div>
+        </div>
         <div id="clock"></div>
         <button id="system-button" class="icon-button" aria-label="System menu" aria-expanded="false" aria-controls="system-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></button>
       </div>
@@ -49,7 +53,11 @@
     <div class="menu-heading">
       <h2 id="system-heading">Quick settings</h2>
     </div>
-    <section class="status-cards" aria-label="Network and weather">
+    <section class="status-cards" aria-label="Game host, network and weather">
+      <div id="host-card" class="status-card" data-kind="host" data-state="disabled" hidden>
+        <span class="status-card-icon" aria-hidden="true"></span>
+        <span class="status-card-copy"><strong>Game host</strong><small></small><small class="host-sync"></small></span>
+      </div>
       <div id="network-card" class="status-card" data-kind="network">
         <span class="status-card-icon" aria-hidden="true"></span>
         <span class="status-card-copy"><strong>Network</strong><small>Checking…</small></span>
@@ -66,11 +74,11 @@
         <span class="menu-copy"><strong>Settings</strong><small>Appearance, wallpapers, apps, remote host</small></span>
         <span class="menu-chevron" aria-hidden="true">›</span>
       </button>
-      <label class="menu-action menu-toggle">
+      <button id="autostart" type="button" class="menu-action menu-toggle" role="switch" aria-checked="false">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 16 18 4M8 4h10v10M4 10v10h10"/></svg></span>
         <span class="menu-copy"><strong>Start at login</strong><small>Launch when your PC starts</small></span>
-        <input id="autostart" type="checkbox" aria-label="Start launcher at login">
-      </label>
+        <span class="switch" aria-hidden="true"><span class="switch-knob"></span></span>
+      </button>
       <div id="vpn-rows" class="vpn-rows"></div>
       <button id="quit-button" class="menu-action">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4H4v16h5m4-13 5 5-5 5m-5-5h13"/></svg></span>
@@ -272,6 +280,7 @@
   <script src="launch-session.js"></script>
   <script src="status-format.js"></script>
   <script src="weather-icons.js"></script>
+  <script src="menu-switch.js"></script>
   <script src="status-widgets.js"></script>
   <script src="launch-transition.js"></script>
   <script src="app.js"></script>

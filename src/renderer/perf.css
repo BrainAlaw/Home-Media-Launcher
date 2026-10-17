@@ -12,16 +12,7 @@ body.menu-open .tile .art::before { animation-play-state: paused !important; }
 
 /* Deliberately no `contain` on .tile: layout containment would create a stacking context and paint the z-index:-1 shadow over the tile. */
 
-/* One live blurred surface at a time: while the quick-settings sheet is open (or animating) the header pill,
-   system button and host badge fall back to their opaque material instead of blurring a moving backdrop. */
-body.menu-open #primary-navigation::before,
-body.menu-open #system-button,
-body.menu-open .host-badge {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-body.menu-open #primary-navigation::before,
-body.menu-open #system-button { background: var(--menu-material-solid); }
+/* The header button never blurs (see menu.css), so nothing here competes with the sheet's own layer. */
 
 /* ------------------------------------------------------------------ Lite mode (settings.performance = lite, or auto after sustained low fps) */
 body.perf-lite {
@@ -45,14 +36,10 @@ body.perf-lite .backdrop-layer.art {
 body.perf-lite .tile::after,
 body.perf-lite .tile .art::before { display: none; }
 body.perf-lite .tile.focused .art > img { transition: none; }
-body.perf-lite #primary-navigation::before,
-body.perf-lite #system-button,
 body.perf-lite #system-panel.menu-panel,
 body.perf-lite .panel,
 body.perf-lite dialog,
-body.perf-lite #toast,
-body.perf-lite .host-badge { background: var(--menu-material-solid); }
-body.perf-lite .navigation-lens { box-shadow: none; }
+body.perf-lite #toast { background: var(--menu-material-solid); }
 body.perf-lite #fx { display: none; }
 
 /* ------------------------------------------------------------------ Opt-in meter (?perf or HML_PERF=1) */

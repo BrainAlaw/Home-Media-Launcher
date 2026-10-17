@@ -56,7 +56,8 @@ const bundledCredit = (entry) => window.WallpaperCredit.fromBundled(entry);
 const systemPanel = document.querySelector('#system-panel');
 const systemButton = document.querySelector('#system-button');
 const settingsDialog = document.querySelector('#settings-dialog');
-const vpnIndicator = document.querySelector('#vpn-indicator');
+const headerStatus = document.querySelector('#header-status');
+const autostartSwitch = document.querySelector('#autostart');
 let toastTimer;
 let cursorTimer;
 let backgroundTimer;
@@ -70,11 +71,6 @@ const mediaPreloadCache = new Map();
 const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 const motionScheduler = new window.MenuMotion.CompositorScheduler({ reducedMotion: reducedMotionQuery.matches });
 reducedMotionQuery.addEventListener('change', (event) => motionScheduler.setReducedMotion(event.matches));
-
-/** Compact Vibepollo host badge shown in the Gaming section header; fed by the `remote` extension. */
-const hostBadge = window.HomeSections.createHostBadge(document);
-const HOST_BADGE_REFRESH_MS = 60_000;
-let hostBadgeTimer = 0;
 
 const launchTransition = window.LaunchTransition.createLaunchTransition({ isReducedMotion: () => reducedMotionQuery.matches });
 let suspendToken = 0;
@@ -98,7 +94,6 @@ const spatialGrid = new window.SpatialGrid.SpatialGrid({
   viewport: homeElement,
   container: gridElement,
   createItem: () => document.createElement('button'),
-  decorateHeading: (head, row) => { if (row.id === 'gaming') head.append(hostBadge.element); },
   updateItem: updateTile,
   onFocus: (element) => setFocus(element, { scroll: false, rememberGrid: false }),
   onItemApproachingViewport: (tile) => {
@@ -271,16 +266,6 @@ function updateHostState(remoteStatus = {}, remote = {}) {
   document.body.classList.toggle('host-offline', Boolean(offline));
 }
 
-/** Loads the host identity once, then follows live `host` events and keeps the sync age fresh. */
-function startHostBadge() {
-  const ext = window.launcher?.ext;
-  if (!ext) return;
-  ext.on('remote', 'host', (info) => hostBadge.update(info));
-  ext.invoke('remote', 'getHostInfo').then((info) => hostBadge.update(info))
-    .catch((error) => console.warn('Unable to read Vibepollo host info:', error.message));
-  hostBadgeTimer = setInterval(() => hostBadge.refresh(), HOST_BADGE_REFRESH_MS);
-}
-
 /* ------------------------------------------------------------------ backdrop */
 
 const videoType = (source) => (/\.(mp4|webm)$/i.test(source || '') ? 'video' : 'image');
@@ -426,7 +411,7 @@ function preloadMedia(source) {
 
 /** Focusable header controls in visual order (left to right). */
 function headerButtons() {
-  return [vpnIndicator, systemButton].filter((button) => !button.hidden);
+  return [...headerStatus.querySelectorAll('button.status-chip:not([hidden])'), systemButton];
 }
 
 function focusables() {
@@ -638,7 +623,7 @@ async function toggleSystemPanel(force) {
     focusMenu(0);
     try {
       const enabled = await window.launcher.getAutostart();
-      if (request === systemRequest && state.view === 'system') document.querySelector('#autostart').checked = enabled;
+      if (request === systemRequest && state.view === 'system') window.MenuSwitch.setSwitch(autostartSwitch, enabled);
     } catch (error) { if (request === systemRequest && state.view === 'system') showToast(`Unable to read startup setting: ${error.message}`); }
   } else setFocus(state.focusEl || systemButton, { scroll: false });
 }
@@ -766,20 +751,23 @@ homeElement.addEventListener('focusin', (event) => {
 systemPanel.addEventListener('focusin', (event) => { const index = menuItems().indexOf(event.target); if (index >= 0) state.menuIndex = index; });
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 window.StatusWidgets.init({ showToast });
-// The header VPN chip opens quick settings with focus on the first VPN toggle.
-vpnIndicator.addEventListener('click', async () => {
-  if (state.view !== 'home') return;
+// Header status chips (host, Tailscale, Surfshark) open quick settings with focus on their own row.
+headerStatus.addEventListener('click', async (event) => {
+  const chip = event.target.closest('button.status-chip');
+  if (!chip || state.view !== 'home') return;
   await toggleSystemPanel(true);
-  const index = menuItems().indexOf(window.StatusWidgets.firstVpnControl());
+  const index = menuItems().indexOf(window.StatusWidgets.controlFor(chip.dataset.target));
   if (index >= 0) focusMenu(index);
 });
 document.querySelector('#quit-button').addEventListener('click', () => window.launcher.systemAction('quit'));
 document.querySelector('#poweroff-button').addEventListener('click', () => {
   if (confirm('Shut down this PC? All open applications will be closed.')) window.launcher.systemAction('poweroff');
 });
-document.querySelector('#autostart').addEventListener('change', async (event) => {
-  try { event.target.checked = await window.launcher.setAutostart(event.target.checked); }
-  catch (error) { showToast(`Unable to change startup setting: ${error.message}`); }
+autostartSwitch.addEventListener('click', async () => {
+  const wanted = !window.MenuSwitch.isOn(autostartSwitch);
+  window.MenuSwitch.setSwitch(autostartSwitch, wanted, { busy: true });
+  try { window.MenuSwitch.setSwitch(autostartSwitch, await window.launcher.setAutostart(wanted)); }
+  catch (error) { window.MenuSwitch.setSwitch(autostartSwitch, !wanted); showToast(`Unable to change startup setting: ${error.message}`); }
 });
 
 // Session phase (ns `session`) keeps the black cover consistent when a session was started or ended outside this renderer.
@@ -798,8 +786,7 @@ Promise.all([window.launcher.getModel(), window.launcher.getSettings()]).then(([
   state.config = config;
   render(model);
 }).catch((error) => showToast(`Configuration error: ${error.message}`));
-startHostBadge();
 updateTime();
 setInterval(updateTime, 1000);
 resetCursorTimer();
-window.addEventListener('pagehide', () => { navigationMenu.dispose(); launchSession.dispose(); clearInterval(hostBadgeTimer); }, { once: true });
+window.addEventListener('pagehide', () => { navigationMenu.dispose(); launchSession.dispose(); }, { once: true });

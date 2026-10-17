@@ -87,7 +87,18 @@ test('the top navigation bar and its focus lens are gone from markup and styles'
 test('menu materials and spring transforms do not override game tile or hero selectors', () => {
   const css = fs.readFileSync(path.join(__dirname, '../src/renderer/menu.css'), 'utf8');
   assert.doesNotMatch(css, /(?:^|[\s,])\.(?:tile|hero|art|track|row)(?:\s|[.:{])/m);
-  assert.ok([...css.matchAll(/transition\s*:\s*([^;]+);/g)].every((match) => match[1].trim() === 'none'));
-  assert.match(css, /backdrop-filter: blur/);
+  // Transitions are limited to compositor-friendly properties (transform, opacity) plus colour fades; never layout.
+  const allowed = new Set(['none', 'transform', 'opacity', 'background-color', 'color']);
+  for (const match of css.matchAll(/transition\s*:\s*([^;]+);/g)) {
+    const parts = [];
+    let depth = 0; let current = '';
+    for (const char of match[1]) {
+      if (char === '(') depth++; else if (char === ')') depth--;
+      if (char === ',' && depth === 0) { parts.push(current); current = ''; } else current += char;
+    }
+    parts.push(current);
+    for (const part of parts) assert.ok(allowed.has(part.trim().split(/\s+/)[0]), `transition ${part.trim()}`);
+  }
+  assert.doesNotMatch(css, /backdrop-filter:\s*blur/);
   assert.match(css, /prefers-reduced-motion/);
 });
