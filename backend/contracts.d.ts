@@ -248,8 +248,15 @@ export interface VibepolloHostInfo {
 }
 
 /** ns `icons` (agent C). Methods: `resolve(request)`, `listPresets()`, `searchArtwork(query)`. */
-export interface IconRequest { kind: 'website' | 'game' | 'app'; name: string; url?: string; steamAppId?: number }
+export interface IconRequest { kind: 'website' | 'game' | 'app'; name: string; url?: string; steamAppId?: number; /** Defaults: game -> 'poster', otherwise 'icon'. */ art?: ArtKind }
 export interface IconResult { source: 'preset' | 'site' | 'steamgriddb' | 'playnite' | 'letter'; url: string; width?: number; height?: number }
+export type ArtKind = 'poster' | 'hero' | 'icon' | 'logo';
+/** ns `icons` searchArtwork(query, art?) item. */
+export interface ArtworkCandidate { id: number; art: ArtKind; url: string; thumb: string; width?: number; height?: number; gameId: number; gameName: string }
+export interface IconSizeSpec { width: number; height: number; formats: string[]; transparent?: boolean }
+/** ns `icons` sizes(). */
+export interface IconSizes { tile: IconSizeSpec; appIcon: IconSizeSpec; poster: IconSizeSpec; hero: IconSizeSpec; logo: IconSizeSpec }
+/** ns `icons` also: cacheCandidate(url): IconResult, addPresetWebsites(websites, ids), firstRunWebsites(), sizes(), hasSteamGridDb(). */
 export interface WebPreset { id: string; name: string; url: string; icon: string; color: string; category: 'video' | 'music' | 'other' }
 
 /** ns `session` (agent E). Events: `phase` (SessionPhase). Methods: `closeActive()`. */
