@@ -10,6 +10,9 @@
   // service offers no usable icon) the bundled monogram tile next to this page is used.
   const BUNDLED_PRESET = /\/icons\/presets\/([a-z0-9-]+)\.svg(?:[?#].*)?$/i;
   let presetIcons = {};
+  /** Generated host-app tile art by lower-cased app name (file URL, SteamGridDB composition or data-URL monogram). */
+  const gameArt = new Map();
+  const gamePending = new Map();
 
   /** Preset id for a `preset:<id>` token or a legacy absolute bundled-icon URL; null otherwise. */
   function presetIdOf(source) {
@@ -34,8 +37,51 @@
     if (typeof document === 'undefined') return;
     for (const image of document.images) {
       const current = image.getAttribute('src') || '';
-      const id = Object.keys(presetIcons).find((candidate) => current === previous[candidate] || current.endsWith(`/icons/presets/${candidate}.svg`));
+      const id = Object.keys(presetIcons).find((candidate) => current === previous[candidate] || current === `icons/presets/${candidate}.svg` || current.endsWith(`/icons/presets/${candidate}.svg`));
       if (id && current !== presetIcons[id]) image.src = presetIcons[id];
+    }
+  }
+
+  /** Announces new art for a host application so rendered tiles can swap it in without a reload. */
+  function announceGameArt(name, url) {
+    if (typeof document === 'undefined' || typeof CustomEvent !== 'function') return;
+    document.dispatchEvent(new CustomEvent('hml:tile-art', { detail: { name, url } }));
+  }
+
+  const gameKey = (name) => String(name || '').trim().toLowerCase();
+
+  /** Tile art already known for a host application name; '' until `requestGameArt` resolved. */
+  function gameArtFor(name) { return gameArt.get(gameKey(name)) || ''; }
+
+  /**
+   * Asks the main process for the 16:9 tile art of a host application that has no cover (`builtin` selects the glyph
+   * tile for host built-ins such as Desktop). Resolves with the URL or '' when the bridge is unavailable; concurrent
+   * requests for the same name share one call.
+   */
+  function requestGameArt(name, builtin) {
+    const key = gameKey(name);
+    if (!key) return Promise.resolve('');
+    if (gameArt.has(key)) return Promise.resolve(gameArt.get(key));
+    const bridge = typeof window !== 'undefined' && window.launcher && window.launcher.ext;
+    if (!bridge || typeof bridge.invoke !== 'function') return Promise.resolve('');
+    if (!gamePending.has(key)) {
+      gamePending.set(key, bridge.invoke('icons', 'gameTile', { name, ...(typeof builtin === 'boolean' ? { builtin } : {}) })
+        .then((result) => {
+          const url = result && typeof result.url === 'string' && /^(file:|data:image\/)/i.test(result.url) ? result.url : '';
+          if (url) gameArt.set(key, url);
+          return url;
+        }).catch(() => '').finally(() => gamePending.delete(key)));
+    }
+    return gamePending.get(key);
+  }
+
+  /** Applies an `art-updated` event from the icons extension. */
+  function applyArtUpdate(event) {
+    if (!event || typeof event.url !== 'string' || !/^file:/i.test(event.url)) return;
+    if (event.kind === 'preset' && typeof event.id === 'string') setPresetIcons({ [event.id]: event.url });
+    else if (event.kind === 'game' && typeof event.name === 'string') {
+      gameArt.set(gameKey(event.name), event.url);
+      announceGameArt(event.name, event.url);
     }
   }
 
@@ -73,10 +119,12 @@
     document.addEventListener('DOMContentLoaded', () => {
       const bridge = window.launcher && window.launcher.ext;
       if (!bridge || typeof bridge.invoke !== 'function') return;
+      // Live updates first so art finished while the maps below are in flight is not missed.
+      if (typeof bridge.on === 'function') { try { bridge.on('icons', 'art-updated', applyArtUpdate); } catch { /* Bridge without events: the invokes below still run. */ } }
       bridge.invoke('icons', 'presetIcons').then(setPresetIcons)
         .then(() => bridge.invoke('icons', 'refreshPresetIcons')).then(setPresetIcons).catch(() => {});
     });
   }
 
-  return { assetUrl, isLoadableImage, presetIdOf, setPresetIcons };
+  return { assetUrl, isLoadableImage, presetIdOf, setPresetIcons, requestGameArt, gameArtFor, applyArtUpdate };
 });

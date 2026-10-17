@@ -1,0 +1,26 @@
+/* Tile artwork: wide (16:9) compositions fill the tile; the placeholder is a refined monogram mark, never a bare letter. */
+
+.tile .art { container-type: size; }
+
+/* Composed 16:9 tiles (preset websites, generated host-app art) fill the tile instead of the small app-icon box. */
+.tile .art.wide > img {
+  inset: 0; left: 0; top: 0; width: 100%; height: 100%; max-height: none;
+  transform: none; object-fit: cover;
+}
+
+/* Placeholder while no image exists (or none can): a frosted continuous-corner mark at ~46% of the tile height. */
+.tile .art > .fallback {
+  isolation: isolate;
+  font: 800 calc(46cqh * .46) / 1 var(--font-display, system-ui);
+  letter-spacing: .04em;
+  color: #fff;
+  text-shadow: 0 .06em .18em rgb(0 0 0 / .35);
+}
+.tile .art > .fallback::before {
+  content: ''; position: absolute; inset: 0; margin: auto; z-index: -1;
+  height: 46%; aspect-ratio: 1;
+  border-radius: 24%; corner-shape: squircle;
+  background: linear-gradient(160deg, rgb(255 255 255 / .34), rgb(255 255 255 / .08));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .34), 0 .5em 1.2em rgb(0 0 0 / .35);
+}
+.tile .art.has-image > .fallback { display: none; }

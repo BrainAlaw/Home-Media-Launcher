@@ -2,7 +2,7 @@
 
 const { findNext, toRect } = window.SpatialNav;
 const { buildLayout, describeEmptyGaming, pushRecent, hueFor } = window.TileModel;
-const { assetUrl, isLoadableImage } = window.AssetUrl;
+const { assetUrl, isLoadableImage, presetIdOf, requestGameArt, gameArtFor } = window.AssetUrl;
 const ThemeEngine = window.ThemeEngine;
 const gallery = window.Wallpapers.createGallery(window.WALLPAPER_ENTRIES || []);
 
@@ -382,7 +382,25 @@ function buildArt(tile) {
   fallback.textContent = tile.name.slice(0, 1).toUpperCase();
   art.append(fallback);
   if (isLoadableImage(tile.icon)) {
-    const image = document.createElement('img');
+    setArtImage(art, assetUrl(tile.icon), presetIdOf(tile.icon) !== null);
+  } else if (tile.provider === 'remote' || tile.remote) {
+    // Host apps without a downloaded cover: generated 16:9 art (SteamGridDB composition, glyph or monogram tile).
+    art.dataset.artName = tile.name;
+    const known = gameArtFor(tile.name);
+    if (known) setArtImage(art, known, true);
+    else requestGameArt(tile.name, tile.artHint === 'builtin' ? true : tile.artHint === 'game' ? false : undefined).then((url) => { if (url && !art.querySelector(':scope > img')) setArtImage(art, url, true); });
+  }
+  return art;
+}
+
+/**
+ * Shows an image in a tile's art slot (creating or re-pointing the single <img>). `wide` marks 16:9 tile compositions
+ * that fill the tile instead of the small centred app-icon box (see tile-art.css).
+ */
+function setArtImage(art, url, wide) {
+  let image = art.querySelector(':scope > img');
+  if (!image) {
+    image = document.createElement('img');
     image.alt = '';
     image.decoding = 'async';
     image.addEventListener('load', () => {
@@ -391,12 +409,18 @@ function buildArt(tile) {
       const accent = window.TileAccent.sampleImage(image);
       if (accent) art.parentElement?.style.setProperty('--tile-accent', window.TileAccent.accentCss(accent));
     });
-    image.addEventListener('error', () => image.remove());
-    image.src = assetUrl(tile.icon);
+    image.addEventListener('error', () => { image.remove(); art.classList.remove('has-image', 'wide'); });
     art.append(image);
   }
-  return art;
+  art.classList.toggle('wide', wide === true);
+  if (image.getAttribute('src') !== url) image.src = url;
 }
+
+// Generated art finished in the main process (SteamGridDB download): swap it into rendered host tiles live.
+document.addEventListener('hml:tile-art', (event) => {
+  const { name, url } = event.detail || {};
+  for (const art of document.querySelectorAll('.tile .art[data-art-name]')) if (art.dataset.artName === name) setArtImage(art, url, true);
+});
 
 function tagFocusable(button, tile, rowId) {
   button.classList.add('focusable');

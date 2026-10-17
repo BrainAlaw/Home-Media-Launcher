@@ -39,8 +39,8 @@ Iteration 5 (14 requested items):
 
 ## Known open issues
 
-1. Gaming tiles (Desktop, Gaming, Remote Input, Remote Monitor, TV, Tekken 6) show only big letters: no cover art applied from Vibepollo/SteamGridDB.
-2. Preset icons (Netflix, Spotify, …) show as small coloured squares with a letter in profiles without cached art; real icons exist for 10 of 16 presets (see `backend/ICONS.md`). Check on the real profile after the background fetch has run. The bundled monogram tile is composed too small.
+1. (Fixed in i6/g1) Gaming tiles: host payload has no downloadable cover; now SteamGridDB poster / glyph / monogram tiles, see backend/ICONS.md. Cover route needs a token scope (403 today).
+2. (Fixed in i6/g1) Preset icons: swap bug in asset-url.js (relative src never matched), wide tile CSS, larger monogram, live art-updated; 12 of 16 presets have real icons.
 3. The user's real config has `header.showWeather: false`; weather only appears after enabling Settings → General → Weather (or editing the config). Defaults changed only in `config.example.json`.
 4. (Fixed) `homeHeader.oledProtection` now defaults to `true` everywhere (OLED TV).
 5. Dead CSS remains: `.icon-field`, `.catalog-icon-panel`, `.catalog-thumb` in `appearance.css`; unused `.preset-card/.preset-grid/.font-list` in `styles.css`/`theme.css`.

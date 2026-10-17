@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('node:path');
+const { readJson } = require('../../../backend/storage');
 const { createIconResolver } = require('../../../backend/icon-resolver');
 const { ICON_SIZES } = require('../../../backend/icon-sizes');
 const { listPresets, addPresetWebsites, firstRunWebsites, presetIdFromIcon } = require('../../../backend/web-presets');
@@ -23,7 +25,7 @@ function trustedHostsFrom(ctx) {
 function getResolver(ctx) {
   const key = `${ctx.userData}|${ctx.secrets?.steamGridDbKey ? 'k' : ''}`;
   if (!resolver || resolverKey !== key) {
-    resolver = createIconResolver({ userData: ctx.userData, secrets: ctx.secrets, trustedHosts: trustedHostsFrom(ctx) });
+    resolver = createIconResolver({ userData: ctx.userData, secrets: ctx.secrets, trustedHosts: trustedHostsFrom(ctx), onArt: (event) => ctx.emit('art-updated', event) });
     resolverKey = key;
   }
   return resolver;
@@ -36,7 +38,14 @@ function usedPresetIds(ctx) {
   return [...new Set(ids.filter(Boolean))];
 }
 
-/** ns `icons`: see backend/ICONS.md and the IconRequest / IconResult / WebPreset contracts. */
+/** Names of cached host applications that still need generated tile art (no cover downloaded). */
+async function uncoveredHostApps(ctx) {
+  const cache = await readJson(path.join(ctx.userData, 'remote-apps.json'), null);
+  const tiles = Array.isArray(cache?.tiles) ? cache.tiles : [];
+  return tiles.filter((tile) => tile && typeof tile.name === 'string' && !tile.icon).map((tile) => ({ name: tile.name, builtin: tile.artHint === 'builtin' ? true : tile.artHint === 'game' ? false : undefined }));
+}
+
+/** ns `icons` (event `art-updated`: { kind: 'preset', id, url } | { kind: 'game', name, url }): see backend/ICONS.md and the IconRequest / IconResult / WebPreset contracts. */
 module.exports = {
   namespace: 'icons',
   handlers: {
@@ -48,6 +57,8 @@ module.exports = {
     presetIcons: (ctx) => getResolver(ctx).presetIconMap(listPresets().map((preset) => preset.id)),
     /** Fetches missing tile art for the presets used by the configured websites; resolves with { presetId: fileUrl }. */
     refreshPresetIcons: (ctx) => getResolver(ctx).refreshPresetIcons(usedPresetIds(ctx)),
+    /** { url, source } of the 16:9 tile art for a host application without cover art; `{ name, builtin }`. */
+    gameTile: (ctx, request) => getResolver(ctx).resolveGameTile(request),
     searchArtwork: (ctx, query, art) => getResolver(ctx).searchArtwork(query, art),
     cacheCandidate: (ctx, url) => getResolver(ctx).cacheCandidate(url),
     /** Returns the existing websites array plus the requested presets (ids), without duplicates. The renderer saves it. */
@@ -59,6 +70,8 @@ module.exports = {
   start(ctx) {
     const active = getResolver(ctx);
     active.prune().catch(() => {}).then(() => active.refreshPresetIcons(usedPresetIds(ctx))).catch(() => {});
+    // Pre-warm generated art for cached host apps so the first paint after a restart already shows it.
+    uncoveredHostApps(ctx).then((apps) => Promise.all(apps.filter((app) => app.builtin !== true).map((app) => active.resolveGameTile(app)))).catch(() => {});
   },
   stop() { resolver = null; resolverKey = ''; }
 };

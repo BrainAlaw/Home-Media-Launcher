@@ -7,7 +7,8 @@ const { fileURLToPath, pathToFileURL } = require('node:url');
 const { atomicWrite, readJson, serialize } = require('./storage');
 const { cacheArtwork, imageExtension, pruneArtwork } = require('./artwork');
 const { matchPresetByHostname, getPresetSources, PRESET_DIRECTORY } = require('./web-presets');
-const { composeTile, decodePng, analyseImage, toHex } = require('./tile-art');
+const { composeTile, decodePng, analyseImage, glyphForName, toHex } = require('./tile-art');
+const { requestBuffer: defaultRequestBuffer } = require('./network');
 const { createSiteFetcher } = require('./site-fetch');
 const { createSteamGridDb, isSteamGridDbImage, MIN_ICON_EDGE: MIN_GAME_ICON_EDGE } = require('./steamgriddb');
 const { ICON_SIZES, MIN_SITE_ICON_EDGE } = require('./icon-sizes');
@@ -22,6 +23,9 @@ const MAX_LOGO_EMBED_BYTES = 180 * 1024;
 /** A fetched icon smaller than this looks blurry at 40% of a 720p tile, so the monogram tile is used instead. */
 const MIN_PRESET_ICON_EDGE = 128;
 const MAX_PRESET_ICON_BYTES = 900 * 1024;
+/** Posters and heroes are embedded into the composed tile as base64, so larger downloads are skipped. */
+const MAX_GAME_ART_BYTES = 600 * 1024;
+const GAME_FILE = /^[0-9a-f]{64}\.svg$/;
 const PRESET_FILE = /^[a-z0-9-]+\.svg$/;
 const MIME_BY_EXTENSION = Object.freeze({ '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' });
 const SVG_FILE = /^[0-9a-f]{64}\.svg$/;
@@ -186,7 +190,8 @@ function normaliseRequest(request) {
  * Options (all injectable for tests): `userData`, `secrets` (steamGridDbKey stays in this process),
  * `trustedHosts()` (hosts exempt from the private-address guard), `fetchSite`, `requestBuffer`, `now`.
  */
-function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], fetchSite, requestBuffer, now = Date.now } = {}) {
+function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], fetchSite, requestBuffer, now = Date.now, onArt = () => {} } = {}) {
+  const notify = (event) => { try { onArt(event); } catch { /* Listeners must never break artwork resolution. */ } };
   if (!userData) throw new Error('userData directory is required');
   const directory = path.join(userData, 'icon-cache');
   const indexFile = path.join(directory, 'index.json');
@@ -304,7 +309,9 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     });
     const file = path.join(presetDirectory, `${id}.svg`);
     await serialize(file, () => atomicWrite(file, svg));
-    return pathToFileURL(file).href;
+    const url = pathToFileURL(file).href;
+    notify({ kind: 'preset', id, url });
+    return url;
   }
 
   async function freshPresetTile(id) {
@@ -349,6 +356,87 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     const worker = async () => { for (let id = queue.shift(); id; id = queue.shift()) result[id] = await resolvePresetIcon(id); };
     await Promise.all([worker(), worker(), worker()]);
     return result;
+  }
+
+  /* ---------------------------------------------------------------- game tile art (host apps) */
+
+  const gameDirectory = path.join(directory, 'games');
+  const gamePending = new Map();
+  const gameKey = (name) => createHash('sha256').update(String(name).trim().toLowerCase()).digest('hex');
+
+  async function freshGameTile(name) {
+    const file = path.join(gameDirectory, `${gameKey(name)}.svg`);
+    try {
+      const stats = await fs.stat(file);
+      return now() - stats.mtimeMs <= CACHE_TTL_MS ? pathToFileURL(file).href : null;
+    } catch { return null; }
+  }
+
+  /** First SteamGridDB image of a kind that fits the embed budget, as { dataUrl, body, size }. */
+  async function downloadGridImage(art, target) {
+    const download = requestBuffer || defaultRequestBuffer;
+    for (const image of await grid.images(art, target, 4)) {
+     for (const source of [...new Set([image.url, image.thumb])]) {
+      try {
+        const { body } = await download(source, { maxBytes: MAX_GAME_ART_BYTES, timeoutMs: 8000 });
+        const mime = MIME_BY_EXTENSION[imageExtension(body)];
+        if (mime) return { dataUrl: `data:${mime};base64,${body.toString('base64')}`, body, size: imageSize(body) };
+      } catch { /* Too large, blocked or not an image: try the next candidate. */ }
+     }
+    }
+    return null;
+  }
+
+  /** Composes SteamGridDB art (poster on a gradient, else hero crop) into a 16:9 tile; null without art. */
+  async function buildGameTile(name) {
+    if (!grid) return null;
+    const target = await findGame({ name });
+    if (!target) return null;
+    const poster = await downloadGridImage('poster', target).catch(() => null);
+    let svg = null;
+    if (poster) {
+      const analysis = analyseImage(decodePng(poster.body));
+      const aspect = poster.size.width && poster.size.height ? poster.size.width / poster.size.height : 2 / 3;
+      svg = composeTile({ name, color: analysis.color || nameColor(name), posterDataUrl: poster.dataUrl, posterAspect: aspect });
+    } else {
+      const hero = await downloadGridImage('hero', target).catch(() => null);
+      if (hero) svg = composeTile({ name, heroDataUrl: hero.dataUrl });
+    }
+    if (!svg) return null;
+    const file = path.join(gameDirectory, `${gameKey(name)}.svg`);
+    await serialize(file, () => atomicWrite(file, svg));
+    return pathToFileURL(file).href;
+  }
+
+  /** Refined monogram / glyph tile as an SVG data URL (no network, nothing written to disk). */
+  function monogramGameTile(name) {
+    const svg = composeTile({ name, glyph: glyphForName(name), color: nameColor(name) });
+    return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  }
+
+  /**
+   * 16:9 tile art for a host application without cover art. Host built-ins (`builtin: true`, e.g. Desktop, TV)
+   * get a glyph tile; other names are looked up on SteamGridDB (cached 14 days, failures retried after 6 hours)
+   * and fall back to a monogram tile. Resolves with { url, source: 'steamgriddb' | 'monogram' }, never rejects.
+   */
+  async function resolveGameTile({ name, builtin } = {}) {
+    const label = typeof name === 'string' ? name.trim().slice(0, 200) : '';
+    if (!label) return { url: monogramGameTile('?'), source: 'monogram' };
+    // Without an explicit host hint, names of well-known Sunshine built-ins (Desktop, TV, ...) never go to SteamGridDB.
+    if (builtin === true || (builtin === undefined && glyphForName(label))) return { url: monogramGameTile(label), source: 'monogram' };
+    const cached = await freshGameTile(label);
+    if (cached) return { url: cached, source: 'steamgriddb' };
+    const key = `game|${label.toLowerCase()}`;
+    const failedAt = negative.get(key);
+    if (failedAt !== undefined && now() - failedAt <= NEGATIVE_TTL_MS) return { url: monogramGameTile(label), source: 'monogram' };
+    if (!gamePending.has(key)) {
+      gamePending.set(key, buildGameTile(label).catch(() => null).then((url) => {
+        if (url) notify({ kind: 'game', name: label, url }); else negative.set(key, now());
+        return url;
+      }).finally(() => gamePending.delete(key)));
+    }
+    const url = await gamePending.get(key);
+    return url ? { url, source: 'steamgriddb' } : { url: monogramGameTile(label), source: 'monogram' };
   }
 
   async function findGame(request) {
@@ -472,6 +560,13 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
         const file = path.join(directory, name);
         try { if (Date.now() - (await fs.stat(file)).mtimeMs > 3600000) await fs.rm(file, { force: true }); } catch { /* Retry next time. */ }
       }
+      let games = [];
+      try { games = await fs.readdir(gameDirectory); } catch { /* No game tiles cached yet. */ }
+      for (const name of games) {
+        if (!GAME_FILE.test(name)) continue;
+        const file = path.join(gameDirectory, name);
+        try { if (now() - (await fs.stat(file)).mtimeMs > CACHE_TTL_MS) await fs.rm(file, { force: true }); } catch { /* Retry next time. */ }
+      }
       let tiles = [];
       try { tiles = await fs.readdir(presetDirectory); } catch { /* No preset tiles cached yet. */ }
       for (const name of tiles) {
@@ -482,7 +577,7 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     });
   }
 
-  return { resolve, resolvePresetIcon, presetIconMap, refreshPresetIcons, searchArtwork, cacheCandidate, prune, directory };
+  return { resolve, resolvePresetIcon, resolveGameTile, presetIconMap, refreshPresetIcons, searchArtwork, cacheCandidate, prune, directory };
 }
 
 module.exports = {
