@@ -44,10 +44,11 @@
    * Splits a flat tile list into the two home sections. Recently launched tiles lead each section.
    * @param {Tile[]} tiles
    * @param {string[]} recentIds most recent first
-   * @param {{ showEmptyGaming?: boolean }} [options] keep the Gaming row (and its host badge) even with no tiles
+   * @param {{ showEmptyGaming?: boolean, gamingEmptyMessage?: string }} [options] keep the Gaming row (and its host badge)
+   *   even with no tiles; the message explains the empty row
    * @returns {Layout}
    */
-  function buildLayout(tiles, recentIds = [], { showEmptyGaming = false } = {}) {
+  function buildLayout(tiles, recentIds = [], { showEmptyGaming = false, gamingEmptyMessage = '' } = {}) {
     const rank = new Map(recentIds.map((id, index) => [id, index]));
     const byRecency = (list) => list
       .map((tile, index) => ({ tile, index, rank: rank.has(tile.id) ? rank.get(tile.id) : Infinity }))
@@ -57,8 +58,30 @@
     for (const tile of tiles) buckets[sectionOf(tile)].push(tile);
     const rows = [];
     if (buckets.theatre.length) rows.push({ id: 'theatre', title: 'Home Theatre', tiles: byRecency(buckets.theatre) });
-    if (buckets.gaming.length || showEmptyGaming) rows.push({ id: 'gaming', title: 'Gaming', tiles: byRecency(buckets.gaming) });
+    if (buckets.gaming.length || showEmptyGaming) {
+      rows.push({ id: 'gaming', title: 'Gaming', tiles: byRecency(buckets.gaming), ...(!buckets.gaming.length && gamingEmptyMessage ? { emptyMessage: gamingEmptyMessage } : {}) });
+    }
     return { rows };
+  }
+
+  /**
+   * Explains an empty Gaming row from the remote sync result.
+   * @param {{ status?: string, host?: string, error?: string } | undefined} remoteStatus
+   * @param {{ enabled?: boolean, host?: string } | undefined} remote
+   * @param {number} [hiddenCount] remote apps the user switched off in Settings
+   * @returns {string}
+   */
+  function describeEmptyGaming(remoteStatus, remote, hiddenCount = 0) {
+    if (!remote?.enabled) return '';
+    const host = remote.host || remoteStatus?.host || 'the host';
+    const status = remoteStatus?.status;
+    if (status === 'offline') {
+      return /credential|token|unauthori[sz]ed|401|403/i.test(remoteStatus?.error || '')
+        ? `No apps yet - check the API token for ${host}`
+        : `Offline - no cached apps yet. Check that ${host} is reachable`;
+    }
+    if (hiddenCount > 0) return 'All apps are hidden - re-enable them in Settings > Applications';
+    return `No apps yet - ${host} reports no applications`;
   }
 
   /**
@@ -91,5 +114,5 @@
     return hash % 360;
   }
 
-  return { categorise, sectionOf, buildLayout, pushRecent, subtitle, hueFor, MAX_RECENTS };
+  return { categorise, sectionOf, buildLayout, describeEmptyGaming, pushRecent, subtitle, hueFor, MAX_RECENTS };
 });
