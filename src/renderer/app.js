@@ -701,6 +701,8 @@ window.ControllersPage.init({ setView: (view) => { state.view = view; } });
  */
 function handleAction(action) {
   if (state.locked) return;
+  // Overlays with their own input: the on-screen keyboard (above everything) and the music view.
+  if (window.OnScreenKeyboard.handleAction(action) || window.MediaView.handleAction(action)) return;
   const isDirection = ['up', 'down', 'left', 'right'].includes(action);
   if (state.view === 'home') {
     // The widget is one focus stop; it consumes everything except `menu` (quick settings) while focused.
@@ -722,6 +724,20 @@ function handleAction(action) {
     else if (action === 'back' && !window.SettingsDialog.dismissPopup()) closeSettings();
   }
 }
+
+/** Music view (opened by the home media widget): owns input while `state.view === 'media'`; focus returns to the opener. */
+document.addEventListener('launcher:open-media-view', () => {
+  if (state.view !== 'home' || state.locked) return;
+  const opener = state.focusEl;
+  state.view = 'media';
+  window.MediaView.open({
+    onClose: () => {
+      state.view = 'home';
+      if (opener?.isConnected) setFocus(opener, { scroll: false });
+      else setFocus(state.focusEl || systemButton, { scroll: false });
+    }
+  }).catch((error) => { state.view = 'home'; showToast(`Music unavailable: ${error.message}`); });
+});
 
 const KEY_ACTIONS = {
   ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
