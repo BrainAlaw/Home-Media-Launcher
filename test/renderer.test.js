@@ -45,22 +45,25 @@ test('spatial nav lands on the closest column when changing rows', () => {
   assert.equal(findNext(current, [current, ...row], 'down'), 'r3');
 });
 
-test('layout groups tiles and promotes the most recent tile to hero', () => {
+test('layout splits tiles into Home Theatre and Gaming with recents first', () => {
   const tiles = [
     { id: 'g1', name: 'Game', provider: 'remote' },
     { id: 'a1', name: 'App', provider: 'local', command: '/usr/bin/app' },
     { id: 'm1', name: 'Custom Moonlight', command: 'moonlight-qt' },
-    { id: 'w1', name: 'Web', type: 'website', url: 'https://www.example.com/x' }
+    { id: 'w1', name: 'Web', type: 'website', url: 'https://www.example.com/x' },
+    { id: 'l1', name: 'Local game', provider: 'local', category: 'game' },
+    { id: 'v1', name: 'Music', type: 'webapp', category: 'music' }
   ];
   const fresh = buildLayout(tiles, []);
-  assert.equal(fresh.hero.id, 'g1');
-  assert.deepEqual(fresh.rows.map((row) => row.id), ['games', 'apps', 'web']);
-  assert.deepEqual(fresh.rows[0].tiles.map((tile) => tile.id), ['g1', 'm1']);
+  assert.deepEqual(fresh.rows.map((row) => [row.id, row.title]), [['theatre', 'Home Theatre'], ['gaming', 'Gaming']]);
+  assert.deepEqual(fresh.rows[0].tiles.map((tile) => tile.id), ['a1', 'w1', 'v1']);
+  assert.deepEqual(fresh.rows[1].tiles.map((tile) => tile.id), ['g1', 'm1', 'l1']);
 
-  const withRecents = buildLayout(tiles, ['w1', 'gone', 'a1']);
-  assert.equal(withRecents.hero.id, 'w1');
-  assert.deepEqual(withRecents.rows[0], { id: 'recent', title: 'Continue', tiles: [tiles[1]] });
-  assert.equal(buildLayout([], []).hero, null);
+  const withRecents = buildLayout(tiles, ['v1', 'gone', 'l1']);
+  assert.deepEqual(withRecents.rows[0].tiles.map((tile) => tile.id), ['v1', 'a1', 'w1']);
+  assert.deepEqual(withRecents.rows[1].tiles.map((tile) => tile.id), ['l1', 'g1', 'm1']);
+  assert.deepEqual(buildLayout([], []).rows, []);
+  assert.deepEqual(buildLayout([tiles[1]], [], { showEmptyGaming: true }).rows.map((row) => row.id), ['theatre', 'gaming']);
 });
 
 test('recents are deduplicated, ordered and capped', () => {

@@ -25,6 +25,7 @@ const { ControllerPairing } = require('./controller-pairing');
 const { WallpaperPlaylist } = require('../../backend/wallpaper-playlist');
 const { loadEnv, readSecrets } = require('../../backend/env');
 const { registerExtensions } = require('./ext-registry');
+const remoteExt = require('./ext/remote');
 
 loadEnv();
 
@@ -102,9 +103,9 @@ async function assembleModel() {
       discoveredTiles.push(...windowsTiles.map((tile) => ({ ...tile, provider: 'local' })));
     } else discoveredTiles.push(...(await scanDesktopEntries({ includeHidden: config.settings.showHiddenDesktopEntries })).map((tile) => ({ ...tile, provider: 'local' })));
   }
-  const remoteCredential = await loadCredential(tokenPath, safeStorage);
-  contextArtwork.setRemoteAccess(config.settings?.remote, remoteCredential);
-  const remoteResult = await library.sync((onProgress) => listRemoteApps(config.settings?.remote, path.join(app.getPath('userData'), 'remote-apps.json'), {
+  const remoteCredential = remoteExt.defaultCredential(await loadCredential(tokenPath, safeStorage), secrets);
+  contextArtwork.setRemoteAccess(remoteExt.withHostDefaults(config.settings?.remote, secrets), remoteCredential);
+  const remoteResult = await library.sync((onProgress) => listRemoteApps(remoteExt.withHostDefaults(config.settings?.remote, secrets), path.join(app.getPath('userData'), 'remote-apps.json'), {
     platform: process.platform,
     token: remoteCredential,
     cacheOnly: !window,
@@ -145,19 +146,21 @@ async function assembleModel() {
 }
 
 function remoteStatus(result) {
-  return {
+  const status = {
     status: result.status, host: result.host || '', error: result.error || '', warning: result.warning || '',
     message: ['offline', 'cached'].includes(result.status) ? `${result.host} offline` : '', updatedAt: result.updatedAt || '',
     isVibepolloOffline: ['offline', 'cached'].includes(result.status)
   };
+  remoteExt.publish(status);
+  return status;
 }
 
 async function refreshHost() {
   if (building) await building;
   const snapshot = config;
-  const remoteCredential = await loadCredential(tokenPath, safeStorage);
-  contextArtwork.setRemoteAccess(snapshot.settings?.remote, remoteCredential);
-  const result = await library.sync((onProgress) => listRemoteApps(snapshot.settings?.remote, path.join(app.getPath('userData'), 'remote-apps.json'), {
+  const remoteCredential = remoteExt.defaultCredential(await loadCredential(tokenPath, safeStorage), secrets);
+  contextArtwork.setRemoteAccess(remoteExt.withHostDefaults(snapshot.settings?.remote, secrets), remoteCredential);
+  const result = await library.sync((onProgress) => listRemoteApps(remoteExt.withHostDefaults(snapshot.settings?.remote, secrets), path.join(app.getPath('userData'), 'remote-apps.json'), {
     token: remoteCredential,
     onProgress
   }));
@@ -270,12 +273,14 @@ function createWindow() {
   window.once('ready-to-show', () => window.show());
 }
 
+const secrets = readSecrets();
+
 app.whenReady().then(async () => {
   configPath = testProfile ? path.join(app.getPath('userData'), 'config.json') : process.env.HOME_MEDIA_LAUNCHER_CONFIG || path.join(app.getPath('userData'), 'config.json');
   tokenPath = path.join(app.getPath('userData'), 'remote-token.json');
   localState = new LocalState(app.getPath('userData'));
   // EXT-HOOK: feature modules in src/main/ext/*.js register their namespaced IPC here.
-  registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets: readSecrets(), config: () => model?.settings || {} });
+  registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets, config: () => model?.settings || {} });
   themeService = new ThemeService(app.getPath('userData'), mediaAssets);
   contextArtwork = new ContextArtwork(app.getPath('userData'), mediaAssets);
   slideshow = new SlideshowCache(mediaAssets);
