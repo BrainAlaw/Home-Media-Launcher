@@ -153,6 +153,8 @@ contextBridge.exposeInMainWorld('launcher', {
   getWallpaperCount: (request) => ipcRenderer.invoke('launcher:get-wallpaper-count', request),
   /** @param {{ folders: string[], online: boolean }} request @param {number} index */
   getWallpaperSlide: (request, index) => ipcRenderer.invoke('launcher:get-wallpaper-slide', request, index),
+  /** Wallpaper source editor: 'inspect' ({ sources }), 'probe' ({ location }) and 'clearCache'. */
+  wallpaperSources: (action, payload) => ipcRenderer.invoke('launcher:wallpaper-sources', action, payload),
   getOnlineWallpaperStatus: () => ipcRenderer.invoke('launcher:get-online-wallpaper-status'),
   clearOnlineWallpapers: () => ipcRenderer.invoke('launcher:clear-online-wallpapers'),
   getAutostart: () => ipcRenderer.invoke('launcher:get-autostart'),
