@@ -1,65 +1,64 @@
 /*
  * HOME LAYOUT: "Home Theatre" and "Gaming" sections, the Gaming host badge and tvOS-style tile motion.
- * Loaded after styles.css so it can refine the carousel and tile rules. Only transform and opacity animate.
+ * Loaded after styles.css so it can refine the carousel and tile rules. Values come from hig.css (--hig-*).
+ * Tile motion animates transform and opacity only; will-change is set on the focused tile only.
  */
 :root {
-  /* Damped spring (~12% overshoot) sampled for CSS; browsers without linear() fall back to the bezier. */
-  --ease-spring: cubic-bezier(.34, 1.36, .5, 1);
-  --motion-spring: 460ms;
-  --motion-glide: 320ms;
-  --track-pad-y: clamp(56px, 9vh, 104px);
+  /* Aliases kept for older rules; the source of truth is hig.css. */
+  --ease-spring: var(--hig-ease-spring);
+  --motion-spring: var(--hig-dur-slow);
+  --motion-glide: var(--hig-dur-base);
+  /* Reserve more than the largest lift shadow plus the focus scale so nothing clips (see --hig-clip-safe). */
+  --track-pad-y: clamp(64px, 9vh, 104px);
   --track-gap-y: 14px;
-}
-@supports (transition-timing-function: linear(0, 1)) {
-  :root {
-    --ease-spring: linear(0, .09 2.1%, .32 5%, .62 8.4%, .88 12%, 1.03 15.5%, 1.1 19%, 1.11 22.5%, 1.08 26.5%, 1.03 31%, .99 36%, .98 41%, 1 49%, 1.005 58%, 1 70%, 1);
-  }
 }
 
 /* ---------------------------------------------------------------- section headers */
-.row-head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 var(--gutter); min-height: 44px; }
-.row-head h2 { margin: 0; font-size: clamp(22px, 1.8vw, 38px); font-weight: 650; color: var(--text); }
+.row-head { display: flex; align-items: center; justify-content: space-between; gap: var(--hig-space-3); margin: 0 var(--gutter); min-height: calc(var(--hig-space-1) * 5); contain: layout style; }
+.row-head h2 { margin: 0; font: var(--hig-font-title3); font-weight: 650; color: var(--hig-label); letter-spacing: var(--title-tracking); }
 .row[data-row="gaming"] { margin-top: clamp(8px, 2vh, 28px); }
 
-.host-badge { display: inline-flex; align-items: center; gap: 12px; max-width: 60%; padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-host-banner); background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); color: var(--text-dim); font-size: clamp(14px, 1vw, 20px); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Host badge: thin material (no live blur) with a status dot. */
+.host-badge { display: inline-flex; align-items: center; gap: var(--hig-space-1); max-width: 60%; padding: var(--hig-space-1) var(--hig-space-2); border: var(--hig-material-edge); border-radius: var(--hig-radius-pill); background: var(--hig-material-thin); color: var(--hig-label-secondary); font: var(--hig-font-caption1); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .host-badge[hidden] { display: none; }
 .host-badge > * { overflow: hidden; text-overflow: ellipsis; }
-.host-name { color: var(--text); font-weight: 650; }
-.host-ip, .host-sync { color: var(--text-dim); }
-.host-ip::before, .host-state::before, .host-sync::before { content: '\00b7'; margin-right: 12px; opacity: .6; }
+.host-name { color: var(--hig-label); font-weight: 650; }
+.host-ip, .host-sync { color: var(--hig-label-secondary); }
+.host-ip::before, .host-state::before, .host-sync::before { content: '\00b7'; margin-right: var(--hig-space-1); opacity: .6; }
 .host-dot { flex: none; width: .6em; height: .6em; border-radius: var(--radius-circle); background: var(--warn); }
-.host-badge[data-state="online"] .host-dot { background: var(--ok); box-shadow: 0 0 10px var(--ok); }
+.host-badge[data-state="online"] .host-dot { background: var(--ok); box-shadow: 0 0 6px var(--ok); }
 .host-badge[data-state="offline"] .host-dot { background: var(--danger); }
 .host-badge[data-state="cached"] .host-dot { background: var(--warn); }
 .host-badge[data-state="offline"] .host-state { color: var(--danger); }
 .host-badge[data-state="cached"] .host-state { color: var(--warn); }
 
 /* ---------------------------------------------------------------- unclipped carousels */
-/* The track clips along both axes (scroll container), so its padding must exceed the largest shadow/glow
- * and focus scale. The negative margin hands the extra space back so the page rhythm is unchanged. */
+/* The track clips along both axes (scroll container), so its padding must exceed the largest shadow
+ * and the focus scale. The negative margin hands the extra space back so the page rhythm is unchanged. */
 .track { padding-block: var(--track-pad-y); margin-block: calc(var(--track-gap-y) - var(--track-pad-y)); }
 .row { position: relative; }
 
 /* ---------------------------------------------------------------- tile motion (transform + opacity only) */
-.tile { transition: transform var(--motion-spring) var(--ease-spring); backface-visibility: hidden; }
-.tile::before { transition: opacity var(--motion-glide) var(--ease); }
+.tile { transition: transform var(--hig-dur-slow) var(--hig-ease-spring); backface-visibility: hidden; }
+.tile::before { transition: opacity var(--hig-dur-base) var(--hig-ease-standard); }
 .tile.focused { will-change: transform; }
 
-/* Soft ambient shadow under the tile; fades in with focus so rest state stays cheap. */
-.tile::after { content: ''; position: absolute; z-index: -1; inset: 6% 4% -4%; border-radius: var(--ui-rounding); background: radial-gradient(closest-side, var(--shadow-tint, rgba(0, 0, 0, .55)) 0%, rgba(0, 0, 0, 0) 100%); opacity: 0; transform: translate3d(0, 10%, 0) scale(.96); transition: opacity var(--motion-glide) var(--ease), transform var(--motion-spring) var(--ease-spring); pointer-events: none; }
-.tile.focused::after { opacity: .75; transform: translate3d(0, 14%, 0) scale(1); }
+/* Lift: a soft tinted shadow under the tile. It is a single gradient layer (no blur filter, no box-shadow blur)
+ * that fades and rises with focus, so the rest state costs nothing. */
+.tile::after { content: ''; position: absolute; z-index: -1; inset: 8% 2% -10%; border-radius: var(--hig-radius-lg); background: radial-gradient(closest-side, color-mix(in srgb, var(--hig-focus-lift) 70%, transparent) 0%, transparent 100%); opacity: 0; transform: translate3d(0, 8%, 0) scale(.94); transition: opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-slow) var(--hig-ease-spring); pointer-events: none; }
+.tile.focused::after { opacity: .85; transform: translate3d(0, 14%, 0) scale(1); }
 
-/* Art parallax: the image drifts and zooms slightly inside its frame, plus a one-shot sheen sweep. */
-.tile .art > img, .tile .art > .fallback { transition: transform var(--motion-spring) var(--ease-spring); }
-.tile.focused .art > .fallback { transform: translate3d(0, -2%, 0) scale(1.06); }
-.tile.focused .art > img { transform: translate(-50%, -50%) scale(1.08); }
-.remote.tile.focused .art > img { transform: scale(1.06) translate3d(0, -1.5%, 0); }
-.tile .art::before { content: ''; position: absolute; z-index: 1; inset: -20% auto -20% 0; width: 55%; background: linear-gradient(105deg, transparent 0%, color-mix(in srgb, var(--text) 26%, transparent) 50%, transparent 100%); opacity: 0; transform: translate3d(-130%, 0, 0) skewX(-12deg); pointer-events: none; }
-.tile.focused .art::before { animation: tile-sheen 900ms var(--ease) 90ms 1 both; }
+/* Parallax: the image drifts and zooms inside its frame; a one-shot specular sheen sweeps across on focus. */
+.tile .art > img, .tile .art > .fallback { transition: transform var(--hig-dur-slow) var(--hig-ease-spring); }
+.tile.focused .art > .fallback { transform: translate3d(0, -2%, 0) scale(var(--hig-parallax)); }
+.tile.focused .art > img { transform: translate(-50%, -50%) scale(var(--hig-parallax)); }
+.remote.tile.focused .art > img { transform: scale(var(--hig-parallax)) translate3d(0, -1.5%, 0); }
+.tile .art::before { content: ''; position: absolute; z-index: 1; inset: -20% auto -20% 0; width: 55%; background: linear-gradient(105deg, transparent 0%, var(--hig-focus-sheen) 50%, transparent 100%); opacity: 0; transform: translate3d(-130%, 0, 0) skewX(-12deg); pointer-events: none; }
+.tile.focused .art::before { animation: tile-sheen 900ms var(--hig-ease-out) 90ms 1 both; }
 @keyframes tile-sheen { 0% { opacity: 0; transform: translate3d(-130%, 0, 0) skewX(-12deg); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate3d(260%, 0, 0) skewX(-12deg); } }
 
 /* Label rises into place on focus. */
-.tile .label { transform: translate3d(0, 6px, 0); opacity: .86; transition: transform var(--motion-spring) var(--ease-spring), opacity var(--motion-glide) var(--ease); }
+.tile .label { transform: translate3d(0, 6px, 0); opacity: .86; transition: transform var(--hig-dur-slow) var(--hig-ease-spring), opacity var(--hig-dur-base) var(--hig-ease-standard); }
 .tile.focused .label { transform: translate3d(0, -2px, 0); opacity: 1; }
 
 /* Gentle mouse hover; the focused tile keeps its stronger state. */

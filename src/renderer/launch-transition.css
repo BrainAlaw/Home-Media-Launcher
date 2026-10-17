@@ -1,7 +1,7 @@
-/* Launch / close transitions (see launch-transition.js). Transform and opacity only. */
+/* Launch / close transitions (see launch-transition.js). Transform and opacity only; durations and easings come from hig.css. */
 #launch-cover {
   position: fixed; inset: 0; z-index: 9000; background: #000; pointer-events: none;
-  transform-origin: 0 0; visibility: hidden; will-change: transform, opacity; contain: strict;
+  transform-origin: 0 0; visibility: hidden; contain: strict;
 }
 #launch-cover .lt-tint { position: absolute; inset: 0; background: var(--accent, #4a8dff); opacity: 0; pointer-events: none; }
 
@@ -9,12 +9,12 @@
 body.lt-covering > main, body.lt-covering > #backdrop, body.lt-covering > #background-video,
 body.lt-covering > .shade, body.lt-covering > #fx, body.lt-covering > #host-banner {
   opacity: 0; transform: scale(1.06); transform-origin: 50% 50%;
-  transition: opacity 360ms cubic-bezier(.4, 0, 1, 1), transform 460ms cubic-bezier(.32, .72, 0, 1);
+  transition: opacity var(--hig-dur-base) var(--hig-ease-in), transform var(--hig-dur-slow) var(--hig-ease-standard);
 }
 body.lt-revealing > main, body.lt-revealing > #backdrop, body.lt-revealing > #background-video,
 body.lt-revealing > .shade, body.lt-revealing > #fx, body.lt-revealing > #host-banner {
   transform-origin: 50% 50%;
-  transition: opacity 420ms cubic-bezier(.2, 0, 0, 1) 60ms, transform 520ms cubic-bezier(.2, .8, .2, 1) 60ms;
+  transition: opacity var(--hig-dur-base) var(--hig-ease-out) 60ms, transform var(--hig-dur-slow) var(--hig-ease-spring-soft) 60ms;
 }
 body.lt-covering #toast { z-index: 9100; }
 
