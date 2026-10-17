@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vibepollo Menu Definition",
+  "type": "object", "additionalProperties": false,
+  "required": ["version", "layout", "groups"],
+  "properties": {
+    "version": { "const": 1 },
+    "layout": { "enum": ["top-bar", "side-dock"] },
+    "groups": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/group" } },
+    "slideshow": {
+      "type": "object", "additionalProperties": false, "required": ["enabled", "assets"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "lookAhead": { "type": "number", "multipleOf": 1, "minimum": 3, "maximum": 5 },
+        "intervalMs": { "type": "number", "multipleOf": 1, "minimum": 1000, "maximum": 3600000 },
+        "assets": { "type": "array", "maxItems": 128, "items": {
+          "type": "object", "additionalProperties": false, "required": ["type", "source"],
+          "properties": { "type": { "enum": ["image", "video"] }, "source": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^[^\\u0000-\\u001f]+$" } }
+        } }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 100 },
+    "group": {
+      "type": "object", "additionalProperties": false, "required": ["id", "label", "items"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "label": { "$ref": "#/$defs/label" },
+        "items": { "type": "array", "maxItems": 64, "items": {
+          "type": "object", "additionalProperties": false, "required": ["id", "label", "action"],
+          "properties": {
+            "id": { "$ref": "#/$defs/id" }, "label": { "$ref": "#/$defs/label" },
+            "action": { "enum": ["home", "library", "settings", "category"] },
+            "category": { "type": "string", "minLength": 1, "maxLength": 100 }, "visible": { "type": "boolean" }
+          }
+        } }
+      }
+    }
+  }
+}

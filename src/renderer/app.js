@@ -1,0 +1,769 @@
+'use strict';
+
+const { findNext, toRect } = window.SpatialNav;
+const { buildLayout, pushRecent, subtitle, hueFor } = window.TileModel;
+const { assetUrl, isLoadableImage } = window.AssetUrl;
+const ThemeEngine = window.ThemeEngine;
+const gallery = window.Wallpapers.createGallery(window.WALLPAPER_ENTRIES || []);
+
+const RECENTS_KEY = 'launcher.recents.v1';
+const THEME_KEY = 'launcher.theme.v1';
+const FONT_KEY = 'launcher.font.v1';
+const BACKGROUND_DEBOUNCE_MS = window.HeroBanner.DEBOUNCE_MS;
+const SCROLL_MARGIN_PX = 16;
+
+/**
+ * Renderer state.
+ * view: 'home' (carousels) | 'system' (side panel) | 'settings' (modal dialog) | 'pairing' (controller wizard on top of settings)
+ */
+const state = {
+  model: null,
+  config: null,
+  view: 'home',
+  tilesById: new Map(),
+  focusEl: null,
+  locked: false,
+  menuIndex: 0,
+  menuSelection: { id: 'home', action: 'home' },
+  recents: loadRecents(),
+  theme: ThemeEngine.resolve({}),
+  backdropKey: '',
+  wallpaper: gallery.resolve({}),
+  wallpaperKey: '',
+  slides: [],
+  slideIndex: 0,
+  slideRequest: null,
+  slideCache: new Map(),
+  currentSlide: null,
+  fontId: 'theme'
+};
+
+const homeElement = document.querySelector('#rows');
+const gridElement = document.querySelector('#grid-content');
+const backdropLayers = [...document.querySelectorAll('.backdrop-layer')];
+const videoBackground = document.querySelector('#background-video');
+const toast = document.querySelector('#toast');
+const banner = document.querySelector('#host-banner');
+const systemPanel = document.querySelector('#system-panel');
+const systemButton = document.querySelector('#system-button');
+const settingsDialog = document.querySelector('#settings-dialog');
+const primaryNavigation = document.querySelector('#primary-navigation');
+let toastTimer;
+let cursorTimer;
+let backgroundTimer;
+let backdropToken = 0;
+let slideTimer;
+let slideToken = 0;
+let activeLayer = 0;
+let systemRequest = 0;
+const mediaPreloadCache = new Map();
+
+const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+const motionScheduler = new window.MenuMotion.CompositorScheduler({ reducedMotion: reducedMotionQuery.matches });
+reducedMotionQuery.addEventListener('change', (event) => motionScheduler.setReducedMotion(event.matches));
+
+/** Game details for the focused tile; debounces rapid grid scrubbing and springs between titles. */
+const heroBanner = new window.HeroBanner.HeroBanner({
+  root: document.querySelector('#hero-banner'),
+  scheduler: motionScheduler,
+  assetUrl,
+  onPlay: () => { if (state.view === 'home' && state.focusEl?.dataset.tileId) activate(state.focusEl); }
+});
+
+const launchSession = window.LaunchSession.createLaunchSession({
+  api: window.api,
+  legacyLaunch: (tileId) => window.launcher.launch(tileId),
+  onSuspend: suspendUi,
+  onResume: resumeUi
+});
+
+const spatialGrid = new window.SpatialGrid.SpatialGrid({
+  viewport: homeElement,
+  container: gridElement,
+  createItem: () => document.createElement('button'),
+  updateItem: updateTile,
+  onFocus: (element) => setFocus(element, { scroll: false, rememberGrid: false }),
+  onItemApproachingViewport: (tile) => {
+    preloadMedia(tile.fanart || tile.background || tile.icon);
+    preloadMedia(tile.logo || tile.clearLogo || tile.clear_logo);
+    Promise.resolve()
+      .then(() => window.launcher.getAppBackground(tile.id))
+      .then((artwork) => preloadMedia(artwork?.url))
+      .catch((error) => console.warn('Unable to prefetch tile artwork:', error.message));
+  }
+});
+
+const navigationMenu = new window.NavigationMenu.MenuController({
+  element: primaryNavigation, panel: systemPanel, systemButton,
+  onFocus: (element) => { if (state.view === 'home') setFocus(element, { scroll: false }); },
+  onSelect: (item) => {
+    if (item.action === 'settings') { openSettings(); return; }
+    state.menuSelection = item;
+    if (state.model) render(state.model);
+  }
+});
+
+/* ------------------------------------------------------------------ persistence */
+
+function loadRecents() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : [];
+  } catch { return []; }
+}
+
+/** Last saved theme, applied synchronously at boot so the first paint is already themed. */
+function loadCachedTheme() {
+  try { return JSON.parse(localStorage.getItem(THEME_KEY) || '{}'); } catch { return {}; }
+}
+
+function cacheTheme(theme) {
+  try { localStorage.setItem(THEME_KEY, JSON.stringify(theme || {})); } catch { /* storage unavailable: first paint may flash the default preset */ }
+}
+
+function cacheFont(fontId) {
+  try { localStorage.setItem(FONT_KEY, fontId || 'theme'); } catch { /* storage unavailable: first paint uses the theme font */ }
+}
+
+function saveRecents() {
+  try { localStorage.setItem(RECENTS_KEY, JSON.stringify(state.recents)); } catch { /* storage unavailable: recents are best-effort */ }
+}
+
+/* ------------------------------------------------------------------ feedback & theming */
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('visible'), 3500);
+}
+
+/** Applies a preset + overrides to <html> and refreshes the backdrop, since art/video rules depend on the theme. */
+function applyTheme(theme) {
+  state.theme = ThemeEngine.apply(document.documentElement, theme);
+  ThemeEngine.applyFont?.(document.documentElement, state.fontId); // after apply(): the font override layers on the preset
+  refreshBackdrop();
+}
+
+/** Live font preview from settings (also used to revert on cancel). */
+function applyFont(fontId) {
+  state.fontId = fontId || 'theme';
+  ThemeEngine.applyFont?.(document.documentElement, state.fontId);
+}
+
+function refreshBackdrop() {
+  showBackdrop(pickBackdrop(state.focusEl && state.tilesById.get(state.focusEl.dataset.tileId)));
+}
+
+/** Applies bundled gallery / slideshow settings. Idempotent so re-renders do not restart the slideshow. */
+function applyWallpaper(settings, background = state.model?.settings?.background) {
+  // Slideshow is on by default, unless the user already configured a custom background file.
+  const resolved = gallery.resolve(settings, background?.source ? 'custom' : 'slideshow');
+  const key = JSON.stringify(resolved);
+  if (key === state.wallpaperKey) return;
+  state.wallpaperKey = key;
+  state.wallpaper = resolved;
+  clearInterval(slideTimer);
+  const token = ++slideToken;
+  state.slides = [];
+  state.slideIndex = 0;
+  state.currentSlide = null;
+  state.slideCache = new Map();
+  if (resolved.mode === 'slideshow') void buildPlaylist(resolved, token);
+  refreshBackdrop();
+}
+
+/** Mixes bundled entries with a count of main-process slides (user folders / online); only indexes are held here. */
+async function buildPlaylist(resolved, token) {
+  const plan = window.Wallpapers.slidePlan(resolved);
+  const items = [];
+  if (plan.bundled) gallery.entries.forEach((entry) => items.push({ kind: 'bundled', entry }));
+  let request = null;
+  if (plan.folders.length || plan.online) {
+    request = { folders: plan.folders, online: plan.online };
+    try {
+      const { count } = await window.launcher.getWallpaperCount(request);
+      for (let index = 0; index < count; index += 1) items.push({ kind: 'remote', index });
+    } catch (error) { console.warn('Unable to list wallpapers:', error.message); }
+  }
+  if (token !== slideToken) return;
+  // Nothing usable (empty folder, offline, feature missing): fall back to the bundled gallery.
+  if (!items.length) gallery.entries.forEach((entry) => items.push({ kind: 'bundled', entry }));
+  state.slideRequest = request;
+  state.slides = window.Wallpapers.playbackOrder(items.length, resolved.shuffle).map((position) => items[position]);
+  await showSlide(0, token);
+  if (token === slideToken) startSlideshowTimer();
+}
+
+/** Resolves one slide to a loadable source. Remote slides are decoded first so broken files resolve to null (skipped). */
+function loadSlide(item) {
+  if (item.kind === 'bundled') return Promise.resolve({ source: gallery.urlFor(item.entry, document.baseURI), type: 'image' });
+  let pending = state.slideCache.get(item.index);
+  if (!pending) {
+    const request = state.slideRequest;
+    pending = window.launcher.getWallpaperSlide(request, item.index).then(async (slide) => {
+      if (!slide?.url) return null;
+      if (slide.kind === 'image') {
+        const probe = new Image();
+        probe.decoding = 'async';
+        probe.src = slide.url;
+        await probe.decode();
+      }
+      return { source: slide.url, type: slide.kind };
+    }).catch(() => null);
+    state.slideCache.set(item.index, pending);
+    if (state.slideCache.size > 4) state.slideCache.delete(state.slideCache.keys().next().value);
+  }
+  return pending;
+}
+
+/** Shows slide `index`, skipping missing/undecodable files (and videos while live video is off), then warms only the next slide. */
+async function showSlide(index, token) {
+  const count = state.slides.length;
+  for (let attempt = 0; attempt < Math.min(count, 8); attempt += 1) {
+    const position = (index + attempt) % count;
+    const slide = await loadSlide(state.slides[position]);
+    if (token !== slideToken) return;
+    if (!slide || (slide.type === 'video' && !state.theme.liveVideo)) continue;
+    state.slideIndex = position;
+    state.currentSlide = slide;
+    refreshBackdrop();
+    if (count > 1) void loadSlide(state.slides[(position + 1) % count]);
+    return;
+  }
+  if (token !== slideToken) return;
+  const fallback = gallery.entries[0];
+  state.currentSlide = fallback ? { source: gallery.urlFor(fallback, document.baseURI), type: 'image' } : null;
+  refreshBackdrop();
+}
+
+function startSlideshowTimer() {
+  clearInterval(slideTimer);
+  if (state.wallpaper.mode !== 'slideshow' || state.slides.length < 2) return;
+  const token = slideToken;
+  slideTimer = setInterval(() => { void showSlide(state.slideIndex + 1, token); }, state.wallpaper.intervalSec * 1000);
+}
+
+/** The wallpaper behind everything when a tile brings no art of its own. */
+function globalBackground() {
+  const { mode, id } = state.wallpaper;
+  if (mode === 'slideshow' && state.currentSlide) return state.currentSlide;
+  const entry = mode === 'bundled' ? gallery.get(id) : null;
+  if (entry) return { source: gallery.urlFor(entry, document.baseURI), type: 'image' };
+  return mode === 'slideshow' ? null : state.model?.settings.background;
+}
+
+const scrollBehavior = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
+
+/** Shows a subtle top banner when the remote game host cannot be reached. */
+function updateHostBanner(remoteStatus = {}, remote = {}) {
+  const status = remoteStatus.status;
+  const offline = remote.enabled && (status === 'offline' || status === 'cached');
+  banner.replaceChildren();
+  if (offline) {
+    const host = document.createElement('em');
+    host.textContent = remote.host || 'Game host';
+    banner.append(host, ' offline');
+    if (status === 'cached') banner.append(document.createTextNode(' · showing cached library'));
+  }
+  banner.classList.toggle('visible', Boolean(offline));
+  document.body.classList.toggle('host-offline', Boolean(offline));
+}
+
+/* ------------------------------------------------------------------ backdrop */
+
+const videoType = (source) => (/\.(mp4|webm)$/i.test(source || '') ? 'video' : 'image');
+
+/**
+ * Chooses what sits behind the UI for the focused tile, in priority order:
+ *  1. the tile's own background, 2. its icon/cover art (when dynamic art is on), 3. the global wallpaper.
+ * Video sources are skipped when live video is disabled.
+ * @returns {{ type: 'image' | 'video', source: string, art: boolean } | null}
+ */
+function pickBackdrop(tile) {
+  const { liveVideo, dynamicArt } = state.theme;
+  const global = globalBackground();
+  const candidates = [];
+  // Backend fanart outranks a user-configured tile background; both fall back to cover art, then the wallpaper.
+  if (tile?.fanart) candidates.push({ source: tile.fanart, art: false });
+  if (tile?.background) candidates.push({ source: tile.background, art: false });
+  // Only game cover art (remote tiles) makes a good blurred backdrop; app logos fall through to the wallpaper.
+  if (dynamicArt && (tile?.provider === 'remote' || tile?.remote) && isLoadableImage(tile?.icon)) candidates.push({ source: tile.icon, art: true });
+  if (global?.source) candidates.push({ source: global.source, type: global.type, art: false });
+  for (const candidate of candidates) {
+    const type = candidate.type || videoType(candidate.source);
+    if (type === 'video' && !liveVideo) continue;
+    return { type, source: candidate.source, art: candidate.art };
+  }
+  return null;
+}
+
+function hideVideo() {
+  videoBackground.style.opacity = '0';
+  videoBackground.pause();
+}
+
+/** Crossfades between two image layers (decoded off-screen first to avoid flashes); video uses its own element. */
+async function showBackdrop(choice) {
+  const key = choice ? `${choice.type}|${choice.art}|${choice.source}` : '';
+  if (key === state.backdropKey) return;
+  state.backdropKey = key;
+  const token = ++backdropToken;
+  if (!choice) {
+    backdropLayers.forEach((layer) => layer.classList.remove('on'));
+    hideVideo();
+    return;
+  }
+  if (choice.type === 'video') {
+    backdropLayers.forEach((layer) => layer.classList.remove('on'));
+    if (videoBackground.dataset.source !== choice.source) {
+      videoBackground.src = assetUrl(choice.source);
+      videoBackground.dataset.source = choice.source;
+    }
+    videoBackground.style.opacity = '1';
+    videoBackground.play().catch(() => showToast('Unable to play the video background'));
+    return;
+  }
+  const url = assetUrl(choice.source);
+  const probe = new Image();
+  probe.src = url;
+  try { await probe.decode(); } catch { if (token === backdropToken) state.backdropKey = ''; return; }
+  if (token !== backdropToken) return;
+  hideVideo();
+  const next = backdropLayers[1 - activeLayer];
+  next.style.backgroundImage = `url("${url.replace(/"/g, '%22')}")`;
+  next.classList.toggle('art', choice.art);
+  next.classList.add('on');
+  backdropLayers[activeLayer].classList.remove('on');
+  activeLayer = 1 - activeLayer;
+}
+
+/** Debounced so rapid D-pad scrubbing does not decode a new backdrop on every step. */
+function scheduleBackground(tile) {
+  clearTimeout(backgroundTimer);
+  backgroundTimer = setTimeout(() => showBackdrop(pickBackdrop(tile)), BACKGROUND_DEBOUNCE_MS);
+}
+
+/* ------------------------------------------------------------------ rendering */
+
+/** Artwork shared by tiles and the hero: generated gradient + initial, replaced by the icon once it loads. */
+function buildArt(tile) {
+  const art = document.createElement('div');
+  art.className = 'art';
+  art.style.setProperty('--hue', String(hueFor(tile.name)));
+  const fallback = document.createElement('div');
+  fallback.className = 'fallback';
+  fallback.textContent = tile.name.slice(0, 1).toUpperCase();
+  art.append(fallback);
+  if (isLoadableImage(tile.icon)) {
+    const image = document.createElement('img');
+    image.alt = '';
+    image.decoding = 'async';
+    image.addEventListener('load', () => art.classList.add('has-image'));
+    image.addEventListener('error', () => image.remove());
+    image.src = assetUrl(tile.icon);
+    art.append(image);
+  }
+  return art;
+}
+
+function tagFocusable(button, tile, rowId) {
+  button.classList.add('focusable');
+  button.dataset.tileId = tile.id;
+  button.dataset.row = rowId;
+  button.setAttribute('aria-label', tile.name);
+  button.classList.toggle('remote', tile.provider === 'remote' || Boolean(tile.remote));
+}
+
+function updateTile(button, tile, rowId) {
+  button.type = 'button';
+  button.className = 'tile';
+  button.style.removeProperty('--virtual-x');
+  tagFocusable(button, tile, rowId);
+  const label = document.createElement('span');
+  label.className = 'label';
+  label.textContent = tile.name;
+  button.replaceChildren(buildArt(tile), label);
+}
+
+/** Warm one nearby cover or backend-provided hero asset without retaining an unbounded image cache. */
+function preloadMedia(source) {
+  if (typeof source !== 'string' || !source) return;
+  const url = assetUrl(source);
+  if (!url) return;
+  let media = mediaPreloadCache.get(url);
+  if (media) {
+    mediaPreloadCache.delete(url);
+    mediaPreloadCache.set(url, media);
+    return;
+  }
+  if (/\.(mp4|webm)(?:[?#]|$)/i.test(source)) {
+    media = document.createElement('video');
+    media.preload = 'metadata';
+    media.src = url;
+  } else if (isLoadableImage(source)) {
+    media = new Image();
+    media.decoding = 'async';
+    media.src = url;
+  } else return;
+  mediaPreloadCache.set(url, media);
+  if (mediaPreloadCache.size > 8) mediaPreloadCache.delete(mediaPreloadCache.keys().next().value);
+}
+
+function focusables() {
+  return [...document.querySelectorAll('#primary-navigation [data-menu-id], #system-button, #rows .focusable')];
+}
+
+function render(model) {
+  state.model = model;
+  navigationMenu.setItems(model.menu);
+  state.menuSelection = navigationMenu.items.find((item) => item.id === navigationMenu.selectedId) || { id: 'home', action: 'home' };
+  const overrides = model.settings?.iconOverrides || {};
+  // Custom icon overrides take priority over any provider-supplied icon.
+  const hostOffline = model.settings?.remote?.enabled && ['offline', 'cached'].includes(model.remoteStatus?.status);
+  const tiles = model.rows.flatMap((row) => row.tiles).map((tile) => ({
+    ...tile,
+    icon: overrides[tile.id] || tile.icon || '',
+    // The backend may flag a game itself; otherwise streamed titles inherit the host state.
+    ...(tile.isVibepolloOffline === undefined && hostOffline && (tile.provider === 'remote' || tile.remote) ? { isVibepolloOffline: true } : {})
+  }));
+  state.tilesById = new Map(tiles.map((tile) => [tile.id, tile]));
+  const filtered = state.menuSelection.action === 'category'
+    ? tiles.filter((tile) => window.NavigationMenu.matchesCategory(tile, state.menuSelection.category)) : tiles;
+  const layout = buildLayout(filtered, state.menuSelection.action === 'home' ? state.recents : []);
+
+  const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row, menuId: state.focusEl.dataset.menuId };
+  const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles }));
+  spatialGrid.setRows(gridRows);
+  const empty = document.querySelector('#empty');
+  empty.hidden = filtered.length > 0;
+  if (!filtered.length) heroBanner.clear();
+  empty.textContent = tiles.length ? 'No applications in this section.' : 'No tiles selected. Open Settings to add some.';
+
+  state.fontId = model.settings?.fontId || 'theme';
+  applyTheme(model.settings?.theme);
+  cacheTheme(model.settings?.theme);
+  cacheFont(state.fontId);
+  applyWallpaper(model.settings?.wallpaper, model.settings?.background);
+  updateHostBanner(model.remoteStatus, model.settings?.remote);
+  updateHeader();
+
+  const restoredTile = state.view === 'home' && previous?.id
+    ? spatialGrid.focusTile(previous.id, previous.row, { scroll: true, focus: false }) : null;
+  const all = focusables();
+  const restored = restoredTile || (previous && (previous.element.isConnected ? previous.element
+    : previous.menuId ? all.find((el) => el.dataset.menuId === previous.menuId)
+      : previous.id ? (all.find((el) => el.dataset.tileId === previous.id && el.dataset.row === previous.row)
+        || all.find((el) => el.dataset.tileId === previous.id)) : null));
+  state.focusEl = null;
+  if (state.view === 'home') setFocus(restored || all.find((el) => el.classList.contains('focusable')) || systemButton, { scroll: false });
+  else state.focusEl = restored || null;
+}
+
+/* ------------------------------------------------------------------ focus & scrolling */
+
+function setFocus(element, { scroll = true, rememberGrid = true } = {}) {
+  if (!element) return;
+  state.focusEl?.classList.remove('focused');
+  state.focusEl = element;
+  if (rememberGrid && !spatialGrid.isFocusing) spatialGrid.rememberElement(element);
+  element.classList.add('focused');
+  element.focus({ preventScroll: true });
+  if (scroll) ensureVisible(element);
+  const tile = state.tilesById.get(element.dataset.tileId);
+  if (tile) heroBanner.show(tile, { recent: state.recents.includes(tile.id), subtitle: subtitle(tile) });
+  scheduleBackground(tile);
+}
+
+/** Minimal scrolling: horizontally within the carousel, then vertically within the page. */
+function ensureVisible(element) {
+  const behavior = scrollBehavior();
+  const track = element.closest('.track');
+  if (track) {
+    const padding = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+    const left = element.offsetLeft;
+    const right = left + element.offsetWidth;
+    if (left - track.scrollLeft < padding) track.scrollTo({ left: Math.max(0, left - padding), behavior });
+    else if (right - track.scrollLeft > track.clientWidth - padding) track.scrollTo({ left: right - track.clientWidth + padding, behavior });
+  }
+  const section = element.closest('.row');
+  if (!section) { homeElement.scrollTo({ top: 0, behavior }); return; }
+  const top = section.offsetTop;
+  const bottom = top + section.offsetHeight;
+  const view = homeElement.scrollTop;
+  if (top < view + SCROLL_MARGIN_PX) homeElement.scrollTo({ top: Math.max(0, top - SCROLL_MARGIN_PX), behavior });
+  else if (bottom > view + homeElement.clientHeight - SCROLL_MARGIN_PX) homeElement.scrollTo({ top: bottom - homeElement.clientHeight + SCROLL_MARGIN_PX, behavior });
+}
+
+/** Moves focus to the best spatial neighbour within `elements` (document-wide or dialog-scoped). */
+function moveFocusAmong(elements, current, direction) {
+  const rects = elements.map((element, index) => toRect(index, element));
+  const currentIndex = elements.indexOf(current);
+  if (currentIndex === -1) return elements[0] || null;
+  const next = findNext(rects[currentIndex], rects, direction);
+  return next === null ? null : elements[next];
+}
+
+function moveHome(direction) {
+  if (primaryNavigation.contains(state.focusEl)) {
+    if (direction === 'left' || direction === 'right') {
+      if (direction === 'right' && navigationMenu.focusedIndex === navigationMenu.buttons.length - 1) setFocus(systemButton, { scroll: false });
+      else navigationMenu.move(direction);
+      return;
+    }
+    if (direction === 'down') {
+      navigationMenu.commitFocused();
+      setFocus(homeElement.querySelector('.focusable') || systemButton);
+      return;
+    }
+    return;
+  }
+  if (state.focusEl === systemButton && direction === 'left') {
+    navigationMenu.buttons.at(-1)?.focus({ preventScroll: true });
+    return;
+  }
+  if (state.focusEl?.dataset.tileId && spatialGrid.move(direction)) return;
+  const target = moveFocusAmong(focusables(), state.focusEl, direction);
+  if (target) setFocus(target);
+}
+
+/* ------------------------------------------------------------------ launching */
+
+async function activate(element) {
+  if (!element) return;
+  if (!element.dataset.tileId) { element.click(); return; }
+  if (state.locked) return;
+  const tile = state.tilesById.get(element.dataset.tileId);
+  if (!tile) return;
+  state.locked = true;
+  element.classList.add('launching');
+  try {
+    if (!(await launchSession.launch(tile))) return;
+    state.recents = pushRecent(state.recents, tile.id);
+    saveRecents();
+  } catch (error) {
+    state.locked = false;
+    element.classList.remove('launching');
+    showToast(`Launch failed: ${error.message}`);
+  }
+}
+
+/** Stops every timer, video and animation the launcher owns while an external app has the screen. */
+function suspendUi() {
+  state.locked = true;
+  clearTimeout(backgroundTimer);
+  clearInterval(slideTimer);
+  heroBanner.suspend();
+  hideVideo();
+  document.body.classList.add('app-running');
+}
+
+/** Restores rendering, timers and focus once the launched app has exited. */
+function resumeUi({ error }) {
+  state.locked = false;
+  document.body.classList.remove('app-running');
+  document.querySelectorAll('.launching').forEach((element) => element.classList.remove('launching'));
+  if (error) showToast(`Process failed: ${error}`);
+  state.backdropKey = '';
+  startSlideshowTimer();
+  // Re-render so "Continue" and the hero reflect the session that just ended; render() restores the focused tile.
+  if (state.model) render(state.model);
+  else refreshBackdrop();
+}
+
+/* ------------------------------------------------------------------ header */
+
+async function updateHeader() {
+  const header = state.model?.settings.header || {};
+  document.querySelector('#title').textContent = header.showText ? (header.text || 'Home') : '';
+  document.querySelector('#date').hidden = header.showDate === false;
+  document.querySelector('#clock').hidden = header.showTime === false;
+  const weatherElement = document.querySelector('#weather');
+  weatherElement.hidden = !header.showWeather;
+  if (header.showWeather) {
+    weatherElement.textContent = 'Weather…';
+    try {
+      const weather = await window.launcher.getWeather(header.weatherLocation || 'London');
+      weatherElement.textContent = weather ? `${weather.location}  ${Math.round(weather.temperature)}°C` : 'Weather unavailable';
+    } catch { weatherElement.textContent = 'Weather unavailable'; }
+  }
+}
+
+function updateTime() {
+  const now = new Date();
+  document.querySelector('#clock').textContent = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' }).format(now);
+  document.querySelector('#date').textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+}
+
+/* ------------------------------------------------------------------ system panel & settings */
+
+function menuItems() { return [...systemPanel.querySelectorAll('button, input')]; }
+
+function focusMenu(index) {
+  const items = menuItems();
+  state.menuIndex = Math.max(0, Math.min(index, items.length - 1));
+  const item = items[state.menuIndex];
+  item?.focus({ preventScroll: true });
+  item?.scrollIntoView({ block: 'nearest' });
+}
+
+async function toggleSystemPanel(force) {
+  const open = force ?? state.view !== 'system';
+  const request = ++systemRequest;
+  navigationMenu.setOpen(open);
+  systemButton.setAttribute('aria-expanded', String(open));
+  state.view = open ? 'system' : 'home';
+  if (open) {
+    focusMenu(0);
+    try {
+      const enabled = await window.launcher.getAutostart();
+      if (request === systemRequest && state.view === 'system') document.querySelector('#autostart').checked = enabled;
+    } catch (error) { if (request === systemRequest && state.view === 'system') showToast(`Unable to read startup setting: ${error.message}`); }
+  } else setFocus(state.focusEl || systemButton, { scroll: false });
+}
+
+function openSettings() {
+  state.view = 'settings';
+  systemRequest++;
+  navigationMenu.setOpen(false);
+  systemButton.setAttribute('aria-expanded', 'false');
+  window.SettingsDialog.open();
+  settingsControls()[0]?.focus();
+}
+
+/** Idempotent: invoked by buttons, the dialog 'close' event and the cancel event. */
+function closeSettings() {
+  if (state.view !== 'settings') return;
+  window.SettingsDialog.close();
+  state.view = 'home';
+  state.fontId = state.model?.settings.fontId || 'theme';
+  applyTheme(state.model?.settings.theme); // discard any unsaved live preview
+  applyWallpaper(state.model?.settings.wallpaper);
+  setFocus(state.focusEl || systemButton, { scroll: false });
+}
+
+function settingsControls() {
+  return [...settingsDialog.querySelectorAll('button, input, select, textarea')]
+    .filter((control) => !control.disabled && control.type !== 'hidden' && control.getClientRects().length > 0);
+}
+
+window.SettingsDialog.init({
+  getConfig: () => state.config,
+  setConfig: (config) => { state.config = config; },
+  getModel: () => state.model,
+  getTiles: () => [...state.tilesById.values()],
+  onModel: render,
+  previewTheme: applyTheme,
+  previewWallpaper: applyWallpaper,
+  previewFont: applyFont,
+  gallery,
+  showToast,
+  onClose: closeSettings
+});
+
+// The pairing wizard is a second modal on top of settings; it claims input routing while open.
+window.ControllersPage.init({ setView: (view) => { state.view = view; } });
+
+/* ------------------------------------------------------------------ input routing */
+
+/**
+ * Single entry point for every input device. Actions: up/down/left/right/confirm/back/menu.
+ * @param {'up'|'down'|'left'|'right'|'confirm'|'back'|'menu'} action
+ */
+function handleAction(action) {
+  if (state.locked) return;
+  const isDirection = ['up', 'down', 'left', 'right'].includes(action);
+  if (state.view === 'home') {
+    if (isDirection) moveHome(action);
+    else if (action === 'confirm') activate(state.focusEl);
+    else if (action === 'back' && !primaryNavigation.contains(state.focusEl)) navigationMenu.focusSelected();
+    else toggleSystemPanel(true);
+  } else if (state.view === 'system') {
+    if (action === 'up' || action === 'down') focusMenu(state.menuIndex + (action === 'up' ? -1 : 1));
+    else if (action === 'confirm') menuItems()[state.menuIndex]?.click();
+    else if (action === 'back' || action === 'menu') toggleSystemPanel(false);
+  } else if (state.view === 'pairing') {
+    window.ControllersPage.handleAction(action);
+  } else if (state.view === 'settings') {
+    const controls = settingsControls();
+    if (isDirection) moveFocusAmong(controls, document.activeElement, action)?.focus();
+    else if (action === 'confirm') document.activeElement?.click();
+    else if (action === 'back') closeSettings();
+  }
+}
+
+const KEY_ACTIONS = {
+  ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+  Enter: 'confirm', ' ': 'confirm', Escape: 'back', Backspace: 'back', ContextMenu: 'menu'
+};
+
+document.addEventListener('keydown', (event) => {
+  // Native form editing and dialog handling own the keyboard while settings are open.
+  if (state.view === 'settings') return;
+  if (event.key === 'Tab' && state.view === 'system') {
+    event.preventDefault();
+    const items = menuItems();
+    focusMenu((items.indexOf(document.activeElement) + (event.shiftKey ? -1 : 1) + items.length) % items.length);
+    return;
+  }
+  const action = KEY_ACTIONS[event.key];
+  if (!action) return;
+  event.preventDefault();
+  handleAction(action);
+});
+
+new window.GamepadInput.GamepadInput({ onAction: handleAction }).start();
+
+/* ------------------------------------------------------------------ pointer (secondary) */
+
+homeElement.addEventListener('click', (event) => {
+  const element = event.target.closest('.focusable');
+  if (element) { setFocus(element); activate(element); }
+});
+
+// Only real pointer movement moves focus: scrolling content under a parked cursor must not steal it.
+document.addEventListener('pointermove', (event) => {
+  if (state.view !== 'home' || event.pointerType !== 'mouse' || !(event.movementX || event.movementY)) return;
+  const element = event.target.closest?.('.focusable');
+  if (element && element !== state.focusEl) setFocus(element);
+}, { passive: true });
+
+function resetCursorTimer() {
+  document.body.classList.remove('cursor-hidden');
+  clearTimeout(cursorTimer);
+  cursorTimer = setTimeout(() => document.body.classList.add('cursor-hidden'), state.model?.settings.cursorHideDelayMs || 2200);
+}
+window.addEventListener('mousemove', resetCursorTimer, { passive: true });
+
+systemButton.addEventListener('click', () => toggleSystemPanel());
+systemButton.addEventListener('focus', () => { if (state.view === 'home') setFocus(systemButton, { scroll: false }); });
+homeElement.addEventListener('focusin', (event) => {
+  if (state.view === 'home' && event.target.matches('.focusable') && event.target !== state.focusEl) setFocus(event.target, { scroll: false });
+});
+systemPanel.addEventListener('focusin', (event) => { const index = menuItems().indexOf(event.target); if (index >= 0) state.menuIndex = index; });
+document.querySelector('#settings-button').addEventListener('click', openSettings);
+document.querySelector('#quit-button').addEventListener('click', () => window.launcher.systemAction('quit'));
+document.querySelector('#poweroff-button').addEventListener('click', () => {
+  if (confirm('Shut down this PC? All open applications will be closed.')) window.launcher.systemAction('poweroff');
+});
+document.querySelector('#autostart').addEventListener('change', async (event) => {
+  try { event.target.checked = await window.launcher.setAutostart(event.target.checked); }
+  catch (error) { showToast(`Unable to change startup setting: ${error.message}`); }
+});
+
+// Both the new `onAppClosed` event and the legacy `process-finished` event end the session; the transition is idempotent.
+window.launcher.onProcessFinished((result) => launchSession.notifyClosed({ appId: result.tileId || '', ...(result.error ? { error: String(result.error) } : {}) }));
+
+/* ------------------------------------------------------------------ boot */
+
+ThemeEngine.apply(document.documentElement, loadCachedTheme());
+try { applyFont(localStorage.getItem(FONT_KEY) || 'theme'); } catch { /* storage unavailable */ }
+
+Promise.all([window.launcher.getModel(), window.launcher.getSettings()]).then(([model, config]) => {
+  state.config = config;
+  render(model);
+}).catch((error) => showToast(`Configuration error: ${error.message}`));
+updateTime();
+setInterval(updateTime, 1000);
+resetCursorTimer();
+window.addEventListener('pagehide', () => { navigationMenu.dispose(); launchSession.dispose(); heroBanner.dispose(); }, { once: true });

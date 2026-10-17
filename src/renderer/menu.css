@@ -1,0 +1,205 @@
+/* Menu-only materials and typography. Content cards retain their existing theme contract. */
+:root {
+  --menu-font: var(--font-ui);
+  --menu-material: rgba(24, 28, 38, .48);
+  --menu-material-solid: #20242e;
+  --menu-text: #f8f9fc;
+  --menu-text-muted: rgba(245, 247, 255, .68);
+  --menu-ink: #171a21;
+  --menu-lens: rgba(255, 255, 255, .96);
+  --menu-stroke: rgba(255, 255, 255, .2);
+  --menu-specular: rgba(255, 255, 255, .35);
+  --menu-shadow: 0 16px 42px rgba(0, 0, 0, .24);
+}
+
+header:has(#primary-navigation) {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  min-height: 76px;
+}
+header:has(#primary-navigation) #header-content { min-width: 0; flex-wrap: wrap; gap: 5px 18px; }
+header:has(#primary-navigation) .header-actions { justify-self: end; }
+#primary-navigation {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 68px;
+  max-width: min(64vw, 980px);
+  padding: 8px;
+  border: 1px solid var(--menu-stroke);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--menu-text);
+  box-shadow: var(--menu-shadow), inset 0 1px 0 var(--menu-specular);
+  font-family: var(--menu-font);
+  isolation: isolate;
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#primary-navigation::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--menu-material);
+  backdrop-filter: var(--menu-backdrop-filter, blur(28px) saturate(165%));
+  -webkit-backdrop-filter: var(--menu-backdrop-filter, blur(28px) saturate(165%));
+  pointer-events: none;
+}
+.navigation-tabs { display: flex; flex: none; align-items: center; gap: 4px; min-width: 0; }
+#primary-navigation .navigation-tab {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 100px;
+  height: 50px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--menu-text-muted);
+  font: 600 clamp(18px, 1.35vw, 28px) / 1 var(--menu-font);
+  letter-spacing: -.025em;
+  white-space: nowrap;
+  transform-origin: center;
+  touch-action: manipulation;
+  transition: none;
+  outline: none;
+}
+#primary-navigation .menu-content { display: flex; align-items: center; justify-content: center; gap: 9px; pointer-events: none; }
+#primary-navigation svg { width: 21px; height: 21px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#primary-navigation .navigation-tab[aria-selected="true"] { color: var(--menu-text); }
+#primary-navigation[data-engaged="true"] .navigation-tab[data-focused="true"] { color: var(--menu-ink); }
+.navigation-lens {
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 48px;
+  border-radius: 999px;
+  transform-origin: top left;
+  background: var(--menu-lens);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, .2), inset 0 1px 0 var(--menu-specular);
+  opacity: .16;
+  pointer-events: none;
+  will-change: transform;
+}
+#primary-navigation[data-engaged="true"] .navigation-lens { opacity: 1; }
+#system-button {
+  flex: none;
+  border: 1px solid var(--menu-stroke);
+  border-radius: 50%;
+  color: var(--menu-text);
+  background: var(--menu-material);
+  backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: inset 0 1px 0 var(--menu-specular);
+  transition: none;
+}
+#system-button:is(:focus, .focused) { background: var(--menu-lens); color: var(--menu-ink); border-color: var(--menu-lens); box-shadow: var(--menu-shadow); }
+#system-button svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+/* The sheet is an overlay: opening it never resizes or transforms the application rows. */
+#system-panel.menu-panel {
+  z-index: 20;
+  top: clamp(112px, 14vh, 170px);
+  right: var(--gutter);
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100dvh - 150px);
+  padding: 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  border: 1px solid var(--menu-stroke);
+  border-radius: 30px;
+  background: var(--menu-material);
+  color: var(--menu-text);
+  box-shadow: var(--menu-shadow), inset 0 1px 0 var(--menu-specular);
+  backdrop-filter: blur(34px) saturate(170%);
+  -webkit-backdrop-filter: blur(34px) saturate(170%);
+  font-family: var(--menu-font);
+  transform-origin: top right;
+  transition: none;
+  animation: none;
+}
+#system-panel .menu-heading { padding: 6px 10px 20px; border: 0; }
+#system-panel .menu-eyebrow { color: var(--menu-text-muted); font: 650 10px / 1 var(--menu-font); letter-spacing: .16em; }
+#system-panel .menu-heading h2 { margin: 9px 0 0; color: var(--menu-text); font: 650 27px / 1.1 var(--menu-font); letter-spacing: -.035em; text-transform: none; }
+#system-panel .menu-items { position: relative; display: grid; gap: 6px; }
+#system-panel .menu-action {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 18px;
+  color: var(--menu-text);
+  background: transparent;
+  box-shadow: none;
+  transform-origin: center;
+  outline: none;
+  transition: none;
+}
+.system-focus-lens {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--menu-lens);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .18);
+  transform-origin: top center;
+  pointer-events: none;
+  will-change: transform;
+}
+#system-panel .menu-action:is(:hover, :focus, :focus-visible), #system-panel .menu-toggle:focus-within { background: transparent; border-color: transparent; box-shadow: none; }
+#system-panel .menu-action[data-focused="true"] { color: var(--menu-ink); }
+#system-panel .menu-action .menu-symbol { width: 36px; height: 36px; background: transparent; border-radius: 0; color: inherit; transition: none; }
+#system-panel .menu-symbol svg { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#system-panel .menu-copy { gap: 4px; pointer-events: none; }
+#system-panel .menu-copy strong { font: 600 17px / 1.15 var(--menu-font); letter-spacing: -.02em; }
+#system-panel .menu-copy small { color: var(--menu-text-muted); font: 450 12px / 1.2 var(--menu-font); }
+#system-panel .menu-action[data-focused="true"] .menu-copy small { color: color-mix(in srgb, var(--menu-ink) 68%, transparent); }
+#system-panel .menu-chevron { color: inherit; font-size: 23px; opacity: .5; transform: none; transition: none; }
+#system-panel .menu-action.danger, #system-panel .menu-action.danger .menu-symbol { color: var(--danger); background: transparent; }
+#system-panel .menu-action input { width: 22px; height: 22px; accent-color: var(--accent); outline: none; box-shadow: none; }
+#system-panel .menu-footer { margin: 18px 10px 2px; color: var(--menu-text-muted); font-size: 11px; text-align: right; letter-spacing: .02em; }
+
+@supports not (backdrop-filter: blur(1px)) {
+  #primary-navigation::before, #system-panel.menu-panel, #system-button { background: var(--menu-material-solid); }
+}
+@media (max-width: 1050px) {
+  header:has(#primary-navigation) { grid-template-columns: minmax(0, 1fr) auto; gap: 12px; }
+  header:has(#primary-navigation) .header-actions { grid-column: 2; grid-row: 1; }
+  #primary-navigation { grid-row: 2; grid-column: 1 / -1; justify-self: center; max-width: 100%; }
+  #system-panel.menu-panel { top: 100px; }
+}
+@media (max-width: 620px) {
+  #primary-navigation { height: 58px; padding: 6px; gap: 0; }
+  #primary-navigation .navigation-tab { height: 44px; min-width: 70px; padding: 0 12px; font-size: 16px; }
+  #primary-navigation .menu-content { gap: 6px; }
+  #primary-navigation svg { width: 17px; height: 17px; }
+  header:has(#primary-navigation) #date { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation-lens, .system-focus-lens { will-change: auto; }
+  #primary-navigation .menu-content, #system-panel .menu-copy, #system-panel .menu-symbol { transform: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  #primary-navigation::before, #system-panel.menu-panel, #system-button { background: var(--menu-material-solid); backdrop-filter: none; }
+}

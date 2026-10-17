@@ -1,0 +1,4 @@
+# Optional: grant the explicitly configured group access to xone pairing controls only.
+# Create the vibepollo-controllers group and join it before installing this rule.
+# No driver installation or privilege escalation is performed by the launcher.
+ACTION=="add|bind", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_interface", DRIVER=="xone-dongle", ATTRS{idVendor}=="045e", ATTRS{idProduct}=="02e6|02fe", TEST=="pairing", RUN+="/usr/bin/chgrp vibepollo-controllers /sys%p/pairing", RUN+="/usr/bin/chmod 0660 /sys%p/pairing"

@@ -1,0 +1,110 @@
+/* Controllers page and pairing wizard. Tokens only: colours, radii and durations come from theme.css. */
+
+/* ---------------------------------------------------------------- device list */
+.controller-platform { align-self: flex-start; padding: 6px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-chip); background: color-mix(in srgb, var(--text) 6%, var(--color-transparent)); color: var(--text-dim); font-size: 12px; letter-spacing: var(--label-tracking); }
+.device-list { display: grid; gap: 12px; margin-bottom: 20px; }
+.device-note { margin: 0; padding: 18px 4px; color: var(--text-dim); }
+.device-note[data-state="error"] { color: var(--danger); }
+
+dialog button.device-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; width: 100%; min-height: 84px; padding: 14px 22px; border: var(--ring-width) solid var(--glass-border); border-radius: calc(var(--ui-rounding) * 1.2); background: var(--glass-bg); backdrop-filter: blur(calc(var(--glass-blur) * .6)) saturate(var(--glass-saturate)); color: var(--text); text-align: left; will-change: transform; }
+dialog button.device-row:hover { background: var(--glass-bg); }
+dialog button.device-row:focus { border-color: var(--focus-ring); box-shadow: var(--focus-glow); }
+.device-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-circle); background: color-mix(in srgb, var(--accent) 22%, var(--color-transparent)); color: var(--accent-2); }
+.device-icon .glyph { width: 28px; height: 28px; }
+.glyph { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.device-text { display: grid; gap: 4px; min-width: 0; }
+.device-text strong { overflow: hidden; font-size: clamp(17px, 1.2vw, 22px); text-overflow: ellipsis; white-space: nowrap; }
+.device-text span { color: var(--text-dim); font-size: clamp(13px, .95vw, 16px); }
+.device-text span[data-state="warn"] { color: var(--warn); }
+
+.device-empty { display: grid; justify-items: center; gap: 8px; padding: 26px 12px 18px; border: 1px dashed var(--glass-border); border-radius: calc(var(--ui-rounding) * 1.2); text-align: center; }
+.device-empty .cg { width: min(220px, 60%); opacity: .55; }
+.device-empty strong { font-size: 18px; }
+.device-empty span { color: var(--text-dim); }
+
+.controller-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+dialog .controller-actions button { min-height: 52px; padding-inline: 24px; text-align: center; }
+dialog .controller-actions .primary { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; }
+#controller-hint { margin-top: 14px; }
+
+/* Battery gauge */
+.battery { --battery-color: var(--ok); display: inline-flex; align-items: center; gap: 8px; color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: clamp(14px, 1vw, 17px); }
+.battery[data-level="low"] { --battery-color: var(--warn); }
+.battery[data-level="critical"] { --battery-color: var(--danger); }
+.battery[data-level="unknown"] { --battery-color: var(--text-faint); }
+.battery-body { display: block; width: 40px; height: 19px; padding: 2px; border: 2px solid currentColor; border-radius: var(--radius-chip); }
+.battery-fill { display: block; width: calc(var(--level, 0) * 1%); height: 100%; border-radius: 1px; background: var(--battery-color); transition: width var(--motion-slow) var(--ease); }
+.battery-cap { width: 3px; height: 8px; margin-left: -6px; border-radius: 0 2px 2px 0; background: currentColor; }
+.battery-bolt { width: 9px; height: 13px; fill: var(--warn); }
+
+/* ---------------------------------------------------------------- pairing wizard */
+dialog.wizard { width: min(780px, 92vw); height: fit-content; min-height: min(580px, 84vh); overflow: hidden; }
+.wizard-card { display: flex; flex-direction: column; min-height: min(580px, 84vh); padding: 26px 44px 34px; }
+.wizard-progress { display: flex; justify-content: center; gap: 8px; margin-bottom: 6px; }
+.wizard-dot { width: 8px; height: 8px; border-radius: var(--radius-circle); background: var(--border); transition: width var(--motion-base) var(--ease), background var(--motion-base) var(--ease); }
+.wizard-dot[data-state="active"] { width: 30px; border-radius: var(--radius-chip); background: var(--accent); }
+.wizard-dot[data-state="done"] { background: var(--ok); }
+.wizard-dot[data-state="error"] { width: 30px; border-radius: var(--radius-chip); background: var(--danger); }
+.wizard-stage { position: relative; display: grid; flex: 1; }
+.wizard-panel { grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; will-change: transform, opacity; }
+.wizard-art { display: grid; place-items: center; width: min(340px, 72%); min-height: 190px; }
+.wizard-panel h2 { margin: 0; font: var(--title-weight) clamp(26px, 2.3vw, 40px) / 1.12 var(--font-display); letter-spacing: var(--title-tracking); text-transform: var(--label-transform); }
+.wizard-panel p { margin: 0; max-width: 48ch; color: var(--text-dim); font-size: clamp(15px, 1.1vw, 19px); line-height: 1.5; }
+.wizard-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+dialog .wizard-chips .chip { padding: 9px 18px; border-radius: calc(var(--ui-rounding) * 3); text-align: center; font-size: 15px; }
+dialog .wizard-chips .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 26%, var(--color-transparent)); }
+.wizard-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 10px; }
+dialog .wizard-actions button { min-width: 180px; min-height: 54px; text-align: center; font-weight: 600; }
+
+/* Controller illustration */
+.cg { width: 100%; height: auto; overflow: visible; }
+.cg-body { fill: var(--surface-hover); stroke: var(--border); stroke-width: 2; }
+.cg-detail { fill: var(--surface); stroke: var(--border); stroke-width: 2; }
+.cg-bumper { fill: none; }
+.cg-sync { fill: var(--accent); }
+.cg-ring { fill: none; stroke: var(--accent); stroke-width: 2.5; transform-box: fill-box; transform-origin: center; animation: cg-ring calc(var(--motion-pulse) * 1.6) ease-out infinite; }
+.cg-led { animation: cg-led var(--motion-pulse) ease-in-out infinite; }
+.cg-arc { fill: none; stroke: var(--accent-2); stroke-width: 3; stroke-linecap: round; animation: cg-led var(--motion-pulse) ease-in-out infinite; }
+.cg-arc-2 { animation-delay: calc(var(--motion-pulse) * .3); }
+.cg-link { fill: none; stroke: var(--accent-2); stroke-width: 2; stroke-dasharray: 5 7; animation: cg-led var(--motion-pulse) ease-in-out infinite; }
+.cg-dongle rect { fill: var(--surface-hover); stroke: var(--border); stroke-width: 2; }
+.cg-dongle .cg-led { fill: var(--accent); stroke: none; }
+.cg-cable { fill: none; stroke: var(--border); stroke-width: 4; stroke-linecap: round; }
+.cg-plug { fill: var(--surface-hover); stroke: var(--accent-2); stroke-width: 2; }
+.cg-idle .cg-ring, .cg-idle .cg-led { animation: none; }
+@keyframes cg-ring { 0% { transform: scale(.6); opacity: .95; } 100% { transform: scale(2.8); opacity: 0; } }
+@keyframes cg-led { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+
+/* Scanner */
+.scanner { position: relative; display: grid; place-items: center; width: 210px; height: 210px; }
+.scanner-ripple { position: absolute; inset: 0; border: 2px solid var(--accent); border-radius: var(--radius-circle); opacity: 0; animation: scan-ripple calc(var(--motion-pulse) * 2.8) ease-out infinite; }
+.scanner-ripple:nth-child(2) { animation-delay: calc(var(--motion-pulse) * .93); }
+.scanner-ripple:nth-child(3) { animation-delay: calc(var(--motion-pulse) * 1.86); }
+.scanner-arc { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); animation: scan-spin calc(var(--motion-pulse) * 1.5) linear infinite; }
+.scanner-arc circle { fill: none; stroke-width: 3; stroke-linecap: round; }
+.scanner-arc-track { stroke: var(--border); }
+.scanner-arc-head { stroke: var(--accent-2); stroke-dasharray: 26 74; }
+.scanner-core { position: relative; display: grid; place-items: center; width: 88px; height: 88px; border: 1px solid var(--glass-border); border-radius: var(--radius-circle); background: var(--glass-bg); color: var(--accent-2); box-shadow: var(--focus-glow); }
+.scanner-core .glyph { width: 40px; height: 40px; }
+@keyframes scan-ripple { 0% { transform: scale(.4); opacity: .8; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes scan-spin { to { transform: rotate(360deg); } }
+
+/* Result marks: the stroke draws itself once `.drawn` is added. */
+.mark { width: 128px; height: 128px; }
+.mark-success { color: var(--ok); }
+.mark-error { color: var(--danger); }
+.mark-circle, .mark-stroke { fill: var(--color-transparent); stroke: currentColor; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset calc(var(--motion-slow) * 1.8) var(--ease); }
+.mark-stroke { transition-delay: calc(var(--motion-slow) * .9); }
+.mark.drawn .mark-circle, .mark.drawn .mark-stroke { stroke-dashoffset: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-ring, .cg-led, .cg-arc, .cg-link, .scanner-ripple, .scanner-arc { animation: none; }
+  .scanner-ripple { opacity: .25; }
+  .mark-circle, .mark-stroke { stroke-dashoffset: 0; transition: none; }
+}
+
+@media (max-width: 760px) {
+  .wizard-card { padding: 22px 22px 26px; }
+  dialog button.device-row { grid-template-columns: auto minmax(0, 1fr); }
+  dialog button.device-row .battery { grid-column: 1 / -1; }
+}

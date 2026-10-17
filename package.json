@@ -1,0 +1,17 @@
+{
+  "name": "home-media-launcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fullscreen, controller-first home media launcher for Linux",
+  "main": "src/main/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "start:wayland": "electron --ozone-platform-hint=auto .",
+    "test": "node --test",
+    "check": "node --check src/main/index.js && node --check src/main/web-preload.js && node --check src/renderer/app.js && node --check src/renderer/settings.js && node --check src/renderer/theme.js && node --check src/renderer/hero-banner.js && npm test"
+  },
+  "devDependencies": {
+    "electron": "^44.4.3"
+  }
+}
