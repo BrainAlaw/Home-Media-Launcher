@@ -90,8 +90,11 @@ test('vpnSubtitle explains every state and never truncates silently', () => {
   assert.equal(shortenMiddle('short'), 'short');
 });
 
-test('Windows runs the GPU service in-process unless opted out', () => {
-  assert.ok(buildGpuSwitches('win32', {}).switches.some(([name]) => name === 'in-process-gpu'));
-  assert.ok(!buildGpuSwitches('win32', { HML_GPU_PROCESS: 'separate' }).switches.some(([name]) => name === 'in-process-gpu'));
-  assert.ok(!buildGpuSwitches('linux', {}).switches.some(([name]) => name === 'in-process-gpu'));
+test('Windows uses software compositing by default; in-process GPU is opt-in (it presents grey in fullscreen)', () => {
+  const names = (env) => buildGpuSwitches('win32', env).switches.map(([name]) => name);
+  assert.ok(names({}).includes('disable-gpu-compositing'));
+  assert.ok(!names({}).includes('in-process-gpu'));
+  assert.ok(names({ HML_GPU_PROCESS: 'inprocess' }).includes('in-process-gpu'));
+  assert.ok(!names({ HML_GPU_COMPOSITING: 'gpu' }).includes('disable-gpu-compositing'));
+  assert.ok(!buildGpuSwitches('linux', {}).switches.some(([name]) => name === 'disable-gpu-compositing'));
 });

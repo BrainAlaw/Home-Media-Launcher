@@ -4,10 +4,11 @@
  * Chromium switches that keep compositing, rasterisation and video decode on the GPU for the 10-foot UI.
  * `HML_GPU_SAFE=1` disables all of them for machines with broken drivers.
  *
- * Windows: the stock out-of-process GPU path was measured at a hard ~27 fps (one frame every 6 vsyncs at 165 Hz) for ANY
- * animated content, even a lone transformed square, on a host with virtual display adapters (Sunshine/Parsec/SudoMaker)
- * next to a real GPU. Running the GPU service inside the browser process (`in-process-gpu`) restores the full display
- * rate with GPU compositing and rasterisation still enabled. `HML_GPU_PROCESS=separate` opts back out.
+ * Windows: the stock out-of-process GPU presentation path was measured at ~30 fps (one frame every 6 vsyncs at 165 Hz)
+ * in fullscreen on a host with virtual display adapters (Sunshine/Parsec/SudoMaker) next to a real GPU. `in-process-gpu`
+ * fixes the frame rate but presents a flat grey window in fullscreen (verified with desktopCapturer), so it is opt-in
+ * only (`HML_GPU_PROCESS=inprocess`). The default is software compositing (`disable-gpu-compositing`): ~110 fps, correct
+ * output, GPU rasterisation kept. `HML_GPU_COMPOSITING=gpu` restores Chromium's default GPU compositing.
  * @param {NodeJS.Platform} platform
  * @param {Record<string, string | undefined>} env
  * @returns {{ switches: Array<[string, string?]>, features: string[], disabledFeatures: string[] }}
@@ -18,7 +19,8 @@ function buildGpuSwitches(platform, env) {
   const features = ['CanvasOopRasterization'];
   const disabledFeatures = [];
   if (platform === 'win32') {
-    if (env.HML_GPU_PROCESS !== 'separate') switches.push(['in-process-gpu']);
+    if (env.HML_GPU_PROCESS === 'inprocess') switches.push(['in-process-gpu']);
+    else if (env.HML_GPU_COMPOSITING !== 'gpu') switches.push(['disable-gpu-compositing']);
     // Window occlusion tracking can park rAF/compositing of a fullscreen window while another surface overlaps it.
     disabledFeatures.push('CalculateNativeWinOcclusion');
   }
