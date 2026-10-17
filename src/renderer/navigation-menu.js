@@ -74,7 +74,7 @@
       if (previous) direction = Math.sign(action.offsetTop - previous.offsetTop);
       this.clearPanelFocus(); action.dataset.focused = 'true';
       this.itemMotions.get(action)?.to({ focus: 1, x: 0, y: 0 }, { y: direction * 36 });
-      this.panelLensMotion.to({ y: action.offsetTop, height: action.offsetHeight / 64 });
+      this.panelLensMotion.to({ y: action.offsetTop, height: action.offsetHeight / (this.panelLens.offsetHeight || 64) });
     }
 
     setOpen(open) {
