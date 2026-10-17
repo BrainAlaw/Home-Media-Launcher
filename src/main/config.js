@@ -117,6 +117,8 @@ function validateConfig(config) {
     let parsed;
     try { parsed = new URL(website.url); } catch { throw new Error(`websites[${index}].url is invalid`); }
     if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error(`websites[${index}].url must use HTTP or HTTPS`);
+    // Category ids are resolved against settings.categories at render time, so unknown ids are tolerated here.
+    if (website.category !== undefined && (typeof website.category !== 'string' || !website.category.trim() || website.category.length > 64 || /[ -]/.test(website.category))) throw new Error(`websites[${index}].category must be a category id`);
   });
   return config;
 }

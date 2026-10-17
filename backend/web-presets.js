@@ -90,11 +90,14 @@ function matchPresetByHostname(hostname) {
   return best ? toPublic(best) : null;
 }
 
-/** Matches the config.json `websites[]` schema ({ id, name, url, icon }) validated in src/main/config.js. */
+/** Home category of a preset: streaming video and music services both live in Home Theatre. */
+function presetHomeCategory() { return 'theatre'; }
+
+/** Matches the config.json `websites[]` schema ({ id, name, url, icon, category }) validated in src/main/config.js. */
 function presetToWebsite(preset) {
   if (!preset || typeof preset.id !== 'string' || typeof preset.name !== 'string' || typeof preset.url !== 'string') throw new Error('Invalid web preset');
   // The icon is an install-path independent token; the renderer / icon service resolves it at runtime.
-  return { id: `preset:${preset.id}`, name: preset.name, url: preset.url, icon: `preset:${preset.id}` };
+  return { id: `preset:${preset.id}`, name: preset.name, url: preset.url, icon: `preset:${preset.id}`, category: presetHomeCategory(preset) };
 }
 
 /** Preset id for an icon value: a `preset:<id>` token or a legacy absolute bundled-icon URL / path; otherwise null. */

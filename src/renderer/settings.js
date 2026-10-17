@@ -28,8 +28,6 @@ window.SettingsDialog = (function () {
   let presetSelect = null;
   let fontSelect = null;
 
-  const ICON_HINT = 'Preferred sizes: tile art 1280×720 (16:9) · icon 512×512 PNG or SVG · game poster 600×900';
-
   /** @param {string} tag @param {Record<string, any>} props */
   function el(tag, props = {}) {
     const node = document.createElement(tag);
@@ -47,109 +45,42 @@ window.SettingsDialog = (function () {
     return button;
   }
 
-  /* ------------------------------------------------------------------ icon fields */
+  /* ------------------------------------------------------------------ icon thumbnails and category (shared popup: icon-popup.js) */
 
-  /** Calls an extension namespace; rejects when the bridge or the namespace is not available yet. */
-  async function callExt(namespace, method, ...args) {
-    const bridge = window.launcher?.ext;
-    if (!bridge || typeof bridge.invoke !== 'function') throw new Error('Extension bridge unavailable');
-    return bridge.invoke(namespace, method, ...args);
-  }
-
-  /** @param {unknown} result artwork search result: an array, or an object with a `results` array */
-  function artworkUrls(result) {
-    const list = Array.isArray(result) ? result : (Array.isArray(result?.results) ? result.results : []);
-    return list.map((item) => (typeof item === 'string' ? item : item?.url)).filter((url) => typeof url === 'string' && url).slice(0, 12);
+  /**
+   * Thumbnail button with a pencil badge; opens the shared icon popup. The value lives in a hidden input (`className`)
+   * so collect() reads it like any other field.
+   * @param {{ className: string, value?: string, kind: 'app' | 'website' | 'game', describe: () => { name: string, url?: string }, fallback?: string, onChange?: (value: string) => void }} options
+   */
+  function createIconThumb({ className, value, kind, describe, fallback, onChange }) {
+    const stored = el('input', { type: 'hidden', className, value: value || '' });
+    const thumb = window.IconPopup.createThumb({
+      value, kind, describe, fallback,
+      onChange: (next) => { stored.value = next; onChange?.(next); }
+    });
+    return { thumb: thumb.element, stored, refresh: thumb.refresh };
   }
 
   /**
-   * Icon editor for one item: preview, path field, Auto, Browse, Search artwork and Clear.
-   * Overrides win over any other icon source. `describe()` supplies the item's current name / address.
-   * @param {{ className: string, value?: string, kind: 'app' | 'website' | 'game', describe: () => { name: string, url?: string }, onChange?: (value: string) => void }} options
+   * Compact category selector: one toggle button per category (settings.categories, default Home Theatre and Gaming).
+   * The choice is kept in card.dataset.category; a stored id that no longer exists stays selectable.
    */
-  function createIconField({ className, value, kind, describe, onChange }) {
-    const wrap = el('div', { className: 'icon-field' });
-    const preview = el('div', { className: 'icon-preview' });
-    const image = el('img', { alt: '' });
-    image.addEventListener('error', () => image.removeAttribute('src'));
-    preview.append(image);
-    const input = textInput(className, 'Icon image path or web address (optional)', value);
-    const status = el('small', { className: 'icon-status', textContent: '' });
-    const results = el('div', { className: 'artwork-results', hidden: true });
-    const hint = el('small', { className: 'icon-hint', textContent: ICON_HINT });
-    const buttons = ['Auto', 'Browse…', 'Search artwork', 'Clear'].map((label) => el('button', { type: 'button', textContent: label }));
-    const [auto, browse, search, clear] = buttons;
-    const group = el('div', { className: 'button-group' });
+  function createCategoryControl(card, stored) {
+    const { selected, options } = window.IconPopupModel.categoryChoices(window.IconPopupModel.readCategories(ctx.getConfig()?.settings), stored);
+    card.dataset.category = selected;
+    const group = el('div', { className: 'category-choice' });
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', 'Home category');
+    const buttons = options.map((option) => {
+      const button = el('button', { type: 'button', textContent: option.label });
+      button.dataset.category = option.id;
+      button.addEventListener('click', () => { card.dataset.category = option.id; sync(); });
+      return button;
+    });
+    const sync = () => buttons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.category === card.dataset.category)));
     group.append(...buttons);
-
-    const setStatus = (message) => { status.textContent = message; };
-    const sync = () => {
-      const source = input.value.trim();
-      if (source && window.AssetUrl.isLoadableImage(source)) image.src = window.AssetUrl.assetUrl(source);
-      else image.removeAttribute('src');
-      onChange?.(source);
-    };
-    const choose = (source) => {
-      input.value = source;
-      results.hidden = true;
-      results.replaceChildren();
-      sync();
-    };
-    const busy = (isBusy) => buttons.forEach((button) => { button.disabled = isBusy; });
-
-    input.addEventListener('input', sync);
-    clear.addEventListener('click', () => { choose(''); setStatus('Icon cleared - the automatic artwork is used'); });
-    browse.addEventListener('click', async () => {
-      const selected = await window.launcher.chooseFile('icon');
-      if (!selected) return;
-      if (/\.(mp4|webm)$/i.test(selected)) { setStatus('Icons must be image files'); return; }
-      choose(selected);
-      setStatus('');
-    });
-    auto.addEventListener('click', async () => {
-      const { name, url } = describe();
-      if (!name && !url) { setStatus('Enter a name first'); return; }
-      busy(true);
-      setStatus('Looking for an icon…');
-      try {
-        const result = await callExt('icons', 'resolve', { kind, name, ...(url ? { url } : {}) });
-        const found = result && typeof result.url === 'string' ? result.url : '';
-        if (!found) setStatus('No automatic icon found - try Search artwork or Browse');
-        else { choose(found); setStatus(`Automatic icon applied${result.source ? ` (${result.source})` : ''}`); }
-      } catch { setStatus('Automatic icons are not available - use Browse or Search artwork'); }
-      finally { busy(false); }
-    });
-    search.addEventListener('click', async () => {
-      const { name } = describe();
-      if (!name) { setStatus('Enter a name first'); return; }
-      busy(true);
-      setStatus('Searching artwork…');
-      results.replaceChildren();
-      results.hidden = true;
-      try {
-        const urls = artworkUrls(await callExt('icons', 'searchArtwork', name));
-        if (!urls.length) { setStatus('No artwork found'); return; }
-        for (const url of urls) {
-          const candidate = el('button', { type: 'button', className: 'artwork-candidate', title: 'Use this artwork' });
-          candidate.setAttribute('aria-label', 'Use this artwork');
-          const thumb = el('img', { alt: '', loading: 'lazy', decoding: 'async', src: window.AssetUrl.assetUrl(url) });
-          thumb.addEventListener('error', () => candidate.remove());
-          candidate.append(thumb);
-          candidate.addEventListener('click', () => { choose(url); setStatus('Artwork selected'); });
-          results.append(candidate);
-        }
-        results.hidden = false;
-        setStatus('Pick an artwork');
-        results.querySelector('button')?.focus();
-      } catch { setStatus('Artwork search is not available'); }
-      finally { busy(false); }
-    });
-
-    const controls = el('div', { className: 'icon-controls' });
-    controls.append(input, group, status, results, hint);
-    wrap.append(preview, controls);
     sync();
-    return { element: wrap, input };
+    return group;
   }
 
   /** Labelled form field; the label wraps the control so a click or the D-pad focuses it. */
@@ -159,10 +90,10 @@ window.SettingsDialog = (function () {
     return wrap;
   }
 
-  /** Card header: the name input grows, Remove sits at the end. */
-  function cardHead(card, name) {
+  /** Card header: icon thumbnail (with its hidden value), the name input grows, Remove sits at the end. */
+  function cardHead(card, name, iconInput) {
     const head = el('div', { className: 'card-head' });
-    head.append(field('Name', name, 'grow'), removeButton(card));
+    head.append(iconInput.thumb, iconInput.stored, field('Name', name, 'grow'), removeButton(card));
     return head;
   }
 
@@ -171,8 +102,9 @@ window.SettingsDialog = (function () {
     card.dataset.id = website.id || `website:${crypto.randomUUID()}`;
     const name = textInput('website-name', 'Name', website.name);
     const url = textInput('website-url', 'https://example.com', website.url);
-    const iconField = createIconField({ className: 'website-icon', value: icon, kind: 'website', describe: () => ({ name: name.value.trim(), url: url.value.trim() }) });
-    card.append(cardHead(card, name), field('Address', url, 'wide'), iconField.element);
+    const iconInput = createIconThumb({ className: 'website-icon', value: icon, kind: 'website', describe: () => ({ name: name.value.trim(), url: url.value.trim() }) });
+    name.addEventListener('input', iconInput.refresh);
+    card.append(cardHead(card, name, iconInput), field('Address', url, 'wide'), field('Home category', createCategoryControl(card, website.category), 'wide'));
     $('#website-editor').append(card);
   }
 
@@ -181,13 +113,13 @@ window.SettingsDialog = (function () {
     card.dataset.id = tile.id || `custom:${crypto.randomUUID()}`;
     if (legacyId) card.dataset.legacyId = legacyId;
     const name = textInput('app-name', 'Name', tile.name);
-    const iconField = createIconField({ className: 'app-icon', value: icon, kind: 'app', describe: () => ({ name: name.value.trim() }) });
+    const iconInput = createIconThumb({ className: 'app-icon', value: icon, kind: 'app', describe: () => ({ name: name.value.trim() }) });
+    name.addEventListener('input', iconInput.refresh);
     card.append(
-      cardHead(card, name),
+      cardHead(card, name, iconInput),
       field('Command or executable', textInput('app-command', 'Command or executable path', tile.command), 'wide'),
       field('Arguments', textInput('app-args', 'e.g. stream PC Desktop', (tile.args || []).join(' '))),
-      field('Tile background (optional)', textInput('app-background', 'Image path or address', tile.background)),
-      iconField.element
+      field('Tile background (optional)', textInput('app-background', 'Image path or address', tile.background))
     );
     $('#application-editor').append(card);
     return card;
@@ -626,42 +558,18 @@ window.SettingsDialog = (function () {
         const entry = el('div', { className: 'catalog-entry' });
         entry.dataset.appId = app.id;
         entry.dataset.icon = overrides[app.id] || '';
-        // Thumbnail: opens the icon picker below the row; falls back to the app's initial.
-        const thumb = el('button', { type: 'button', className: 'catalog-thumb' });
-        thumb.setAttribute('aria-label', `Change icon for ${app.name}`);
-        thumb.setAttribute('aria-expanded', 'false');
-        const thumbImage = el('img', { alt: '' });
-        thumbImage.addEventListener('error', () => thumbImage.removeAttribute('src'));
-        const initial = el('span', { className: 'catalog-initial', textContent: (app.name || '?').trim().charAt(0).toUpperCase() });
-        initial.setAttribute('aria-hidden', 'true');
-        thumb.append(thumbImage, initial);
-        const showThumb = () => {
-          const source = entry.dataset.icon || app.icon || '';
-          if (source && window.AssetUrl.isLoadableImage(source)) thumbImage.src = window.AssetUrl.assetUrl(source);
-          else thumbImage.removeAttribute('src');
-          thumb.classList.toggle('has-icon', Boolean(entry.dataset.icon));
-        };
-        showThumb();
+        // Thumbnail with a pencil badge opens the shared icon popup; falls back to the app's own icon or initial.
+        const iconThumb = window.IconPopup.createThumb({
+          value: entry.dataset.icon, kind: group.kind, describe: () => ({ name: app.name }), fallback: app.icon || '',
+          onChange: (value) => { entry.dataset.icon = value; }
+        });
+        const thumb = iconThumb.element;
         const info = el('span', { className: 'catalog-info' });
         info.append(el('strong', { className: 'catalog-name', textContent: app.name, title: app.name }), el('small', { textContent: group.sourceLabel }));
         const toggle = el('label', { className: 'catalog-toggle' });
         const checkbox = el('input', { type: 'checkbox', className: 'catalog-checkbox', value: app.id, checked: app.selected });
         checkbox.setAttribute('aria-label', `Show ${app.name} on the home screen`);
         toggle.append(checkbox);
-        let panel = null;
-        thumb.addEventListener('click', () => {
-          if (!panel) {
-            panel = el('div', { className: 'catalog-icon-panel' });
-            const iconField = createIconField({
-              className: 'catalog-icon', value: entry.dataset.icon, kind: group.kind, describe: () => ({ name: app.name }),
-              onChange: (value) => { entry.dataset.icon = value; showThumb(); }
-            });
-            panel.append(iconField.element);
-            entry.append(panel);
-          } else panel.hidden = !panel.hidden;
-          entry.classList.toggle('open', !panel.hidden);
-          thumb.setAttribute('aria-expanded', String(!panel.hidden));
-        });
         entry.append(thumb, info, toggle);
         catalog.append(entry);
       }
@@ -743,7 +651,8 @@ window.SettingsDialog = (function () {
       id: card.dataset.id,
       name: card.querySelector('.website-name').value.trim(),
       url: card.querySelector('.website-url').value.trim(),
-      icon: card.querySelector('.website-icon').value.trim()
+      icon: card.querySelector('.website-icon').value.trim(),
+      category: card.dataset.category || 'theatre'
     })).filter((website) => website.name && website.url);
     // Overrides of untouched items stay as they are. Custom apps and websites carry their icon in the item itself
     // (the editor field already started from any previous override), so a stale override must not shadow it.
@@ -882,11 +791,13 @@ window.SettingsDialog = (function () {
     });
   }
 
-  /** Collapses an open select; true when one was open (the caller then swallows the Back / Escape press). */
-  function dismissPopup() { return closeSelect(); }
+  /** Closes the icon popup or collapses an open select; true when one was open (the caller then swallows the Back / Escape press). */
+  function dismissPopup() { return window.IconPopup.dismiss() || closeSelect(); }
 
   /** Option buttons of the open select, so D-pad navigation stays inside the list; null when nothing is expanded. */
   function popupControls() {
+    const iconPopup = window.IconPopup.controls();
+    if (iconPopup) return iconPopup;
     return openSelect ? [...openSelect.list.querySelectorAll('.select-option')] : null;
   }
 
