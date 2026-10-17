@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="controllers.css">
   <link rel="stylesheet" href="home.css">
   <link rel="stylesheet" href="status.css">
+  <link rel="stylesheet" href="home-layout.css">
   <link rel="stylesheet" href="launch-transition.css">
   <link rel="stylesheet" href="appearance.css">
 <link rel="stylesheet" href="settings-apps.css">
@@ -26,12 +27,13 @@
   <div id="fx" aria-hidden="true"></div>
   <div id="wallpaper-credit-overlay" class="wallpaper-credit" aria-hidden="true"></div>
   <main>
-    <header>
+    <header id="home-header" data-layout="split">
       <div id="header-content">
         <h1 id="title"></h1>
-        <div id="date"></div>
+        <div id="date"><span class="date-weekday"></span><span class="date-full"></span></div>
         <div id="weather"></div>
       </div>
+      <div id="clock"></div>
       <div class="header-actions">
         <div id="header-status" class="header-status">
           <button id="host-indicator" class="status-chip" type="button" data-target="host" data-state="disabled" aria-label="Game host status" aria-controls="system-panel" hidden></button>
@@ -39,13 +41,14 @@
           <button id="surfshark-indicator" class="status-chip" type="button" data-target="surfshark" data-state="unavailable" aria-label="Surfshark unavailable" aria-controls="system-panel" hidden></button>
           <div id="network-indicator" class="status-chip" role="img" aria-label="Network status unavailable" hidden></div>
         </div>
-        <div id="clock"></div>
         <button id="system-button" class="icon-button" aria-label="System menu" aria-expanded="false" aria-controls="system-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></button>
       </div>
     </header>
     <div id="empty" hidden>No tiles selected. Press B or Esc, then open Settings to add some.</div>
     <section id="rows" role="tabpanel" aria-label="Applications" tabindex="-1">
-            <div id="grid-content"></div>
+      <!-- Mount point for the media widget (agent M2): left-aligned, takes space only while it has content. -->
+      <div id="media-widget-slot"></div>
+      <div id="grid-content"></div>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -271,6 +274,7 @@
   <script src="perf.js"></script>
 <script src="menu-motion.js"></script>
   <script src="home-sections.js"></script>
+  <script src="home-header.js"></script>
   <script src="navigation-menu.js"></script>
   <script src="controller-service.js"></script>
   <script src="pairing-flow.js"></script>

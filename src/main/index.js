@@ -26,6 +26,7 @@ const { ControllerPairing } = require('./controller-pairing');
 const { WallpaperPlaylist } = require('../../backend/wallpaper-playlist');
 const { WallpaperSourceService } = require('../../backend/wallpaper-source-service');
 const { loadEnv, readSecrets, scrubSecrets } = require('../../backend/env');
+const { parseLocationQuery, pickPlace } = require('../../backend/weather');
 const { registerExtensions } = require('./ext-registry');
 const remoteExt = require('./ext/remote');
 const sessionExt = require('./ext/session');
@@ -508,9 +509,10 @@ handle('launcher:system-action', (_event, action) => {
 });
 handle('launcher:get-weather', async (_event, location) => {
   if (typeof location !== 'string' || !location.trim()) return null;
-  const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name=${encodeURIComponent(location.trim())}`;
+  const wanted = parseLocationQuery(location);
+  const geocodeUrl = `https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&name=${encodeURIComponent(wanted.name)}${wanted.country ? `&countryCode=${wanted.country}` : ''}`;
   const geocode = await fetch(geocodeUrl, { signal: AbortSignal.timeout(5000) }).then((response) => response.json());
-  const place = geocode.results?.[0];
+  const place = pickPlace(geocode.results, wanted);
   if (!place) return null;
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,weather_code&timezone=auto`;
   const weather = await fetch(weatherUrl, { signal: AbortSignal.timeout(5000) }).then((response) => response.json());

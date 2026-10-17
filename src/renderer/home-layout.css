@@ -1,0 +1,127 @@
+/*
+ * HOME LAYOUT (agent H1): header (date, weather, clock, status cluster) and bottom-anchored tile rows.
+ * Loaded after status.css so it can refine the header. Values come from hig.css (--hig-*).
+ * Only transform, opacity and the independent `translate` property animate; nothing here touches layout per frame.
+ *
+ * Header layouts (settings.homeHeader.layout, applied as header[data-layout]):
+ *   split   - date and weather on the left, clock on the right
+ *   centred - clock centred with the date under it, weather beside the clock
+ */
+:root {
+  --home-clock-size: max(56px, calc(132 * var(--hig-unit)));
+  --home-weekday-size: max(36px, calc(84 * var(--hig-unit)));
+  --home-date-size: max(18px, calc(36 * var(--hig-unit)));
+  --home-header-shadow: 0 1px 2px rgba(0, 0, 0, .45), 0 2px 28px rgba(0, 0, 0, .5);
+  --home-safe-bottom: clamp(20px, 4vh, 56px);
+  --home-reveal-ease: var(--hig-ease-standard);
+}
+
+/* ---------------------------------------------------------------- top scrim: only as strong as the text needs */
+main::before {
+  content: '';
+  position: fixed;
+  z-index: -1;
+  inset: 0 0 auto 0;
+  height: clamp(220px, 38vh, 420px);
+  pointer-events: none;
+  /* Eased stops avoid a visible band edge on large, dark OLED panels. */
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg) 58%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 44%, transparent) 28%,
+    color-mix(in srgb, var(--bg) 24%, transparent) 55%,
+    color-mix(in srgb, var(--bg) 9%, transparent) 80%,
+    transparent 100%);
+}
+
+/* ---------------------------------------------------------------- header grid */
+main { padding-top: clamp(28px, 5vh, 72px); }
+main > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "title actions" "date clock" "weather clock";
+  align-items: start;
+  column-gap: var(--hig-space-6);
+  row-gap: 0;
+  min-height: 0;
+  margin-bottom: 0;
+  padding: 0 var(--gutter);
+}
+#header-content { display: contents; }
+#title { grid-area: title; font: var(--hig-font-callout); color: var(--hig-label-secondary); text-shadow: var(--home-header-shadow); margin-bottom: var(--hig-space-1); }
+#title:empty { display: none; }
+
+#date, #clock, #weather { text-shadow: var(--home-header-shadow); text-transform: none; letter-spacing: normal; }
+#date[hidden], #clock[hidden], #weather[hidden] { display: none; }
+
+#date { grid-area: date; display: flex; flex-direction: column; gap: var(--hig-space-1); min-width: 0; color: var(--hig-label); }
+#date .date-weekday { font: 300 var(--home-weekday-size) / 1.04 var(--font-display); letter-spacing: -.012em; color: var(--hig-label); }
+#date .date-full { font: 400 var(--home-date-size) / 1.2 var(--font-ui); letter-spacing: .01em; color: var(--hig-label-secondary); }
+
+#clock {
+  grid-area: clock;
+  justify-self: end;
+  align-self: start;
+  font: 200 var(--home-clock-size) / 1 var(--font-display);
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  color: var(--hig-label);
+  white-space: nowrap;
+}
+.header-seconds #clock { font-size: calc(var(--home-clock-size) * .86); }
+
+#weather { grid-area: weather; margin-top: var(--hig-space-2); gap: var(--hig-space-2); font: 400 calc(var(--home-date-size) * 1.05) / 1.2 var(--font-ui); color: var(--hig-label-secondary); }
+#weather .weather-glyph { width: 1.55em; height: 1.55em; stroke-width: 1.4; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, .45)); }
+#weather .weather-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32ch; }
+
+.header-actions { grid-area: actions; justify-self: end; align-self: start; display: flex; align-items: center; gap: var(--hig-space-3); margin-bottom: var(--hig-space-2); }
+.header-status { display: flex; align-items: center; gap: var(--hig-space-2); min-width: 0; }
+
+/* Centred: clock in the middle, date under it, weather beside the clock. */
+main > header[data-layout="centred"] {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: "title title title" "weather clock actions" ". date .";
+}
+header[data-layout="centred"] #title { justify-self: center; text-align: center; }
+header[data-layout="centred"] #clock { justify-self: center; align-self: center; }
+header[data-layout="centred"] #weather { justify-self: end; align-self: center; margin-top: 0; }
+header[data-layout="centred"] #date { justify-self: center; align-items: center; text-align: center; margin-top: var(--hig-space-1); }
+header[data-layout="centred"] #date .date-weekday { font-size: calc(var(--home-weekday-size) * .5); font-weight: 400; letter-spacing: .02em; }
+header[data-layout="centred"] .header-actions { align-self: start; margin-bottom: 0; }
+
+/* ---------------------------------------------------------------- OLED protection: slow drift and idle dimming */
+/* `translate` is independent of `transform`, so the drift never fights the reveal animation. Steps are 30 s apart. */
+#title, #date, #weather, #clock { translate: var(--oled-x, 0px) var(--oled-y, 0px); transition: translate 30s linear, opacity 2.4s var(--hig-ease-standard); }
+body.header-dimmed :is(#title, #date, #weather, #clock) { opacity: .3; }
+
+/* ---------------------------------------------------------------- tile rows sit at the bottom of the screen */
+#rows { display: flex; flex-direction: column; }
+#rows::after { display: none; }
+#rows > * { flex: none; }
+/* Auto margins (not justify-content) keep the top reachable by scrolling when the rows are taller than the screen. */
+#grid-content { margin-top: auto; padding-bottom: var(--home-safe-bottom); }
+#media-widget-slot { margin-top: auto; padding: 0 var(--gutter); text-align: left; }
+#media-widget-slot:empty, #media-widget-slot[hidden] { display: none; }
+#rows:has(#media-widget-slot:not(:empty):not([hidden])) #grid-content { margin-top: 0; }
+#empty { margin-top: auto; }
+
+/* ---------------------------------------------------------------- staggered reveal (startup / first wallpaper) */
+body.home-fade:not(.home-ready) :is(#title, #date, #weather, #clock, .header-actions, #media-widget-slot, #grid-content .row) { opacity: 0; }
+body.home-fade.home-ready :is(#title, #date, #weather, #clock, .header-actions, #media-widget-slot, #grid-content .row) {
+  animation: home-reveal 900ms var(--home-reveal-ease) var(--reveal-delay, 0ms) backwards;
+}
+body.home-fade.home-ready #date { --reveal-delay: 0ms; }
+body.home-fade.home-ready #weather { --reveal-delay: 110ms; }
+body.home-fade.home-ready #clock { --reveal-delay: 80ms; }
+body.home-fade.home-ready .header-actions { --reveal-delay: 160ms; }
+body.home-fade.home-ready #media-widget-slot { --reveal-delay: 240ms; }
+body.home-fade.home-ready #grid-content .row:nth-child(1) { --reveal-delay: 300ms; }
+body.home-fade.home-ready #grid-content .row:nth-child(2) { --reveal-delay: 440ms; }
+body.home-fade.home-ready #grid-content .row:nth-child(n + 3) { --reveal-delay: 580ms; }
+@keyframes home-reveal { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #title, #date, #weather, #clock { transition-duration: 1ms, 1ms; }
+  body.home-fade.home-ready :is(#title, #date, #weather, #clock, .header-actions, #media-widget-slot, #grid-content .row) { animation-name: home-reveal-fade; animation-duration: 300ms; }
+  @keyframes home-reveal-fade { from { opacity: 0; } to { opacity: 1; } }
+}
