@@ -325,7 +325,13 @@ if (typeof module === 'object' && module.exports) {
     const element = $('#weather');
     element.hidden = !header.showWeather;
     if (!header.showWeather) { $('#weather-card').hidden = true; return; }
-    const location = header.weatherLocation || 'London';
+    const location = (header.weatherLocation || '').trim();
+    if (!location) {
+      // No location configured: never guess one (no IP lookup); point the user at Settings instead.
+      element.textContent = 'Set your location in Settings';
+      $('#weather-card').hidden = true;
+      return;
+    }
     const load = async () => {
       let snapshot = null;
       try { snapshot = await fetchSnapshot(location); } catch { /* shown as unavailable */ }

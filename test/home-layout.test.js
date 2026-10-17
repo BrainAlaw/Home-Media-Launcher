@@ -72,9 +72,10 @@ test('header settings default to split layout, no seconds, protection and fade o
   assert.equal(HomeHeader.normaliseHeaderSettings({ oledProtection: false }).oledProtection, false);
 });
 
-test('weather location defaults to High Wycombe', () => {
-  assert.equal(HomeHeader.headerWithDefaults({ weatherLocation: '  ' }).weatherLocation, 'High Wycombe,GB');
-  assert.equal(HomeHeader.headerWithDefaults(undefined).weatherLocation, 'High Wycombe,GB');
+test('weather location has no built-in default and is trimmed', () => {
+  assert.equal(HomeHeader.headerWithDefaults({ weatherLocation: '  ' }).weatherLocation, '');
+  assert.equal(HomeHeader.headerWithDefaults(undefined).weatherLocation, '');
+  assert.equal(HomeHeader.headerWithDefaults({ weatherLocation: ' Leeds,GB ' }).weatherLocation, 'Leeds,GB');
   assert.equal(HomeHeader.headerWithDefaults({ weatherLocation: 'Leeds,GB', showWeather: true }).weatherLocation, 'Leeds,GB');
 });
 

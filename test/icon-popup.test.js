@@ -74,3 +74,29 @@ test('markup loads the popup scripts before settings.js and wires the popup into
   assert.match(settings, /window\.IconPopup\.controls\(\)/);
   assert.match(settings, /category: card\.dataset\.category/);
 });
+
+test('pending close runs once and flush completes it early for a reopen', () => {
+  const gate = Model.createPendingClose();
+  let finished = 0;
+  const run = gate.arm(() => { finished += 1; });
+  assert.equal(gate.isPending(), true);
+  assert.equal(gate.flush(), true);
+  assert.equal(finished, 1);
+  assert.equal(gate.isPending(), false);
+  assert.equal(run(), false, 'late animationend or timer is a no-op');
+  assert.equal(gate.flush(), false);
+  assert.equal(finished, 1);
+});
+
+test('a stale runner never finishes a newer close', () => {
+  const gate = Model.createPendingClose();
+  let first = 0;
+  let second = 0;
+  const staleRun = gate.arm(() => { first += 1; });
+  gate.flush();
+  gate.arm(() => { second += 1; });
+  staleRun();
+  assert.equal(first, 1);
+  assert.equal(second, 0);
+  assert.equal(gate.isPending(), true);
+});

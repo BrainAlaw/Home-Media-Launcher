@@ -75,5 +75,31 @@
   /** First letter shown while an item has no loadable icon. */
   function initialOf(name) { return (String(name || '').trim().charAt(0) || '?').toUpperCase(); }
 
-  return { DEFAULT_CATEGORIES, DEFAULT_CATEGORY_ID, MAX_CANDIDATES, readCategories, categoryChoices, normaliseCandidates, artKindFor, initialOf };
+  /**
+   * Tracks a close that is waiting for its exit animation. `arm(finish)` returns an idempotent runner (animationend,
+   * fallback timer or reduced motion may all call it); `flush()` runs the pending one immediately so a reopen during
+   * the animation can complete the close first instead of being ignored.
+   * @returns {{ arm: (finish: () => void) => () => boolean, flush: () => boolean, isPending: () => boolean }}
+   */
+  function createPendingClose() {
+    let pending = null;
+    return {
+      arm(finish) {
+        let done = false;
+        const run = () => {
+          if (done) return false;
+          done = true;
+          if (pending === run) pending = null;
+          finish();
+          return true;
+        };
+        pending = run;
+        return run;
+      },
+      flush() { return pending ? pending() : false; },
+      isPending() { return pending !== null; }
+    };
+  }
+
+  return { createPendingClose, DEFAULT_CATEGORIES, DEFAULT_CATEGORY_ID, MAX_CANDIDATES, readCategories, categoryChoices, normaliseCandidates, artKindFor, initialOf };
 });

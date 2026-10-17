@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { WeatherService, parseLocationQuery, pickPlace, DEFAULT_LOCATION } = require('../weather');
+const { WeatherService, parseLocationQuery, pickPlace } = require('../weather');
 
 test('parseLocationQuery splits name and country', () => {
   assert.deepEqual(parseLocationQuery('High Wycombe,GB'), { name: 'High Wycombe', country: 'GB', query: 'High Wycombe,GB' });
@@ -28,7 +28,7 @@ test('pickPlace prefers the exact name and country', () => {
   assert.equal(pickPlace([{ name: 'A', latitude: 3, longitude: 4, country_code: 'GB' }], { name: 'A', country: 'GB' }).latitude, 3);
 });
 
-test('empty location resolves High Wycombe,GB, queries q=name,country and reuses cached coordinates', async (t) => {
+test('explicit location is geocoded as q=name,country and cached coordinates are reused', async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'weather-loc-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));
   const urls = [];
@@ -43,8 +43,7 @@ test('empty location resolves High Wycombe,GB, queries q=name,country and reuses
   };
   let clock = 1000;
   const service = new WeatherService({ userData: directory, apiKey: 'K', fetchImpl, now: () => clock });
-  const snapshot = await service.get('');
-  assert.equal(DEFAULT_LOCATION, 'High Wycombe,GB');
+  const snapshot = await service.get('High Wycombe,GB');
   assert.equal(snapshot.location, 'High Wycombe');
   assert.equal(snapshot.temperature, 9);
   assert.equal(snapshot.condition, 'Scattered clouds');
@@ -56,4 +55,13 @@ test('empty location resolves High Wycombe,GB, queries q=name,country and reuses
   await service.get('High Wycombe, GB');
   assert.equal(urls.filter((url) => url.pathname.includes('geo')).length, 0, 'second refresh skips geocoding');
   assert.equal(urls.length, 2);
+});
+
+test('empty location is rejected without any network call (no built-in default, no IP lookup)', async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'weather-empty-'));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  let calls = 0;
+  const service = new WeatherService({ userData: directory, apiKey: 'K', fetchImpl: async () => { calls += 1; throw new Error('unexpected'); } });
+  for (const value of ['', '   ', undefined]) await assert.rejects(() => service.get(value), /not set/);
+  assert.equal(calls, 0);
 });
