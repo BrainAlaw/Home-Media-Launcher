@@ -106,7 +106,7 @@ test('focus model: left/right inside, up/down/back leave, confirm activates', ()
   assert.deepEqual(model.handle('left'), { type: 'none' });
   assert.equal(model.current, 'prev');
   assert.deepEqual(model.handle('down'), { type: 'leave', direction: 'down' });
-  assert.deepEqual(model.handle('back'), { type: 'leave', direction: 'down' });
+  assert.deepEqual(model.handle('back'), { type: 'leave', direction: 'system' }, 'Back targets the quick-settings button like tiles');
   assert.deepEqual(model.handle('up'), { type: 'leave', direction: 'up' });
 });
 
@@ -119,6 +119,7 @@ test('focus model keeps the focused action across a state change and falls back 
   assert.equal(model.current, 'open-spotify');
   assert.equal(new MC.WidgetFocusModel([]).handle('left').type, 'none');
   assert.deepEqual(new MC.WidgetFocusModel([]).handle('down'), { type: 'leave', direction: 'down' });
+  assert.deepEqual(new MC.WidgetFocusModel([]).handle('back'), { type: 'leave', direction: 'system' });
 });
 
 test('dominantColour prefers saturated pixels and handles empty input', () => {

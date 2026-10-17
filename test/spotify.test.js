@@ -439,3 +439,44 @@ test('adaptive polling intervals', () => {
   assert.equal(pollInterval({ suspended: false, visible: true, playback: playing, failures: 3 }), 8000);
   assert.equal(pollInterval({ suspended: false, visible: true, playback: playing, waitMs: 30_000 }), 30_000);
 });
+
+test('service: polls only while the renderer reports an active media UI', async (t) => {
+  const userData = tempDir();
+  const storage = fakeSafeStorage();
+  fs.writeFileSync(path.join(userData, 'spotify-tokens.json'), JSON.stringify({ version: 1, encrypted: storage.encryptString(JSON.stringify({ accessToken: 'A', refreshToken: 'R', expiresAt: Date.now() + 3_600_000 })).toString('base64') }));
+  const { fetch, calls } = router({ 'GET /me': json(200, { display_name: 'Maciej' }), 'GET /me/player': json(200, PLAYBACK) });
+  const service = new MediaService({ clientId: 'cid', userData, fetch, safeStorage: storage, sleep: async () => {} });
+  const playerCalls = () => calls.filter((call) => call.key === 'GET /me/player').length;
+  const flush = async () => { for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setImmediate(resolve)); };
+
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  await service.start();
+  await flush();
+  t.mock.timers.tick(60_000);
+  await flush();
+  assert.equal(playerCalls(), 0, 'inactive by default: no playback requests, even after a minute');
+  assert.equal(service.status().auth.status, 'signed-in', 'auth still works while inactive');
+
+  assert.deepEqual(service.setActive(true), { ok: true, active: true });
+  t.mock.timers.tick(0);
+  await flush();
+  assert.equal(playerCalls(), 1, 'activation fetches immediately');
+  t.mock.timers.tick(1000);
+  await flush();
+  assert.equal(playerCalls(), 2, 'playing state polls about once per second while active');
+
+  service.setActive(false);
+  t.mock.timers.tick(120_000);
+  await flush();
+  assert.equal(playerCalls(), 2, 'no requests after deactivation');
+
+  service.setActive(true);
+  t.mock.timers.tick(0);
+  await flush();
+  assert.equal(playerCalls(), 3, 'reactivation fetches immediately again');
+  service.setActive(true);
+  t.mock.timers.tick(0);
+  await flush();
+  assert.equal(playerCalls(), 3, 'repeating the same state is a no-op');
+  service.stop();
+});
