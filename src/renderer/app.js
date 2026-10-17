@@ -48,6 +48,7 @@ const systemPanel = document.querySelector('#system-panel');
 const systemButton = document.querySelector('#system-button');
 const settingsDialog = document.querySelector('#settings-dialog');
 const primaryNavigation = document.querySelector('#primary-navigation');
+const vpnIndicator = document.querySelector('#vpn-indicator');
 let toastTimer;
 let cursorTimer;
 let backgroundTimer;
@@ -411,7 +412,7 @@ function preloadMedia(source) {
 }
 
 function focusables() {
-  return [...document.querySelectorAll('#primary-navigation [data-menu-id], #system-button, #rows .focusable')];
+  return [...document.querySelectorAll('#primary-navigation [data-menu-id], #vpn-indicator:not([hidden]), #system-button, #rows .focusable')];
 }
 
 function render(model) {
@@ -507,7 +508,7 @@ function moveFocusAmong(elements, current, direction) {
 function moveHome(direction) {
   if (primaryNavigation.contains(state.focusEl)) {
     if (direction === 'left' || direction === 'right') {
-      if (direction === 'right' && navigationMenu.focusedIndex === navigationMenu.buttons.length - 1) setFocus(systemButton, { scroll: false });
+      if (direction === 'right' && navigationMenu.focusedIndex === navigationMenu.buttons.length - 1) setFocus(vpnIndicator.hidden ? systemButton : vpnIndicator, { scroll: false });
       else navigationMenu.move(direction);
       return;
     }
@@ -518,7 +519,9 @@ function moveHome(direction) {
     }
     return;
   }
-  if (state.focusEl === systemButton && direction === 'left') {
+  if (state.focusEl === systemButton && direction === 'left' && !vpnIndicator.hidden) { setFocus(vpnIndicator, { scroll: false }); return; }
+  if (state.focusEl === vpnIndicator && direction === 'right') { setFocus(systemButton, { scroll: false }); return; }
+  if ((state.focusEl === systemButton || state.focusEl === vpnIndicator) && direction === 'left') {
     navigationMenu.buttons.at(-1)?.focus({ preventScroll: true });
     return;
   }
@@ -578,15 +581,7 @@ async function updateHeader() {
   document.querySelector('#title').textContent = header.showText ? (header.text || 'Home') : '';
   document.querySelector('#date').hidden = header.showDate === false;
   document.querySelector('#clock').hidden = header.showTime === false;
-  const weatherElement = document.querySelector('#weather');
-  weatherElement.hidden = !header.showWeather;
-  if (header.showWeather) {
-    weatherElement.textContent = 'Weather…';
-    try {
-      const weather = await window.launcher.getWeather(header.weatherLocation || 'London');
-      weatherElement.textContent = weather ? `${weather.location}  ${Math.round(weather.temperature)}°C` : 'Weather unavailable';
-    } catch { weatherElement.textContent = 'Weather unavailable'; }
-  }
+  await window.StatusWidgets.updateWeather(header);
 }
 
 function updateTime() {
@@ -742,6 +737,14 @@ homeElement.addEventListener('focusin', (event) => {
 });
 systemPanel.addEventListener('focusin', (event) => { const index = menuItems().indexOf(event.target); if (index >= 0) state.menuIndex = index; });
 document.querySelector('#settings-button').addEventListener('click', openSettings);
+window.StatusWidgets.init({ showToast });
+// The header VPN chip opens quick settings with focus on the first VPN toggle.
+vpnIndicator.addEventListener('click', async () => {
+  if (state.view !== 'home') return;
+  await toggleSystemPanel(true);
+  const index = menuItems().indexOf(window.StatusWidgets.firstVpnControl());
+  if (index >= 0) focusMenu(index);
+});
 document.querySelector('#quit-button').addEventListener('click', () => window.launcher.systemAction('quit'));
 document.querySelector('#poweroff-button').addEventListener('click', () => {
   if (confirm('Shut down this PC? All open applications will be closed.')) window.launcher.systemAction('poweroff');

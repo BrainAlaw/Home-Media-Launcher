@@ -1,0 +1,72 @@
+/* Header status chips, quick-settings status cards, VPN rows and weather glyphs. Colours come from the menu tokens. */
+.header-actions { gap: 16px; }
+.status-chip {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--menu-stroke);
+  border-radius: 50%;
+  background: var(--menu-material);
+  color: var(--menu-text);
+  box-shadow: inset 0 1px 0 var(--menu-specular);
+  font-family: var(--menu-font);
+  outline: none;
+}
+div.status-chip { border-color: transparent; background: transparent; box-shadow: none; width: 36px; }
+.status-chip[hidden] { display: none; }
+button.status-chip { cursor: pointer; transition: transform 120ms ease-out; }
+button.status-chip:is(:focus, .focused) { background: var(--menu-lens); color: var(--menu-ink); border-color: var(--menu-lens); box-shadow: var(--menu-shadow); transform: scale(1.1); }
+.status-glyph { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.status-glyph .bar { fill: currentColor; stroke: none; opacity: .28; }
+.status-glyph .bar[data-lit="true"] { opacity: 1; }
+.status-glyph .slash { opacity: .85; }
+#network-indicator[data-state="offline"] { color: var(--danger, #ff6b6b); }
+#vpn-indicator .status-glyph { width: 22px; height: 22px; }
+#vpn-indicator .check { opacity: 0; }
+#vpn-indicator[data-state="off"] { color: var(--menu-text-muted); }
+#vpn-indicator[data-state="on"] { color: var(--success, #5ee08a); }
+#vpn-indicator[data-state="on"] .check { opacity: 1; }
+#vpn-indicator[data-state="busy"] { color: var(--accent); }
+#vpn-indicator[data-state="busy"] .status-glyph { opacity: .6; }
+#vpn-indicator[data-state]:is(:focus, .focused) { color: var(--menu-ink); }
+
+#weather { display: inline-flex; align-items: center; gap: 8px; }
+#weather[hidden] { display: none; }
+#weather .weather-glyph { width: 1.3em; height: 1.3em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+#system-panel .status-cards { display: grid; gap: 8px; margin: 0 0 12px; }
+#system-panel .status-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--menu-text) 8%, transparent);
+  color: var(--menu-text);
+  font-family: var(--menu-font);
+}
+#system-panel .status-card[hidden] { display: none; }
+#system-panel .status-card-icon { display: grid; place-items: center; width: 36px; height: 36px; }
+#system-panel .status-card-icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#system-panel .status-card-icon .bar { fill: currentColor; stroke: none; opacity: .28; }
+#system-panel .status-card-icon .bar[data-lit="true"] { opacity: 1; }
+#system-panel .status-card-copy { display: grid; gap: 3px; min-width: 0; }
+#system-panel .status-card-copy strong { font: 600 16px / 1.15 var(--menu-font); letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#system-panel .status-card-copy small { color: var(--menu-text-muted); font: 450 12px / 1.2 var(--menu-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#system-panel .forecast-strip { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 4px 0 0; padding: 8px 0 0; border-top: 1px solid var(--menu-stroke); list-style: none; }
+#system-panel .forecast-strip[hidden] { display: none; }
+#system-panel .forecast-strip li { display: grid; justify-items: center; gap: 3px; font: 600 12px / 1 var(--menu-font); }
+#system-panel .forecast-strip svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#system-panel .forecast-strip small { color: var(--menu-text-muted); font: 450 10px / 1 var(--menu-font); }
+
+#system-panel .vpn-rows { display: contents; }
+#system-panel .vpn-row[data-state="unavailable"] { opacity: .6; }
+#system-panel .vpn-row[data-state="on"] .menu-symbol { color: var(--success, #5ee08a); }
+#system-panel .vpn-row[data-state="on"][data-focused="true"] .menu-symbol { color: inherit; }
+#system-panel .vpn-row .check { opacity: 0; }
+#system-panel .vpn-row[data-state="on"] .check { opacity: 1; }
+#system-panel .vpn-row .menu-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

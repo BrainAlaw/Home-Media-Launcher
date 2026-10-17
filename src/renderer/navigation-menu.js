@@ -158,6 +158,8 @@
       const rect = this.rects.get(button);
       if (!rect || !rect.width) return;
       const target = { x: rect.x, y: rect.y, width: rect.width / 100, height: rect.height / 48 };
+      this.lens.style.setProperty('--lens-sx', String(target.width));
+      this.lens.style.setProperty('--lens-sy', String(target.height));
       if (snap || this.query.matches) this.lensMotion.snap(target); else this.lensMotion.to(target);
     }
 

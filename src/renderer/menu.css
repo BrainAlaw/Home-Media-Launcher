@@ -10,6 +10,13 @@
   --menu-stroke: rgba(255, 255, 255, .2);
   --menu-specular: rgba(255, 255, 255, .35);
   --menu-shadow: 0 16px 42px rgba(0, 0, 0, .24);
+  /* Concentric pill: outer radius = half the bar height, inner radius = outer - padding - border. */
+  --nav-pad: 8px;
+  --nav-border: 1px;
+  --nav-tab-height: 50px;
+  --nav-height: calc(var(--nav-tab-height) + (var(--nav-pad) + var(--nav-border)) * 2);
+  --nav-radius: calc(var(--nav-height) / 2);
+  --nav-inner-radius: calc(var(--nav-radius) - var(--nav-pad) - var(--nav-border));
 }
 
 header:has(#primary-navigation) {
@@ -28,11 +35,12 @@ header:has(#primary-navigation) .header-actions { justify-self: end; }
   display: flex;
   align-items: center;
   gap: 4px;
-  height: 68px;
+  box-sizing: border-box;
+  height: var(--nav-height);
   max-width: min(64vw, 980px);
-  padding: 8px;
-  border: 1px solid var(--menu-stroke);
-  border-radius: 999px;
+  padding: var(--nav-pad);
+  border: var(--nav-border) solid var(--menu-stroke);
+  border-radius: var(--nav-radius);
   background: transparent;
   color: var(--menu-text);
   box-shadow: var(--menu-shadow), inset 0 1px 0 var(--menu-specular);
@@ -61,10 +69,10 @@ header:has(#primary-navigation) .header-actions { justify-self: end; }
   place-items: center;
   flex: none;
   min-width: 100px;
-  height: 50px;
+  height: var(--nav-tab-height);
   padding: 0 20px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--nav-inner-radius);
   background: transparent;
   color: var(--menu-text-muted);
   font: 600 clamp(18px, 1.35vw, 28px) / 1 var(--menu-font);
@@ -86,7 +94,10 @@ header:has(#primary-navigation) .header-actions { justify-self: end; }
   top: 0;
   width: 100px;
   height: 48px;
-  border-radius: 999px;
+  /* The lens is scaled to each tab, so its radii are pre-divided by the scale to stay circular and concentric. */
+  --lens-sx: 1;
+  --lens-sy: 1;
+  border-radius: calc(var(--nav-inner-radius) / var(--lens-sx)) / calc(var(--nav-inner-radius) / var(--lens-sy));
   transform-origin: top left;
   background: var(--menu-lens);
   box-shadow: 0 5px 15px rgba(0, 0, 0, .2), inset 0 1px 0 var(--menu-specular);
@@ -190,8 +201,8 @@ header:has(#primary-navigation) .header-actions { justify-self: end; }
   #system-panel.menu-panel { top: 100px; }
 }
 @media (max-width: 620px) {
-  #primary-navigation { height: 58px; padding: 6px; gap: 0; }
-  #primary-navigation .navigation-tab { height: 44px; min-width: 70px; padding: 0 12px; font-size: 16px; }
+  #primary-navigation { --nav-pad: 6px; --nav-tab-height: 44px; gap: 0; }
+  #primary-navigation .navigation-tab { height: var(--nav-tab-height); min-width: 70px; padding: 0 12px; font-size: 16px; }
   #primary-navigation .menu-content { gap: 6px; }
   #primary-navigation svg { width: 17px; height: 17px; }
   header:has(#primary-navigation) #date { font-size: 13px; }
