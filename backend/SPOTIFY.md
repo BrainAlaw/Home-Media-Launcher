@@ -58,3 +58,17 @@ Endpoints used: `GET /me`, `GET /me/player` (`additional_types=track,episode`), 
 - `devices()` returns `{ ok, devices: MediaDevice[] }`; `search()` returns `{ ok, results: MediaSearchResult }`.
 - `playlists(offset?)` and `playlistTracks(id, offset?)` return `{ ok, items, total, offset, nextOffset: number | null }` (50 per page).
 - Error codes: `UNCONFIGURED`, `AUTH`, `OFFLINE`, `RATE_LIMITED`, `PREMIUM_REQUIRED`, `NO_ACTIVE_DEVICE`, `NO_DEVICE`, `VOLUME_CONTROL_DISALLOW`, `INVALID`, `HTTP_<status>`.
+
+## Soloist (local player, ns `soloist`, Linux only)
+
+Optional local Spotify Connect player. When enabled (`settings.soloist.enabled`) and its socket is live, playback state comes from
+the Soloist WebSocket instead of `GET /me/player`, and the Web API is used only for commands and the device hand-off: the Soloist
+device (matched by `settings.soloist.deviceName`, default `Home Media Launcher`) is listed in `GET /me/player/devices` and playback
+is transferred to it once (`PUT /me/player`, paused unless something was already playing). If the socket drops, the normal Web API
+polling resumes. On win32/darwin the feature reports `unsupported` and nothing changes.
+
+- Key: `SPOTIFY_SOLOIST_API` in `.env`, read only by the main process (`readSecrets().soloistApiKey`), handed to the Soloist process
+  and removed from the environment; never sent to the renderer, logged or placed in errors (messages are redacted).
+- Implementation: `backend/soloist/` (`manager.js` lifecycle and state mapping, `settings.js` validation) and `src/main/ext/soloist.js`.
+  `backend/spotify/service.js` receives the manager as its `soloist` option.
+- Renderer: quick-settings row `#soloist-row` (`soloist-status.js`), and the media widget line "Soloist: this computer".

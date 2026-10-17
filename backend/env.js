@@ -47,7 +47,7 @@ function readSecrets(env = process.env) {
     steamGridDbKey: text('STEAMDB_API') || text('STEAMGRIDDB_API'),
     /** Public identifier for the Spotify PKCE flow (not a secret, but kept in .env with the other keys). */
     spotifyClientId: text('SPOTIFY_CLIENT_ID'),
-    /** Soloist API key: passed only as argv to the local Soloist process, never to the renderer or logs. */
+    /** Soloist API key. Main process only: passed to the Soloist process, never sent to the renderer, logged or put in errors. */
     soloistApiKey: text('SPOTIFY_SOLOIST_API')
   });
 }

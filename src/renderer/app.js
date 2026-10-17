@@ -824,6 +824,7 @@ homeElement.addEventListener('focusin', (event) => {
 systemPanel.addEventListener('focusin', (event) => { const index = menuItems().indexOf(event.target); if (index >= 0) state.menuIndex = index; });
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 window.StatusWidgets.init({ showToast });
+window.SoloistStatus.init({ showToast });
 // Header status chips (host, Tailscale, Surfshark) open quick settings with focus on their own row.
 headerStatus.addEventListener('click', async (event) => {
   const chip = event.target.closest('button.status-chip');

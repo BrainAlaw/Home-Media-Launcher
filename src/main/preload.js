@@ -114,7 +114,7 @@ const appAPI = {
 };
 
 /** Namespaced extension bridge; see src/main/ext-registry.js. Only allowlisted namespaces can be reached. */
-const EXT_NAMESPACES = new Set(['system', 'vpn', 'icons', 'session', 'remote', 'weather', 'input', 'media']);
+const EXT_NAMESPACES = new Set(['system', 'vpn', 'icons', 'session', 'remote', 'weather', 'input', 'media', 'soloist']);
 const assertNamespace = (namespace) => { if (!EXT_NAMESPACES.has(namespace)) throw new Error(`Unknown extension namespace: ${namespace}`); };
 const extAPI = {
   invoke: (namespace, method, ...args) => { assertNamespace(namespace); return ipcRenderer.invoke(`ext:${namespace}:${String(method)}`, ...args); },

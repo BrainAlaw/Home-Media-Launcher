@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+.git/
+media-assets/
+src/renderer/icons/
+*.mp4
+*.png
+*.jpg
+*.svg
