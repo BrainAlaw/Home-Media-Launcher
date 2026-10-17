@@ -112,4 +112,4 @@ function createSiteFetcher({ trustedHosts = () => [] } = {}) {
   };
 }
 
-module.exports = { assertAllowedUrl, createSiteFetcher, isPrivateAddress };
+module.exports = { assertAllowedUrl, createSiteFetcher, isPrivateAddress, guardedLookup };

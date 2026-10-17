@@ -31,6 +31,11 @@ function loadEnv({ candidates = [path.join(__dirname, '..', '.env'), path.join(p
   return null;
 }
 
+/** Removes secret keys from the environment so spawned applications never inherit them. Call after `readSecrets()`. */
+function scrubSecrets(env = process.env) {
+  for (const key of ['VP_API', 'WEATHER_API', 'STEAMDB_API', 'STEAMGRIDDB_API']) delete env[key];
+}
+
 /** Typed view of the secrets and hosts the launcher understands. Values never leave the main process. */
 function readSecrets(env = process.env) {
   const text = (key) => (typeof env[key] === 'string' ? env[key].trim() : '');
@@ -43,4 +48,4 @@ function readSecrets(env = process.env) {
   });
 }
 
-module.exports = { parseEnv, loadEnv, readSecrets };
+module.exports = { parseEnv, loadEnv, readSecrets, scrubSecrets };

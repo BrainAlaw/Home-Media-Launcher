@@ -4,7 +4,7 @@ const http = require('node:http');
 const https = require('node:https');
 
 /** Bound the entire response, including slow or stalled bodies. Redirects are rejected. */
-function requestBuffer(url, { headers = {}, allowSelfSigned = false, timeoutMs = 8000, maxBytes = 2097152 } = {}) {
+function requestBuffer(url, { headers = {}, allowSelfSigned = false, timeoutMs = 8000, maxBytes = 2097152, lookup } = {}) {
   return new Promise((resolve, reject) => {
     const parsed = new URL(url);
     if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
@@ -12,7 +12,7 @@ function requestBuffer(url, { headers = {}, allowSelfSigned = false, timeoutMs =
       return;
     }
     const transport = parsed.protocol === 'https:' ? https : http;
-    const request = transport.request(parsed, { headers, rejectUnauthorized: !allowSelfSigned, agent: false }, (response) => {
+    const request = transport.request(parsed, { headers, rejectUnauthorized: !allowSelfSigned, agent: false, ...(lookup ? { lookup } : {}) }, (response) => {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         response.resume();
         const error = new Error(`Host returned HTTP ${response.statusCode}`);

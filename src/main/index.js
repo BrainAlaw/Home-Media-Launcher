@@ -24,7 +24,7 @@ const { resolveMenu } = require('../../backend/menu-config');
 const { ControllerPairing } = require('./controller-pairing');
 const { WallpaperPlaylist } = require('../../backend/wallpaper-playlist');
 const { WallpaperSourceService } = require('../../backend/wallpaper-source-service');
-const { loadEnv, readSecrets } = require('../../backend/env');
+const { loadEnv, readSecrets, scrubSecrets } = require('../../backend/env');
 const { registerExtensions } = require('./ext-registry');
 const remoteExt = require('./ext/remote');
 const sessionExt = require('./ext/session');
@@ -173,7 +173,8 @@ function remoteStatus(result) {
     message: ['offline', 'cached'].includes(result.status) ? `${result.host} offline` : '', updatedAt: result.updatedAt || '',
     isVibepolloOffline: ['offline', 'cached'].includes(result.status)
   };
-  remoteExt.publish(status);
+  // Deferred so ctx.config() sees the model that is being assembled around this status.
+  setImmediate(() => remoteExt.publish(status));
   return status;
 }
 
@@ -320,6 +321,8 @@ function createWindow() {
 }
 
 const secrets = readSecrets();
+scrubSecrets();
+let stopExtensions = null;
 
 app.whenReady().then(async () => {
   configPath = testProfile ? path.join(app.getPath('userData'), 'config.json') : process.env.HOME_MEDIA_LAUNCHER_CONFIG || path.join(app.getPath('userData'), 'config.json');
@@ -339,7 +342,7 @@ app.whenReady().then(async () => {
       else if (phase.phase === 'idle' && hostPausedBySession) { hostPausedBySession = false; hostMonitor?.start(); void hostMonitor?.poll(); }
     }
   });
-  registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets, config: () => ({ ...(model?.settings || {}), websites: config?.websites || [] }) });
+  stopExtensions = registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets, config: () => ({ ...(model?.settings || {}), websites: config?.websites || [] }) });
   themeService = new ThemeService(app.getPath('userData'), mediaAssets);
   contextArtwork = new ContextArtwork(app.getPath('userData'), mediaAssets);
   slideshow = new SlideshowCache(mediaAssets);
@@ -397,9 +400,10 @@ app.on('before-quit', (event) => {
     }
   }
   hostMonitor?.stop();
+  stopExtensions?.();
   sessionExt.controller.dispose();
   if (webWindow && !webWindow.isDestroyed()) webWindow.destroy();
-  if (processManager.active) processManager.terminate();
+  if (processManager.active) processManager.terminate({ graceMs: 0, force: true });
   themeService?.close();
   void contextArtwork?.close();
   navigationHints?.close();

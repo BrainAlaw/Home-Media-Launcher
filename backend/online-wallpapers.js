@@ -6,6 +6,10 @@ const { EventEmitter } = require('node:events');
 const { createHash } = require('node:crypto');
 const { atomicWrite, serialize } = require('./storage');
 const { requestBuffer: defaultRequestBuffer } = require('./network');
+const { guardedLookup } = require('./site-fetch');
+
+/** Blocks DNS answers that point at loopback/LAN addresses (catalogue hosts are user supplied). */
+const publicOnlyLookup = guardedLookup([]);
 const { imageExtension } = require('./artwork');
 const { CATALOG } = require('./online-wallpapers-catalog');
 const { parseCatalogue, creditFor, MAX_CATALOGUE_BYTES } = require('./online-catalogue');
@@ -111,7 +115,7 @@ class OnlineWallpapers extends EventEmitter {
     let result;
     try {
       const { body } = await this.requestBuffer(location, {
-        maxBytes: MAX_CATALOGUE_BYTES, timeoutMs: CATALOGUE_TIMEOUT_MS, headers: { Accept: 'application/json', 'User-Agent': 'HomeMediaLauncher/1.0' }
+        lookup: publicOnlyLookup, maxBytes: MAX_CATALOGUE_BYTES, timeoutMs: CATALOGUE_TIMEOUT_MS, headers: { Accept: 'application/json', 'User-Agent': 'HomeMediaLauncher/1.0' }
       });
       const catalogue = parseCatalogue(body, sourceId);
       result = { at: this.now(), name: catalogue.name, entries: catalogue.entries, error: '', stale: false };
@@ -206,7 +210,7 @@ class OnlineWallpapers extends EventEmitter {
     let body;
     try {
       ({ body } = await this.requestBuffer(entry.url, {
-        maxBytes: MAX_BYTES, timeoutMs: TIMEOUT_MS, headers: { Accept: 'image/*', 'User-Agent': 'HomeMediaLauncher/1.0' }
+        lookup: publicOnlyLookup, maxBytes: MAX_BYTES, timeoutMs: TIMEOUT_MS, headers: { Accept: 'image/*', 'User-Agent': 'HomeMediaLauncher/1.0' }
       }));
     } catch (error) {
       const failure = new Error(`Online wallpaper "${entry.name}" is unavailable: ${error.message}`);

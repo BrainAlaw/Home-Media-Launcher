@@ -107,7 +107,7 @@ async function readLinux({ exec, interfaces, readFile }) {
     const wifi = connected.find((entry) => entry.type === 'wifi');
     if (wifi) {
       let access = null;
-      try { access = parseNmcliWifiList(await exec('nmcli', ['-t', '-f', 'ACTIVE,SSID,SIGNAL', 'device', 'wifi', 'list', 'ifname', wifi.device])); } catch { /* signal is optional */ }
+      try { access = parseNmcliWifiList(await exec('nmcli', ['-t', '-f', 'ACTIVE,SSID,SIGNAL', 'device', 'wifi', 'list', 'ifname', wifi.device, '--rescan', 'no'])); } catch { /* signal is optional */ }
       return stripUndefined({ type: 'wifi', connected: true, ssid: access?.ssid, signal: access?.signal, ip: pickIp(interfaces, wifi.device) });
     }
     if (devices.length) return { ...NONE };

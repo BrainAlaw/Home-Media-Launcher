@@ -40,9 +40,11 @@ class ExitOverlay {
   async show(name) {
     if (!this.usable) return false;
     this.name = name;
+    this.wanted = true;
     try {
       if (!this.win || this.win.isDestroyed()) this.ready = this.create();
       if (!(await this.ready)) return false;
+      if (!this.wanted) return false;
       this.push(0);
       if (!this.visible) {
         this.win.setAlwaysOnTop(true, 'screen-saver');
@@ -62,6 +64,7 @@ class ExitOverlay {
   }
 
   hide() {
+    this.wanted = false;
     if (!this.win || this.win.isDestroyed() || !this.visible) return;
     this.visible = false;
     this.win.hide();

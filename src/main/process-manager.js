@@ -83,7 +83,7 @@ class ProcessManager extends EventEmitter {
    * so the child is the group leader), then SIGKILL to the group after `graceMs` if the application is still registered as active.
    * Applications that daemonise into a new session (e.g. Steam, Flatpak sandboxes) escape the group; see backend/SESSION.md.
    */
-  terminate({ graceMs = 3000 } = {}) {
+  terminate({ graceMs = 3000, force = false } = {}) {
     const child = this.active;
     if (!child?.pid) return false;
     const { pid } = child;
@@ -93,6 +93,8 @@ class ProcessManager extends EventEmitter {
         return true;
       }
       this.signalGroup(pid, 'SIGTERM');
+      // Quit path: no timer can fire after the process exits, so escalate immediately.
+      if (force) { try { this.signalGroup(pid, 'SIGKILL'); } catch { /* already gone */ } }
     } catch { return child.kill?.() === true; }
     if (graceMs > 0) {
       clearTimeout(this.forceTimer);
