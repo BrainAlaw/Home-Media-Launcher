@@ -1,0 +1,111 @@
+/*
+ * HOME "NOW PLAYING" WIDGET (media-widget.js).
+ * Layout space is reserved up front (the controls pill and CTA buttons occupy their final box while invisible), so
+ * focusing never shifts the tile rows. Motion is transform + opacity only; the album-art glow is a pre-rendered
+ * radial gradient whose opacity animates (no blur filter, no backdrop-filter). Values come from hig.css (--hig-*).
+ */
+#media-widget-slot {
+  --mw-h: max(92px, calc(140 * var(--hig-unit)));
+  --mw-pad: max(8px, calc(14 * var(--hig-unit)));
+  --mw-btn: max(44px, calc(76 * var(--hig-unit)));
+  --mw-card-w: max(360px, calc(660 * var(--hig-unit)));
+  --mw-ease: var(--hig-ease-spring-soft);
+  position: relative;
+  z-index: 2;
+  flex: none;
+  padding: 0 var(--gutter);
+  margin-bottom: var(--hig-space-3);
+}
+#media-widget-slot[hidden] { display: none; }
+
+.mw { position: relative; isolation: isolate; display: flex; align-items: stretch; gap: var(--hig-space-2); height: var(--mw-h); outline: none; }
+.mw[data-interactive="false"] .mw-card { opacity: .92; }
+
+/* ---------------------------------------------------------------- glow (opacity only) */
+.mw-glows { position: absolute; z-index: -1; left: calc(var(--mw-pad) * -4); top: -38%; bottom: -38%; width: calc(var(--mw-h) * 3.2); pointer-events: none; opacity: 0; transition: opacity var(--hig-dur-slow) var(--hig-ease-standard); }
+.mw[data-kind="playing"] .mw-glows[data-on="true"], .mw[data-kind="paused"] .mw-glows[data-on="true"] { opacity: .38; }
+.mw.focused .mw-glows[data-on="true"] { opacity: .75; }
+.mw[data-kind="paused"] .mw-glows[data-on="true"] { opacity: .22; }
+.mw-glow { position: absolute; inset: 0; opacity: 0; background: radial-gradient(closest-side, color-mix(in srgb, var(--mw-glow-colour, var(--accent)) 70%, transparent) 0%, color-mix(in srgb, var(--mw-glow-colour, var(--accent)) 24%, transparent) 55%, transparent 100%); transition: opacity 600ms var(--hig-ease-standard); }
+.mw-glow.on { opacity: 1; }
+
+/* ---------------------------------------------------------------- compact card */
+.mw-card { position: relative; z-index: 2; display: flex; align-items: center; gap: var(--mw-pad); box-sizing: border-box; width: var(--mw-card-w); padding: var(--mw-pad); border: var(--hig-material-edge); border-radius: var(--hig-radius-lg); background: var(--hig-material-thin); box-shadow: var(--hig-elev-1); transition: transform var(--hig-dur-slow) var(--mw-ease); }
+.mw.focused .mw-card { transform: translate3d(0, -3px, 0); }
+.mw-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: var(--hig-focus-edge); opacity: 0; pointer-events: none; transition: opacity var(--hig-dur-base) var(--hig-ease-standard); }
+.mw.focused .mw-card::after { opacity: 1; }
+.mw[data-kind="signed-out"] .mw-card, .mw[data-kind="signing-in"] .mw-card, .mw[data-kind="error"] .mw-card, .mw[data-kind="idle"] .mw-card { width: auto; min-width: min(var(--mw-card-w), 60vw); max-width: calc(var(--mw-card-w) * 1.15); }
+
+.mw-art { position: relative; flex: none; display: grid; place-items: center; width: calc(var(--mw-h) - var(--mw-pad) * 2); height: calc(var(--mw-h) - var(--mw-pad) * 2); overflow: hidden; border-radius: max(2px, calc(var(--hig-radius-lg) - var(--mw-pad))); background: var(--hig-fill-tertiary); color: var(--hig-label-tertiary); }
+.mw-art > svg { width: 46%; height: 46%; }
+.mw-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--hig-dur-base) var(--hig-ease-standard); }
+.mw-cover.loaded { opacity: 1; }
+.mw[data-kind="paused"] .mw-cover { filter: none; opacity: .72; }
+.mw-cover:not([src]) { display: none; }
+
+.mw-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.mw-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--hig-font-headline); font-weight: 600; color: var(--hig-label); letter-spacing: var(--title-tracking, 0); }
+.mw-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--hig-font-body); font-weight: 500; color: var(--hig-label-tertiary); }
+.mw[data-kind="signed-out"] .mw-title, .mw[data-kind="signing-in"] .mw-title, .mw[data-kind="error"] .mw-title, .mw[data-kind="idle"] .mw-title, .mw[data-kind="unconfigured"] .mw-title { font: var(--hig-font-callout); font-weight: 600; }
+.mw[data-kind="signed-out"] .mw-subtitle, .mw[data-kind="signing-in"] .mw-subtitle, .mw[data-kind="error"] .mw-subtitle, .mw[data-kind="idle"] .mw-subtitle, .mw[data-kind="unconfigured"] .mw-subtitle { font: var(--hig-font-caption1); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mw[data-kind="signing-in"] .mw-subtitle { white-space: nowrap; display: block; }
+
+.mw-progress { height: max(3px, calc(5 * var(--hig-unit))); margin-top: calc(var(--mw-pad) * .6); overflow: hidden; border-radius: var(--hig-radius-pill); background: var(--hig-fill); }
+.mw-progress[hidden] { display: none; }
+.mw-progress > i { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--hig-label-secondary); transform-origin: left center; transform: scaleX(0); transition: transform 260ms linear, background-color var(--hig-dur-base) var(--hig-ease-standard); }
+.mw.focused .mw-progress > i { background: var(--hig-tint); }
+
+/* ---------------------------------------------------------------- buttons (call-to-action group and controls pill) */
+.mw-btn { display: inline-grid; place-items: center; flex: none; box-sizing: border-box; min-width: var(--mw-btn); height: var(--mw-btn); padding: 0; border: 0; border-radius: var(--hig-radius-pill); background: transparent; color: var(--hig-label-secondary); font: var(--hig-font-callout); transition: transform var(--hig-dur-base) var(--mw-ease), background-color var(--hig-dur-fast) var(--hig-ease-standard), color var(--hig-dur-fast) var(--hig-ease-standard); cursor: pointer; }
+.mw-btn svg { width: 46%; height: 46%; }
+.mw-btn:not(.mw-library):not(.mw-open-spotify):not(.mw-login):not(.mw-retry) svg { grid-area: 1 / 1; }
+.mw-btn[aria-pressed="true"] { color: var(--hig-tint); }
+.mw-btn.active { color: var(--hig-label); background: var(--hig-fill); transform: scale(var(--hig-focus-scale)); box-shadow: var(--hig-focus-edge); }
+.mw.focused .mw-btn.active { background: var(--hig-fill); }
+.mw-btn:not(.active):hover { background: var(--hig-fill-tertiary); }
+
+.mw-toggle { width: var(--mw-btn); background: var(--hig-tint); color: var(--hig-on-tint); }
+.mw-toggle svg { width: 50%; height: 50%; }
+.mw-toggle[data-state="playing"] svg:first-of-type, .mw-toggle[data-state="paused"] svg:last-of-type { display: none; }
+.mw-toggle.active { background: var(--hig-tint); color: var(--hig-on-tint); }
+
+.mw-repeat { position: relative; }
+.mw-repeat .mw-badge { position: absolute; right: 18%; top: 14%; display: none; font: 700 max(10px, calc(20 * var(--hig-unit)))/1 var(--font-ui); color: var(--hig-tint); }
+.mw-repeat[data-repeat="track"] .mw-badge { display: block; }
+
+.mw-library, .mw-open-spotify, .mw-login, .mw-retry { display: inline-flex; align-items: center; justify-content: center; gap: var(--hig-space-1); padding: 0 var(--hig-space-3); }
+.mw-library svg { width: calc(var(--mw-btn) * .42); height: calc(var(--mw-btn) * .42); }
+.mw-btn-label { font: var(--hig-font-callout); font-weight: 600; white-space: nowrap; }
+
+/* Call-to-action group (sign in, open Spotify, retry): always visible, accent filled. */
+.mw-ctas { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--hig-space-1); }
+.mw-ctas[hidden], .mw-controls[hidden] { display: none; }
+.mw-ctas .mw-btn { height: calc(var(--mw-btn) * 1.05); background: var(--hig-tint); color: var(--hig-on-tint); }
+.mw-ctas .mw-btn + .mw-btn { background: var(--hig-fill); color: var(--hig-label); }
+.mw-ctas .mw-btn.active { box-shadow: var(--hig-focus-edge), var(--hig-elev-2); }
+
+/* Controls pill: reserved space, revealed by focus (opacity + translate from behind the card). */
+.mw-controls { position: relative; z-index: 1; display: flex; align-items: center; gap: calc(var(--hig-space-1) * .5); box-sizing: border-box; padding: 0 var(--mw-pad); border: var(--hig-material-edge); border-radius: var(--hig-radius-lg); background: var(--hig-material-thin); box-shadow: var(--hig-elev-1); opacity: 0; visibility: hidden; transform: translate3d(calc(var(--hig-space-3) * -1), 0, 0) scale(.96); transform-origin: left center; transition: opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-slow) var(--mw-ease), visibility 0s linear var(--hig-dur-base); pointer-events: none; }
+.mw.focused .mw-controls { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; pointer-events: auto; }
+
+.mw-volume { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-width: calc(var(--mw-btn) * .8); color: var(--hig-label-secondary); }
+.mw-volume b { font: var(--hig-font-caption1); font-weight: 650; font-variant-numeric: tabular-nums; }
+.mw-volume i { display: block; width: 100%; height: max(3px, calc(5 * var(--hig-unit))); border-radius: var(--hig-radius-pill); background: var(--hig-tint); transform-origin: left center; transform: scaleX(0); transition: transform 200ms var(--hig-ease-standard); }
+.mw-volume::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: max(3px, calc(5 * var(--hig-unit))); border-radius: var(--hig-radius-pill); background: var(--hig-fill); z-index: -1; }
+.mw-volume[data-known="false"] i { opacity: .25; }
+
+/* ---------------------------------------------------------------- Lite mode and reduced motion: instant, no glow */
+body.perf-lite .mw-glows { display: none; }
+body.perf-lite .mw-card, body.perf-lite .mw-controls { background: var(--menu-material-solid, #20242e); box-shadow: none; }
+body.perf-lite .mw *, body.perf-lite .mw, body.perf-lite .mw-card::after { transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .mw *, .mw, .mw-card::after, .mw-controls { transition: none !important; animation: none !important; }
+  .mw.focused .mw-card { transform: none; }
+  .mw-controls { transform: none; }
+  .mw-glows { display: none; }
+  .mw-btn.active { transform: none; }
+}
+
+/* Primary buttons keep their tint fill while active (the generic active rule above would grey them). */
+.mw.focused .mw-toggle.active, .mw.focused .mw-ctas .mw-btn:first-child.active { background: var(--hig-tint); color: var(--hig-on-tint); }
+.mw.focused .mw-ctas .mw-btn + .mw-btn.active { background: var(--hig-fill); }

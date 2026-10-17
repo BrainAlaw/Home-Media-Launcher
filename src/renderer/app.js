@@ -111,6 +111,24 @@ const spatialGrid = new window.SpatialGrid.SpatialGrid({
   }
 });
 
+/* ------------------------------------------------------------------ media widget (now playing, ns `media`) */
+
+const mediaWidget = window.MediaWidget.init({
+  ext: window.launcher.ext,
+  showToast,
+  canControl: () => state.view === 'home' && !state.locked,
+  requestFocus: (element) => { if (state.view === 'home' && !state.locked) setFocus(element); },
+  onLeave: leaveMediaWidget
+});
+
+/** Up goes to the header, anything else returns to the remembered tile (same column memory as the grid). */
+function leaveMediaWidget(direction) {
+  if (direction === 'up') { setFocus(headerButtons().at(-1) || systemButton, { scroll: false }); return; }
+  const coordinate = spatialGrid.coordinate;
+  if (coordinate && spatialGrid.focusAt(coordinate[0], coordinate[1], { rememberColumn: false })) return;
+  setFocus(homeElement.querySelector('.focusable') || systemButton);
+}
+
 const navigationMenu = new window.NavigationMenu.MenuController({ panel: systemPanel, systemButton });
 
 /* ------------------------------------------------------------------ persistence */
@@ -451,6 +469,10 @@ function render(model) {
     gamingEmptyMessage: describeEmptyGaming(model.remoteStatus, model.settings?.remote, hiddenRemote)
   });
 
+  const widgetWasFocused = state.focusEl === mediaWidget.element;
+  mediaWidget.setEnabled(model.settings?.mediaWidget !== false);
+  if (widgetWasFocused && !mediaWidget.canFocus()) { state.focusEl.classList.remove('focused'); state.focusEl = null; }
+
   const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row };
   const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles, ...(row.emptyMessage ? { emptyMessage: row.emptyMessage } : {}) }));
   spatialGrid.setRows(gridRows);
@@ -528,12 +550,16 @@ function moveHome(direction) {
   if (headerIndex !== -1) {
     if (direction === 'left' || direction === 'right') {
       setFocus(header[Math.max(0, Math.min(headerIndex + (direction === 'left' ? -1 : 1), header.length - 1))], { scroll: false });
-    } else if (direction === 'down') setFocus(homeElement.querySelector('.focusable') || state.focusEl);
+    } else if (direction === 'down') setFocus(mediaWidget.canFocus() ? mediaWidget.element : homeElement.querySelector('.focusable') || state.focusEl);
     return;
   }
   if (state.focusEl?.dataset.tileId && spatialGrid.move(direction)) return;
-  // Nothing above the top tile row except the header controls.
-  if (direction === 'up') { setFocus(header.at(-1) || state.focusEl, { scroll: false }); return; }
+  // Above the top tile row: the media widget (when it has something to focus), then the header controls.
+  if (direction === 'up') {
+    if (mediaWidget.canFocus()) setFocus(mediaWidget.element);
+    else setFocus(header.at(-1) || state.focusEl, { scroll: false });
+    return;
+  }
   const target = moveFocusAmong([...homeElement.querySelectorAll('.focusable')], state.focusEl, direction);
   if (target) setFocus(target);
 }
@@ -691,6 +717,8 @@ function handleAction(action) {
   if (state.locked) return;
   const isDirection = ['up', 'down', 'left', 'right'].includes(action);
   if (state.view === 'home') {
+    // The widget is one focus stop; it consumes everything except `menu` (quick settings) while focused.
+    if (action !== 'menu' && mediaWidget.owns(state.focusEl)) { mediaWidget.handleAction(action); return; }
     if (isDirection) moveHome(action);
     else if (action === 'confirm') activate(state.focusEl);
     else if (action === 'back' && !headerButtons().includes(state.focusEl)) setFocus(systemButton, { scroll: false });
