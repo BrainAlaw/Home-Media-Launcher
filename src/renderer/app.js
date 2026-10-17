@@ -433,7 +433,13 @@ function focusables() {
   return [...headerButtons(), ...document.querySelectorAll('#rows .focusable')];
 }
 
+/** Tile name labels are hidden by CSS; the tile button keeps its aria-label. */
+function applyTileLabels(settings) {
+  document.body.classList.toggle('tile-labels-off', settings?.showTileLabels === false);
+}
+
 function render(model) {
+  applyTileLabels(model.settings);
   state.model = model;
   const overrides = model.settings?.iconOverrides || {};
   // Custom icon overrides take priority over any provider-supplied icon.

@@ -7,6 +7,7 @@ const { launchSpec } = require('../../backend/launch-spec');
 const { validateMenu } = require('../../backend/menu-config');
 const { isSafeProfileName, isValidSurfsharkMode } = require('../../backend/vpn');
 const WallpaperSources = require('../renderer/wallpaper-sources');
+const Categories = require('../renderer/categories');
 
 const DEFAULT_CONFIG = Object.freeze({
   settings: {
@@ -79,6 +80,10 @@ function validateConfig(config) {
   if (config.settings?.wallpaperCredit !== undefined && typeof config.settings.wallpaperCredit !== 'boolean') throw new Error('wallpaperCredit must be boolean');
   if (config.settings?.performance !== undefined && !['auto', 'quality', 'lite'].includes(config.settings.performance)) throw new Error('performance must be "auto", "quality" or "lite"');
   if (config.settings?.fontId !== undefined && (typeof config.settings.fontId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(config.settings.fontId))) throw new Error('fontId must be a font identifier');
+  if (config.settings?.categories !== undefined) Categories.validate(config.settings.categories);
+  for (const key of ['showTileLabels', 'mediaWidget']) {
+    if (config.settings?.[key] !== undefined && typeof config.settings[key] !== 'boolean') throw new Error(`${key} must be boolean`);
+  }
   const vpn = config.settings?.vpn;
   if (vpn !== undefined) {
     if (!vpn || typeof vpn !== 'object' || Array.isArray(vpn)) throw new Error('vpn must be an object');

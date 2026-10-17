@@ -139,6 +139,37 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Dialog type scale. Dialogs (Settings, pairing wizard) are read at desk distance and hold dense forms, so they use
+ * their own, gentler unit instead of the 10-foot home-screen unit. --hig-dialog-unit grows linearly with the width
+ * but much slower than 100vw: body copy is 15px at 1280 wide, 17.5px at 1920, 20px at 2560 and 25px at 3840
+ * (home screen tiles keep the full --hig-unit). --dlg-px is "one 1080p pixel" for dialog geometry.
+ * ------------------------------------------------------------------------- */
+:root {
+  --hig-dialog-unit: calc(.344px + .0135vw);
+  --dlg-px: calc(var(--hig-dialog-unit) / .603);
+}
+dialog {
+  --hig-unit: var(--hig-dialog-unit);
+  --hig-fs-title1: max(28px, calc(76 * var(--hig-unit)));
+  --hig-fs-title2: max(24px, calc(57 * var(--hig-unit)));
+  --hig-fs-title3: max(20px, calc(48 * var(--hig-unit)));
+  --hig-fs-headline: max(17px, calc(38 * var(--hig-unit)));
+  --hig-fs-callout: max(15px, calc(31 * var(--hig-unit)));
+  --hig-fs-body: max(14px, calc(29 * var(--hig-unit)));
+  --hig-fs-caption1: max(12px, calc(25 * var(--hig-unit)));
+  --hig-fs-caption2: max(11px, calc(23 * var(--hig-unit)));
+  --hig-grid: max(5px, calc(8 * var(--dlg-px)));
+  --hig-font-title1: 600 var(--hig-fs-title1) / 1.1 var(--font-display);
+  --hig-font-title2: 600 var(--hig-fs-title2) / 1.12 var(--font-display);
+  --hig-font-title3: 600 var(--hig-fs-title3) / 1.15 var(--font-display);
+  --hig-font-headline: 650 var(--hig-fs-headline) / 1.2 var(--font-ui);
+  --hig-font-callout: 600 var(--hig-fs-callout) / 1.25 var(--font-ui);
+  --hig-font-body: 500 var(--hig-fs-body) / 1.4 var(--font-ui);
+  --hig-font-caption1: 500 var(--hig-fs-caption1) / 1.35 var(--font-ui);
+  --hig-font-caption2: 600 var(--hig-fs-caption2) / 1.3 var(--font-ui);
+}
+
 /* Continuous (squircle) corners where the engine supports them; plain circular arcs elsewhere. */
 @supports (corner-shape: squircle) {
   .tile, .tile .art, dialog, #toast, .host-badge, .wallpaper-credit, .menu-panel { corner-shape: squircle; }
