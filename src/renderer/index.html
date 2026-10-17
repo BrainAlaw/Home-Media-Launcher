@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="menu.css">
   <link rel="stylesheet" href="controllers.css">
-  <link rel="stylesheet" href="hero.css">
+  <link rel="stylesheet" href="home.css">
 </head>
 <body>
   <div id="backdrop" aria-hidden="true"><div class="backdrop-layer"></div><div class="backdrop-layer"></div></div>
@@ -31,12 +31,10 @@
       </div>
     </header>
     <div id="empty" hidden>No tiles selected. Press B or Esc, then open Settings to add some.</div>
-    <section id="hero-banner" role="region" aria-label="Game details" data-state="empty"></section>
     <section id="rows" role="tabpanel" aria-label="Applications" tabindex="-1">
             <div id="grid-content"></div>
     </section>
   </main>
-  <div id="host-banner" role="status" aria-live="polite"></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <aside id="system-panel" class="panel menu-panel" role="dialog" aria-modal="true" aria-labelledby="system-heading" aria-hidden="true" hidden inert>
     <div class="menu-heading">
@@ -200,7 +198,7 @@
   <script src="gamepad-input.js"></script>
   <script src="settings.js"></script>
   <script src="menu-motion.js"></script>
-  <script src="hero-banner.js"></script>
+  <script src="home-sections.js"></script>
   <script src="navigation-menu.js"></script>
   <script src="controller-service.js"></script>
   <script src="pairing-flow.js"></script>

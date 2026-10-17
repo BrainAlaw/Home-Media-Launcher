@@ -1,7 +1,7 @@
 'use strict';
 
 const { findNext, toRect } = window.SpatialNav;
-const { buildLayout, pushRecent, subtitle, hueFor } = window.TileModel;
+const { buildLayout, pushRecent, hueFor } = window.TileModel;
 const { assetUrl, isLoadableImage } = window.AssetUrl;
 const ThemeEngine = window.ThemeEngine;
 const gallery = window.Wallpapers.createGallery(window.WALLPAPER_ENTRIES || []);
@@ -9,7 +9,7 @@ const gallery = window.Wallpapers.createGallery(window.WALLPAPER_ENTRIES || []);
 const RECENTS_KEY = 'launcher.recents.v1';
 const THEME_KEY = 'launcher.theme.v1';
 const FONT_KEY = 'launcher.font.v1';
-const BACKGROUND_DEBOUNCE_MS = window.HeroBanner.DEBOUNCE_MS;
+const BACKGROUND_DEBOUNCE_MS = 150;
 const SCROLL_MARGIN_PX = 16;
 
 /**
@@ -43,7 +43,6 @@ const gridElement = document.querySelector('#grid-content');
 const backdropLayers = [...document.querySelectorAll('.backdrop-layer')];
 const videoBackground = document.querySelector('#background-video');
 const toast = document.querySelector('#toast');
-const banner = document.querySelector('#host-banner');
 const systemPanel = document.querySelector('#system-panel');
 const systemButton = document.querySelector('#system-button');
 const settingsDialog = document.querySelector('#settings-dialog');
@@ -62,13 +61,10 @@ const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 const motionScheduler = new window.MenuMotion.CompositorScheduler({ reducedMotion: reducedMotionQuery.matches });
 reducedMotionQuery.addEventListener('change', (event) => motionScheduler.setReducedMotion(event.matches));
 
-/** Game details for the focused tile; debounces rapid grid scrubbing and springs between titles. */
-const heroBanner = new window.HeroBanner.HeroBanner({
-  root: document.querySelector('#hero-banner'),
-  scheduler: motionScheduler,
-  assetUrl,
-  onPlay: () => { if (state.view === 'home' && state.focusEl?.dataset.tileId) activate(state.focusEl); }
-});
+/** Compact Vibepollo host badge shown in the Gaming section header; fed by the `remote` extension. */
+const hostBadge = window.HomeSections.createHostBadge(document);
+const HOST_BADGE_REFRESH_MS = 60_000;
+let hostBadgeTimer = 0;
 
 const launchSession = window.LaunchSession.createLaunchSession({
   api: window.api,
@@ -81,6 +77,7 @@ const spatialGrid = new window.SpatialGrid.SpatialGrid({
   viewport: homeElement,
   container: gridElement,
   createItem: () => document.createElement('button'),
+  decorateHeading: (head, row) => { if (row.id === 'gaming') head.append(hostBadge.element); },
   updateItem: updateTile,
   onFocus: (element) => setFocus(element, { scroll: false, rememberGrid: false }),
   onItemApproachingViewport: (tile) => {
@@ -255,19 +252,20 @@ function globalBackground() {
 
 const scrollBehavior = () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth');
 
-/** Shows a subtle top banner when the remote game host cannot be reached. */
-function updateHostBanner(remoteStatus = {}, remote = {}) {
-  const status = remoteStatus.status;
-  const offline = remote.enabled && (status === 'offline' || status === 'cached');
-  banner.replaceChildren();
-  if (offline) {
-    const host = document.createElement('em');
-    host.textContent = remote.host || 'Game host';
-    banner.append(host, ' offline');
-    if (status === 'cached') banner.append(document.createTextNode(' · showing cached library'));
-  }
-  banner.classList.toggle('visible', Boolean(offline));
+/** Dims streamed tiles while the remote game host cannot be reached. */
+function updateHostState(remoteStatus = {}, remote = {}) {
+  const offline = remote.enabled && ['offline', 'cached'].includes(remoteStatus.status);
   document.body.classList.toggle('host-offline', Boolean(offline));
+}
+
+/** Loads the host identity once, then follows live `host` events and keeps the sync age fresh. */
+function startHostBadge() {
+  const ext = window.launcher?.ext;
+  if (!ext) return;
+  ext.on('remote', 'host', (info) => hostBadge.update(info));
+  ext.invoke('remote', 'getHostInfo').then((info) => hostBadge.update(info))
+    .catch((error) => console.warn('Unable to read Vibepollo host info:', error.message));
+  hostBadgeTimer = setInterval(() => hostBadge.refresh(), HOST_BADGE_REFRESH_MS);
 }
 
 /* ------------------------------------------------------------------ backdrop */
@@ -346,7 +344,7 @@ function scheduleBackground(tile) {
 
 /* ------------------------------------------------------------------ rendering */
 
-/** Artwork shared by tiles and the hero: generated gradient + initial, replaced by the icon once it loads. */
+/** Tile artwork: generated gradient + initial, replaced by the icon once it loads. */
 function buildArt(tile) {
   const art = document.createElement('div');
   art.className = 'art';
@@ -430,14 +428,14 @@ function render(model) {
   state.tilesById = new Map(tiles.map((tile) => [tile.id, tile]));
   const filtered = state.menuSelection.action === 'category'
     ? tiles.filter((tile) => window.NavigationMenu.matchesCategory(tile, state.menuSelection.category)) : tiles;
-  const layout = buildLayout(filtered, state.menuSelection.action === 'home' ? state.recents : []);
+  const isHome = state.menuSelection.action === 'home';
+  const layout = buildLayout(filtered, isHome ? state.recents : [], { showEmptyGaming: isHome && Boolean(model.settings?.remote?.enabled) });
 
   const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row, menuId: state.focusEl.dataset.menuId };
   const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles }));
   spatialGrid.setRows(gridRows);
   const empty = document.querySelector('#empty');
   empty.hidden = filtered.length > 0;
-  if (!filtered.length) heroBanner.clear();
   empty.textContent = tiles.length ? 'No applications in this section.' : 'No tiles selected. Open Settings to add some.';
 
   state.fontId = model.settings?.fontId || 'theme';
@@ -445,7 +443,7 @@ function render(model) {
   cacheTheme(model.settings?.theme);
   cacheFont(state.fontId);
   applyWallpaper(model.settings?.wallpaper, model.settings?.background);
-  updateHostBanner(model.remoteStatus, model.settings?.remote);
+  updateHostState(model.remoteStatus, model.settings?.remote);
   updateHeader();
 
   const restoredTile = state.view === 'home' && previous?.id
@@ -470,9 +468,7 @@ function setFocus(element, { scroll = true, rememberGrid = true } = {}) {
   element.classList.add('focused');
   element.focus({ preventScroll: true });
   if (scroll) ensureVisible(element);
-  const tile = state.tilesById.get(element.dataset.tileId);
-  if (tile) heroBanner.show(tile, { recent: state.recents.includes(tile.id), subtitle: subtitle(tile) });
-  scheduleBackground(tile);
+  scheduleBackground(state.tilesById.get(element.dataset.tileId));
 }
 
 /** Minimal scrolling: horizontally within the carousel, then vertically within the page. */
@@ -553,7 +549,6 @@ function suspendUi() {
   state.locked = true;
   clearTimeout(backgroundTimer);
   clearInterval(slideTimer);
-  heroBanner.suspend();
   hideVideo();
   document.body.classList.add('app-running');
 }
@@ -566,7 +561,7 @@ function resumeUi({ error }) {
   if (error) showToast(`Process failed: ${error}`);
   state.backdropKey = '';
   startSlideshowTimer();
-  // Re-render so "Continue" and the hero reflect the session that just ended; render() restores the focused tile.
+  // Re-render so recents ordering reflects the session that just ended; render() restores the focused tile.
   if (state.model) render(state.model);
   else refreshBackdrop();
 }
@@ -763,7 +758,8 @@ Promise.all([window.launcher.getModel(), window.launcher.getSettings()]).then(([
   state.config = config;
   render(model);
 }).catch((error) => showToast(`Configuration error: ${error.message}`));
+startHostBadge();
 updateTime();
 setInterval(updateTime, 1000);
 resetCursorTimer();
-window.addEventListener('pagehide', () => { navigationMenu.dispose(); launchSession.dispose(); heroBanner.dispose(); }, { once: true });
+window.addEventListener('pagehide', () => { navigationMenu.dispose(); launchSession.dispose(); clearInterval(hostBadgeTimer); }, { once: true });

@@ -68,16 +68,18 @@
      *   updateItem: (element: HTMLElement, item: any, rowId: string, col: number) => void,
      *   onFocus?: (element: HTMLElement, item: any, coordinate: SpatialCoordinate) => void,
      *   onItemApproachingViewport?: (item: any, rowId: string, col: number) => void,
+     *   decorateHeading?: (head: HTMLElement, row: GridRow) => void,
      *   buffer?: number
      * }} options
      */
-    constructor({ viewport, container, createItem, updateItem, onFocus = () => {}, onItemApproachingViewport = () => {}, buffer = DEFAULT_BUFFER }) {
+    constructor({ viewport, container, createItem, updateItem, onFocus = () => {}, onItemApproachingViewport = () => {}, decorateHeading = () => {}, buffer = DEFAULT_BUFFER }) {
       this.viewport = viewport;
       this.container = container;
       this.createItem = createItem;
       this.updateItem = updateItem;
       this.onFocus = onFocus;
       this.onItemApproachingViewport = onItemApproachingViewport;
+      this.decorateHeading = decorateHeading;
       this.buffer = buffer;
       /** @type {GridRow[]} */
       this.rows = [];
@@ -125,13 +127,17 @@
         section.dataset.row = data.id;
         section.setAttribute('role', 'group');
 
+        const head = document.createElement('div');
+        head.className = 'row-head';
         const heading = document.createElement('h2');
         heading.textContent = data.title;
+        head.append(heading);
+        this.decorateHeading(head, data);
         const track = document.createElement('div');
         track.className = 'track virtual-track';
         track.setAttribute('aria-label', data.title);
         section.setAttribute('aria-label', data.title);
-        section.append(heading, track);
+        section.append(head, track);
         this.container.append(section);
 
         const layout = {

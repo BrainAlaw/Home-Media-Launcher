@@ -10,12 +10,11 @@
    *   provider?: 'local' | 'remote', type?: string, url?: string, remote?: boolean
    * }} Tile
    * @typedef {{ id: string, title: string, tiles: Tile[] }} Carousel
-   * @typedef {{ hero: Tile | null, rows: Carousel[] }} Layout
+   * @typedef {{ rows: Carousel[] }} Layout
    */
 
   const MAX_RECENTS = 12;
-  const MAX_CONTINUE_ROW = 10;
-
+  
   const baseName = (path) => String(path || '').split(/[\\/]/).pop().toLowerCase();
 
   /**
@@ -31,26 +30,35 @@
   }
 
   /**
-   * Splits a flat tile list into the hero item and ordered carousels.
-   * Hero = most recently launched tile, else first Moonlight game, else the first tile.
+   * Home section for a tile. Streamed (remote / Moonlight) titles and anything categorised as a game live in
+   * "Gaming"; every other website, web app or native application belongs to "Home Theatre".
+   * @param {Tile & { category?: string }} tile
+   * @returns {'gaming' | 'theatre'}
+   */
+  function sectionOf(tile) {
+    if (tile.category === 'game' || categorise(tile) === 'game') return 'gaming';
+    return 'theatre';
+  }
+
+  /**
+   * Splits a flat tile list into the two home sections. Recently launched tiles lead each section.
    * @param {Tile[]} tiles
    * @param {string[]} recentIds most recent first
+   * @param {{ showEmptyGaming?: boolean }} [options] keep the Gaming row (and its host badge) even with no tiles
    * @returns {Layout}
    */
-  function buildLayout(tiles, recentIds = []) {
-    const byId = new Map(tiles.map((tile) => [tile.id, tile]));
-    const recents = recentIds.map((id) => byId.get(id)).filter(Boolean);
-    const buckets = { game: [], app: [], web: [] };
-    for (const tile of tiles) buckets[categorise(tile)].push(tile);
-
-    const hero = recents[0] || buckets.game[0] || tiles[0] || null;
+  function buildLayout(tiles, recentIds = [], { showEmptyGaming = false } = {}) {
+    const rank = new Map(recentIds.map((id, index) => [id, index]));
+    const byRecency = (list) => list
+      .map((tile, index) => ({ tile, index, rank: rank.has(tile.id) ? rank.get(tile.id) : Infinity }))
+      .sort((left, right) => (left.rank - right.rank) || (left.index - right.index) || 0)
+      .map((entry) => entry.tile);
+    const buckets = { theatre: [], gaming: [] };
+    for (const tile of tiles) buckets[sectionOf(tile)].push(tile);
     const rows = [];
-    const continueTiles = recents.slice(1, MAX_CONTINUE_ROW + 1);
-    if (continueTiles.length) rows.push({ id: 'recent', title: 'Continue', tiles: continueTiles });
-    if (buckets.game.length) rows.push({ id: 'games', title: 'Moonlight Games', tiles: buckets.game });
-    if (buckets.app.length) rows.push({ id: 'apps', title: 'Apps', tiles: buckets.app });
-    if (buckets.web.length) rows.push({ id: 'web', title: 'Web Apps', tiles: buckets.web });
-    return { hero, rows };
+    if (buckets.theatre.length) rows.push({ id: 'theatre', title: 'Home Theatre', tiles: byRecency(buckets.theatre) });
+    if (buckets.gaming.length || showEmptyGaming) rows.push({ id: 'gaming', title: 'Gaming', tiles: byRecency(buckets.gaming) });
+    return { rows };
   }
 
   /**
@@ -83,5 +91,5 @@
     return hash % 360;
   }
 
-  return { categorise, buildLayout, pushRecent, subtitle, hueFor, MAX_RECENTS };
+  return { categorise, sectionOf, buildLayout, pushRecent, subtitle, hueFor, MAX_RECENTS };
 });
