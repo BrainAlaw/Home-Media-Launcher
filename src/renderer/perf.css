@@ -1,7 +1,14 @@
 /* Performance layer. Loaded last so it can cap the cost of earlier glass rules. See backend/MENU-PERFORMANCE.md. */
 
-/* will-change only while the quick-settings sheet is actually animating (set/cleared by navigation-menu.js). */
-#system-panel[data-animating="true"] { will-change: transform, opacity; }
+/* The quick-settings sheet is permanently promoted (will-change in menu.css) while it is displayed and has no backdrop-filter at all. */
+
+/* While the sheet is open or animating, everything behind it is frozen: the page is inert, so tile sheens, glows and the
+   scanline blend layer (a full-screen mix-blend-mode group) would only add compositor work to every sheet frame. */
+body.menu-open #fx { visibility: hidden; }
+body.menu-open .tile,
+body.menu-open .tile::before,
+body.menu-open .tile::after,
+body.menu-open .tile .art::before { animation-play-state: paused !important; }
 
 /* Deliberately no `contain` on .tile: layout containment would create a stacking context and paint the z-index:-1 shadow over the tile. */
 
@@ -45,8 +52,7 @@ body.perf-lite .panel,
 body.perf-lite dialog,
 body.perf-lite #toast,
 body.perf-lite .host-badge { background: var(--menu-material-solid); }
-body.perf-lite .navigation-lens,
-body.perf-lite .system-focus-lens { box-shadow: none; }
+body.perf-lite .navigation-lens { box-shadow: none; }
 body.perf-lite #fx { display: none; }
 
 /* ------------------------------------------------------------------ Opt-in meter (?perf or HML_PERF=1) */

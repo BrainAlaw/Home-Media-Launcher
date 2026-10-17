@@ -60,5 +60,5 @@ test('buildGpuSwitches targets platform and honours the safe-mode opt-out', () =
   const win = buildGpuSwitches('win32', {});
   assert.ok(!win.features.includes('VaapiVideoDecoder'));
   assert.ok(win.switches.some(([name]) => name === 'enable-gpu-rasterization'));
-  assert.deepEqual(buildGpuSwitches('linux', { HML_GPU_SAFE: '1' }), { switches: [], features: [] });
+  assert.deepEqual(buildGpuSwitches('linux', { HML_GPU_SAFE: '1' }), { switches: [], features: [], disabledFeatures: [] });
 });
