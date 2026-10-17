@@ -68,12 +68,23 @@ function validateWallpaperSources(sources) {
   });
 }
 
+/** settings.homeHeader (agent H1): layout and presentation options of the home header. */
+function validateHomeHeader(homeHeader) {
+  if (homeHeader === undefined) return;
+  if (!homeHeader || typeof homeHeader !== 'object' || Array.isArray(homeHeader)) throw new Error('homeHeader must be an object');
+  if (homeHeader.layout !== undefined && !['split', 'centred'].includes(homeHeader.layout)) throw new Error('homeHeader.layout must be "split" or "centred"');
+  for (const key of ['showSeconds', 'oledProtection', 'fadeIn']) {
+    if (homeHeader[key] !== undefined && typeof homeHeader[key] !== 'boolean') throw new Error(`homeHeader.${key} must be boolean`);
+  }
+}
+
 function validateConfig(config) {
   if (!config || typeof config !== 'object') throw new Error('Configuration root must be an object');
   if (config.menu !== undefined) validateMenu(config.menu);
   if (config.settings !== undefined && (!config.settings || typeof config.settings !== 'object' || Array.isArray(config.settings))) throw new Error('settings must be an object');
   if (config.settings?.selectedAppIds !== undefined && (!Array.isArray(config.settings.selectedAppIds) || config.settings.selectedAppIds.some((id) => typeof id !== 'string'))) throw new Error('selectedAppIds must be an array of strings');
   if (config.settings?.hiddenAppIds !== undefined && (!Array.isArray(config.settings.hiddenAppIds) || config.settings.hiddenAppIds.some((id) => typeof id !== 'string'))) throw new Error('hiddenAppIds must be an array of strings');
+  validateHomeHeader(config.settings?.homeHeader);
   validateWallpaper(config.settings?.wallpaper);
   validateWallpaperSources(config.settings?.wallpaperSources);
   if (config.settings?.wallpaperCredit !== undefined && typeof config.settings.wallpaperCredit !== 'boolean') throw new Error('wallpaperCredit must be boolean');
@@ -139,4 +150,4 @@ async function saveConfig(configPath, config) {
   return config;
 }
 
-module.exports = { DEFAULT_CONFIG, loadConfig, saveConfig, validateConfig, validateWallpaper, validateWallpaperSources };
+module.exports = { DEFAULT_CONFIG, loadConfig, saveConfig, validateConfig, validateWallpaper, validateWallpaperSources, validateHomeHeader };

@@ -447,6 +447,7 @@ function render(model) {
   state.tilesById = new Map(tiles.map((tile) => [tile.id, tile]));
   const hiddenRemote = (model.availableApps || []).filter((entry) => entry.provider === 'remote' && !entry.selected).length;
   const layout = buildLayout(tiles, state.recents, {
+    categories: model.settings?.categories,
     showEmptyGaming: Boolean(model.settings?.remote?.enabled),
     gamingEmptyMessage: describeEmptyGaming(model.remoteStatus, model.settings?.remote, hiddenRemote)
   });
@@ -586,28 +587,15 @@ function resumeUi({ error }) {
 
 /* ------------------------------------------------------------------ header */
 
+const homeHeader = window.HomeHeader.create();
+
 async function updateHeader() {
   const header = state.model?.settings.header || {};
   document.querySelector('#title').textContent = header.showText ? (header.text || 'Home') : '';
   document.querySelector('#date').hidden = header.showDate === false;
   document.querySelector('#clock').hidden = header.showTime === false;
-  await window.StatusWidgets.updateWeather(header);
-}
-
-const clockNode = document.querySelector('#clock');
-const dateNode = document.querySelector('#date');
-const clockFormat = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' });
-const dateFormat = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-let clockText = '';
-let dateText = '';
-
-/** Only touches the DOM when the minute or day actually changes, so idle seconds cause no style/layout work. */
-function updateTime() {
-  const now = new Date();
-  const time = clockFormat.format(now);
-  if (time !== clockText) { clockText = time; clockNode.textContent = time; }
-  const date = dateFormat.format(now);
-  if (date !== dateText) { dateText = date; dateNode.textContent = date; }
+  homeHeader.configure(state.model?.settings.homeHeader);
+  await window.StatusWidgets.updateWeather(window.HomeHeader.headerWithDefaults(header));
 }
 
 /* ------------------------------------------------------------------ system panel & settings */
@@ -791,9 +779,10 @@ try { applyFont(localStorage.getItem(FONT_KEY) || 'theme'); } catch { /* storage
 Promise.all([window.launcher.getModel(), window.launcher.getSettings()]).then(([model, config]) => {
   state.config = config;
   render(model);
+  // Let the first wallpaper start fading in, then stagger the header and rows over it.
+  setTimeout(() => homeHeader.reveal(), 400);
 }).catch((error) => showToast(`Configuration error: ${error.message}`));
 startHostBadge();
-updateTime();
-setInterval(updateTime, 1000);
+homeHeader.configure(undefined);
 resetCursorTimer();
-window.addEventListener('pagehide', () => { navigationMenu.dispose(); launchSession.dispose(); clearInterval(hostBadgeTimer); }, { once: true });
+window.addEventListener('pagehide', () => { homeHeader.dispose(); navigationMenu.dispose(); launchSession.dispose(); clearInterval(hostBadgeTimer); }, { once: true });

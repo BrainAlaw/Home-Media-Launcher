@@ -17,8 +17,14 @@
       "text": "Home",
       "showDate": true,
       "showTime": true,
-      "showWeather": false,
-      "weatherLocation": "London"
+      "showWeather": true,
+      "weatherLocation": "High Wycombe,GB"
+    },
+    "homeHeader": {
+      "layout": "split",
+      "showSeconds": false,
+      "oledProtection": true,
+      "fadeIn": true
     },
     "background": {
       "type": "image",

@@ -49,12 +49,50 @@ function buildSnapshot(place, current, forecast, now = Date.now()) {
     feelsLike: Math.round(Number.isFinite(current.main.feels_like) ? current.main.feels_like : temperature),
     condition: titleCase(current.weather?.[0]?.description),
     icon: sanitizeIcon(String(current.weather?.[0]?.icon || '')),
+    ...(Number.isFinite(place?.lat) && Number.isFinite(place?.lon) ? { lat: place.lat, lon: place.lon } : {}),
     forecast: summariseForecast(forecast?.list, forecast?.city?.timezone ?? current?.timezone ?? 0),
     fetchedAt: now
   };
 }
 
-const cacheKey = (location) => String(location).trim().toLowerCase();
+const cacheKey = (location) => String(location).trim().replace(/\s*,\s*/g, ',').replace(/\s+/g, ' ').toLowerCase();
+
+/** Location used when settings.header.weatherLocation is empty (OpenWeatherMap "name,country" query form). */
+const DEFAULT_LOCATION = 'High Wycombe,GB';
+
+/**
+ * Splits "High Wycombe,GB" / "Paris, FR" / "London" into a place name and an optional ISO 3166 country code.
+ * A trailing two-letter segment is treated as the country; anything else stays part of the name.
+ * @param {string} text
+ * @returns {{ name: string, country: string, query: string }}
+ */
+function parseLocationQuery(text) {
+  const parts = String(text || '').split(',').map((part) => part.trim()).filter(Boolean);
+  let country = '';
+  if (parts.length > 1 && /^[A-Za-z]{2}$/.test(parts.at(-1))) country = parts.pop().toUpperCase();
+  const name = parts.join(', ');
+  return { name, country, query: country ? `${name},${country}` : name };
+}
+
+const fold = (value) => String(value || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+
+/**
+ * Picks the best geocoding candidate: exact name and country first, then exact name, then the country, then the
+ * provider's own ranking. Works for OpenWeatherMap (`country`) and Open-Meteo (`country_code`) payloads.
+ * @param {Array<Record<string, any>>} places
+ * @param {{ name: string, country: string }} wanted
+ */
+function pickPlace(places, wanted) {
+  const list = (Array.isArray(places) ? places : []).filter((place) => Number.isFinite(place?.lat ?? place?.latitude) && Number.isFinite(place?.lon ?? place?.longitude));
+  const countryOf = (place) => String(place.country || place.country_code || '').toUpperCase();
+  const sameName = (place) => fold(place.name) === fold(wanted.name);
+  const sameCountry = (place) => !wanted.country || countryOf(place) === wanted.country;
+  return list.find((place) => sameName(place) && sameCountry(place))
+    || list.find(sameName)
+    || list.find(sameCountry)
+    || list[0]
+    || null;
+}
 
 class WeatherService {
   /**
@@ -96,15 +134,20 @@ class WeatherService {
   /** Fresh cache hit, else live fetch, else stale cache. Rejects only when nothing is available at all. */
   async get(location) {
     if (!this.available) throw new Error('Weather API key is not configured');
-    const text = typeof location === 'string' ? location.trim() : '';
-    if (!text || text.length > 80) throw new Error('Invalid weather location');
+    const text = (typeof location === 'string' && location.trim()) || DEFAULT_LOCATION;
+    if (text.length > 80) throw new Error('Invalid weather location');
     const key = cacheKey(text);
     const cached = (await this.readCache().catch(() => ({})))[key];
     if (cached && this.now() - cached.fetchedAt < FRESH_MS) return cached;
     try {
-      const places = await this.request('/geo/1.0/direct', { q: text, limit: 1 });
-      const place = Array.isArray(places) ? places[0] : null;
-      if (!place) throw new Error('Location not found');
+      // A previous snapshot already knows the coordinates, so only the first lookup pays for geocoding.
+      let place = Number.isFinite(cached?.lat) && Number.isFinite(cached?.lon) ? { name: cached.location, lat: cached.lat, lon: cached.lon } : null;
+      if (!place) {
+        const wanted = parseLocationQuery(text);
+        const places = await this.request('/geo/1.0/direct', { q: wanted.query, limit: 5 });
+        place = pickPlace(places, wanted);
+        if (!place) throw new Error('Location not found');
+      }
       const where = { lat: place.lat, lon: place.lon, units: 'metric' };
       const [current, forecast] = await Promise.all([this.request('/data/2.5/weather', where), this.request('/data/2.5/forecast', where)]);
       const snapshot = buildSnapshot(place, current, forecast, this.now());
@@ -117,4 +160,4 @@ class WeatherService {
   }
 }
 
-module.exports = { WeatherService, buildSnapshot, summariseForecast, sanitizeIcon, titleCase };
+module.exports = { WeatherService, DEFAULT_LOCATION, parseLocationQuery, pickPlace, buildSnapshot, summariseForecast, sanitizeIcon, titleCase };
