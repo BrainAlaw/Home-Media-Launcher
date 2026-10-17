@@ -136,6 +136,6 @@ test('resolve validates requests', async () => {
 
 test('ext module exposes the documented handlers', () => {
   assert.equal(iconsExt.namespace, 'icons');
-  for (const method of ['resolve', 'listPresets', 'searchArtwork', 'cacheCandidate', 'addPresetWebsites', 'firstRunWebsites', 'sizes']) assert.equal(typeof iconsExt.handlers[method], 'function');
+  for (const method of ['resolve', 'resolvePresetIcon', 'presetIcons', 'refreshPresetIcons', 'listPresets', 'searchArtwork', 'cacheCandidate', 'addPresetWebsites', 'firstRunWebsites', 'sizes']) assert.equal(typeof iconsExt.handlers[method], 'function');
   assert.equal(iconsExt.handlers.listPresets().length, 16);
 });

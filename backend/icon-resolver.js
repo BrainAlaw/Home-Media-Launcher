@@ -6,9 +6,10 @@ const { createHash } = require('node:crypto');
 const { fileURLToPath, pathToFileURL } = require('node:url');
 const { atomicWrite, readJson, serialize } = require('./storage');
 const { cacheArtwork, imageExtension, pruneArtwork } = require('./artwork');
-const { matchPresetByHostname } = require('./web-presets');
+const { matchPresetByHostname, getPresetSources, PRESET_DIRECTORY } = require('./web-presets');
+const { composeTile, decodePng, analyseImage, toHex } = require('./tile-art');
 const { createSiteFetcher } = require('./site-fetch');
-const { createSteamGridDb, isSteamGridDbImage } = require('./steamgriddb');
+const { createSteamGridDb, isSteamGridDbImage, MIN_ICON_EDGE: MIN_GAME_ICON_EDGE } = require('./steamgriddb');
 const { ICON_SIZES, MIN_SITE_ICON_EDGE } = require('./icon-sizes');
 
 const CACHE_TTL_MS = 14 * 24 * 3600 * 1000;
@@ -16,6 +17,13 @@ const NEGATIVE_TTL_MS = 6 * 3600 * 1000;
 const MAX_INDEX_ENTRIES = 400;
 const MAX_SVG_BYTES = 256 * 1024;
 const MAX_SITE_ATTEMPTS = 4;
+const MAX_PRESET_ATTEMPTS = 8;
+const MAX_LOGO_EMBED_BYTES = 180 * 1024;
+/** A fetched icon smaller than this looks blurry at 40% of a 720p tile, so the monogram tile is used instead. */
+const MIN_PRESET_ICON_EDGE = 128;
+const MAX_PRESET_ICON_BYTES = 900 * 1024;
+const PRESET_FILE = /^[a-z0-9-]+\.svg$/;
+const MIME_BY_EXTENSION = Object.freeze({ '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' });
 const SVG_FILE = /^[0-9a-f]{64}\.svg$/;
 const KINDS = new Set(['website', 'game', 'app']);
 const ART_BY_KIND = Object.freeze({ website: 'icon', app: 'icon', game: 'poster' });
@@ -142,6 +150,17 @@ function letterTile(name, kind = 'app') {
   return { source: 'letter', url: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, width, height };
 }
 
+/** Deterministic dark-ish brand colour for names without a sampled colour. */
+function nameColor(name) {
+  const hash = createHash('sha256').update(String(name).toLowerCase()).digest();
+  const hue = ((hash[0] * 256 + hash[1]) % 360) / 360;
+  const saturation = 0.55;
+  const lightness = 0.36;
+  const amount = saturation * Math.min(lightness, 1 - lightness);
+  const channel = (offset) => { const k = (offset + hue * 12) % 12; return lightness - amount * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return toHex([channel(0) * 255, channel(8) * 255, channel(4) * 255]);
+}
+
 function normaliseRequest(request) {
   if (!request || typeof request !== 'object') throw new Error('Icon request must be an object');
   const kind = request.kind;
@@ -246,6 +265,92 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     return fallback;
   }
 
+  /* ---------------------------------------------------------------- preset tile art */
+
+  const presetDirectory = path.join(directory, 'presets');
+  const presetPending = new Map();
+
+  const bundledPresetUrl = (id) => pathToFileURL(path.join(PRESET_DIRECTORY, `${id}.svg`)).href;
+
+  /** Best icon of the service itself as { dataUrl, body } (raster >= 128 px or a sanitised SVG), or null. */
+  async function fetchPresetIcon(sources) {
+    let candidates = [];
+    for (const page of sources.pages) candidates = candidates.concat(await siteCandidates(new URL(page)).catch(() => []));
+    for (const asset of sources.assets) candidates.push({ url: asset, size: 180, svg: false, apple: true, ico: false });
+    for (const candidate of rankCandidates(candidates).filter((entry) => !entry.ico).slice(0, MAX_PRESET_ATTEMPTS)) {
+      try {
+        const { body } = await fetcher(candidate.url, { maxBytes: 2097152, accept: 'image/*,*/*;q=0.5' });
+        if (body.length > MAX_PRESET_ICON_BYTES) continue;
+        const svg = sanitizeSvg(body);
+        if (svg) return { dataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, body: null };
+        const mime = MIME_BY_EXTENSION[imageExtension(body)];
+        if (!mime) continue;
+        const size = imageSize(body);
+        const edge = Math.min(size.width || candidate.size || 0, size.height || candidate.size || 0);
+        if (edge >= MIN_PRESET_ICON_EDGE) return { dataUrl: `data:${mime};base64,${body.toString('base64')}`, body };
+      } catch { /* Blocked, missing or not an image: try the next candidate. */ }
+    }
+    return null;
+  }
+
+  async function buildPresetTile(id) {
+    const sources = getPresetSources(id);
+    const icon = await fetchPresetIcon(sources);
+    if (!icon) return null;
+    const analysis = analyseImage(icon.body ? decodePng(icon.body) : null);
+    const svg = composeTile({
+      name: sources.name, mono: sources.mono, color: analysis.color || sources.color,
+      iconDataUrl: icon.dataUrl, iconLuminance: analysis.luminance, iconTransparent: analysis.transparent
+    });
+    const file = path.join(presetDirectory, `${id}.svg`);
+    await serialize(file, () => atomicWrite(file, svg));
+    return pathToFileURL(file).href;
+  }
+
+  async function freshPresetTile(id) {
+    const file = path.join(presetDirectory, `${id}.svg`);
+    try {
+      const stats = await fs.stat(file);
+      return Date.now() - stats.mtimeMs <= CACHE_TTL_MS ? pathToFileURL(file).href : null;
+    } catch { return null; }
+  }
+
+  /**
+   * File URL of the 16:9 tile art for a preset: the composed tile built from the service's own icon
+   * (cached 14 days) or the bundled monogram tile when the service offers no usable icon.
+   * Never throws for a known id; failures are not retried for 6 hours.
+   */
+  async function resolvePresetIcon(id) {
+    if (typeof id !== 'string' || !getPresetSources(id)) throw new Error('Unknown preset');
+    const cached = await freshPresetTile(id);
+    if (cached) return cached;
+    const key = `preset|${id}`;
+    const failedAt = negative.get(key);
+    if (failedAt !== undefined && now() - failedAt <= NEGATIVE_TTL_MS) return bundledPresetUrl(id);
+    if (!presetPending.has(key)) {
+      presetPending.set(key, buildPresetTile(id).catch(() => null).then((url) => {
+        if (!url) negative.set(key, now());
+        return url;
+      }).finally(() => presetPending.delete(key)));
+    }
+    return (await presetPending.get(key)) || bundledPresetUrl(id);
+  }
+
+  /** Cached or bundled tile art for every id without any network access (instant). */
+  async function presetIconMap(ids) {
+    const entries = await Promise.all(ids.filter((id) => getPresetSources(id)).map(async (id) => [id, (await freshPresetTile(id)) || bundledPresetUrl(id)]));
+    return Object.fromEntries(entries);
+  }
+
+  /** Resolves (downloading where needed) the tile art of the given ids, three at a time. */
+  async function refreshPresetIcons(ids) {
+    const queue = ids.filter((id) => getPresetSources(id));
+    const result = {};
+    const worker = async () => { for (let id = queue.shift(); id; id = queue.shift()) result[id] = await resolvePresetIcon(id); };
+    await Promise.all([worker(), worker(), worker()]);
+    return result;
+  }
+
   async function findGame(request) {
     if (request.steamAppId) return { steamAppId: request.steamAppId };
     const games = await grid.search(request.name);
@@ -254,11 +359,41 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     return best?.id ? { gameId: best.id } : null;
   }
 
+  /** A logo composed onto a brand-coloured gradient, stored as SVG; null when the logo is not embeddable. */
+  async function composeLogoTile(request, logo) {
+    const url = await cacheArtwork(logo.url, directory, { requestBuffer });
+    const body = await fs.readFile(fileURLToPath(url));
+    const mime = MIME_BY_EXTENSION[imageExtension(body)];
+    if (!mime || body.length > MAX_LOGO_EMBED_BYTES) return { url, ...imageSize(body) };
+    const analysis = analyseImage(decodePng(body));
+    const square = request.art === 'icon';
+    const size = square ? ICON_SIZES.appIcon : ICON_SIZES.tile;
+    const light = analysis.color === null && analysis.luminance < 0.3;
+    const svg = composeTile({
+      name: request.name, color: light ? '#c9ced8' : analysis.color || nameColor(request.name),
+      logoDataUrl: `data:${mime};base64,${body.toString('base64')}`, width: size.width, height: size.height
+    });
+    const stored = await storeBuffer(Buffer.from(svg));
+    return { url: stored.url, width: size.width, height: size.height };
+  }
+
   async function fromSteamGridDb(request) {
     if (!grid) return null;
     const target = await findGame(request);
     if (!target) return null;
     const [image] = await grid.images(request.art, target, 1);
+    if (request.art === 'icon') {
+      // Icons are ranked square >= 256 px first; anything smaller loses to a logo on a gradient.
+      const sharp = image && Math.min(image.width || 0, image.height || 0) >= MIN_GAME_ICON_EDGE;
+      if (!sharp) {
+        const [logo] = await grid.images('logo', target, 1).catch(() => []);
+        const tile = logo ? await composeLogoTile(request, logo).catch(() => null) : null;
+        if (tile) return { source: 'steamgriddb', ...tile };
+      }
+    } else if (request.art === 'logo' && image) {
+      const tile = await composeLogoTile(request, image).catch(() => null);
+      if (tile) return { source: 'steamgriddb', ...tile };
+    }
     if (!image) return null;
     const url = await cacheArtwork(image.url, directory, { requestBuffer });
     return { source: 'steamgriddb', url, width: image.width, height: image.height };
@@ -279,7 +414,7 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     const key = [request.kind, request.art, request.name.toLowerCase(), request.url?.hostname || '', request.steamAppId || ''].join('|');
     if (request.url) {
       const preset = matchPresetByHostname(request.url.hostname);
-      if (preset) return { source: 'preset', url: preset.icon };
+      if (preset) return { source: 'preset', url: await resolvePresetIcon(preset.id) };
     }
     const cached = await cachedResult(key);
     if (cached) return cached;
@@ -337,10 +472,17 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
         const file = path.join(directory, name);
         try { if (Date.now() - (await fs.stat(file)).mtimeMs > 3600000) await fs.rm(file, { force: true }); } catch { /* Retry next time. */ }
       }
+      let tiles = [];
+      try { tiles = await fs.readdir(presetDirectory); } catch { /* No preset tiles cached yet. */ }
+      for (const name of tiles) {
+        if (!PRESET_FILE.test(name)) continue;
+        const file = path.join(presetDirectory, name);
+        try { if (Date.now() - (await fs.stat(file)).mtimeMs > CACHE_TTL_MS) await fs.rm(file, { force: true }); } catch { /* Retry next time. */ }
+      }
     });
   }
 
-  return { resolve, searchArtwork, cacheCandidate, prune, directory };
+  return { resolve, resolvePresetIcon, presetIconMap, refreshPresetIcons, searchArtwork, cacheCandidate, prune, directory };
 }
 
 module.exports = {
