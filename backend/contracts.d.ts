@@ -252,7 +252,9 @@ export interface IconRequest { kind: 'website' | 'game' | 'app'; name: string; u
 export interface IconResult { source: 'preset' | 'site' | 'steamgriddb' | 'playnite' | 'letter'; url: string; width?: number; height?: number }
 export interface WebPreset { id: string; name: string; url: string; icon: string; color: string; category: 'video' | 'music' | 'other' }
 
-/** ns `session` (agent E). Events: `phase` (SessionPhase). Methods: `closeActive()`. */
+/** ns `session` (agent E). Events: `phase` (SessionPhase), `notice` (SessionNotice). Methods: `closeActive()`, `getPhase()`, `getStatus()`. */
+export interface SessionNotice { message: string }
+export interface SessionStatus { phase: SessionPhase["phase"]; guideAvailable: boolean; guideReason: string; overlayMode: "overlay" | "direct" }
 export type SessionPhase =
   | { phase: 'idle' }
   | { phase: 'launching'; tileId: string; name: string }

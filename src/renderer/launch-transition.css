@@ -1,0 +1,26 @@
+/* Launch / close transitions (see launch-transition.js). Transform and opacity only. */
+#launch-cover {
+  position: fixed; inset: 0; z-index: 9000; background: #000; pointer-events: none;
+  transform-origin: 0 0; visibility: hidden; will-change: transform, opacity; contain: strict;
+}
+#launch-cover .lt-tint { position: absolute; inset: 0; background: var(--accent, #4a8dff); opacity: 0; pointer-events: none; }
+
+/* The launcher UI fades and scales out while the cover expands, and back in on return. */
+body.lt-covering > main, body.lt-covering > #backdrop, body.lt-covering > #background-video,
+body.lt-covering > .shade, body.lt-covering > #fx, body.lt-covering > #host-banner {
+  opacity: 0; transform: scale(1.06); transform-origin: 50% 50%;
+  transition: opacity 360ms cubic-bezier(.4, 0, 1, 1), transform 460ms cubic-bezier(.32, .72, 0, 1);
+}
+body.lt-revealing > main, body.lt-revealing > #backdrop, body.lt-revealing > #background-video,
+body.lt-revealing > .shade, body.lt-revealing > #fx, body.lt-revealing > #host-banner {
+  transform-origin: 50% 50%;
+  transition: opacity 420ms cubic-bezier(.2, 0, 0, 1) 60ms, transform 520ms cubic-bezier(.2, .8, .2, 1) 60ms;
+}
+body.lt-covering #toast { z-index: 9100; }
+
+@media (prefers-reduced-motion: reduce) {
+  body.lt-covering > main, body.lt-covering > #backdrop, body.lt-covering > #background-video,
+  body.lt-covering > .shade, body.lt-covering > #fx, body.lt-covering > #host-banner { transform: none; transition: opacity 160ms linear; }
+  body.lt-revealing > main, body.lt-revealing > #backdrop, body.lt-revealing > #background-video,
+  body.lt-revealing > .shade, body.lt-revealing > #fx, body.lt-revealing > #host-banner { transition: opacity 160ms linear; }
+}
