@@ -10,9 +10,17 @@ const { resolveBinary } = require('../../backend/binary-resolver');
  * `started` { pid, tileId, type } and `finished` { code, signal, tileId, error? }.
  */
 class ProcessManager extends EventEmitter {
-  constructor(spawnProcess = spawn) {
+  constructor(spawnProcess = spawn, { platform = process.platform, signalGroup, killTree } = {}) {
     super();
     this.spawnProcess = spawnProcess;
+    this.platform = platform;
+    this.forceTimer = null;
+    this.signalGroup = signalGroup || ((pid, signal) => process.kill(-pid, signal));
+    this.killTree = killTree || ((pid, fallback) => {
+      const killer = spawn('taskkill', ['/pid', String(pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true });
+      killer.on('error', fallback);
+      killer.unref();
+    });
     this.active = null;
     this.activeTileId = null;
   }
@@ -69,19 +77,33 @@ class ProcessManager extends EventEmitter {
     });
   }
 
-  /** Politely stops the running application, including children in its process group. */
-  terminate() {
+  /**
+   * Stops the running application including its process tree.
+   * Windows: `taskkill /t /f` (whole tree, immediate). POSIX: SIGTERM to the process group (children were spawned detached,
+   * so the child is the group leader), then SIGKILL to the group after `graceMs` if the application is still registered as active.
+   * Applications that daemonise into a new session (e.g. Steam, Flatpak sandboxes) escape the group; see backend/SESSION.md.
+   */
+  terminate({ graceMs = 3000 } = {}) {
     const child = this.active;
     if (!child?.pid) return false;
+    const { pid } = child;
     try {
-      if (process.platform === 'win32') {
-        const killer = spawn('taskkill', ['/pid', String(child.pid), '/t', '/f'], { stdio: 'ignore', windowsHide: true });
-        killer.on('error', () => { child.kill?.(); });
-        killer.unref();
+      if (this.platform === 'win32') {
+        this.killTree(pid, () => { child.kill?.(); });
+        return true;
       }
-      else process.kill(-child.pid, 'SIGTERM');
-      return true;
+      this.signalGroup(pid, 'SIGTERM');
     } catch { return child.kill?.() === true; }
+    if (graceMs > 0) {
+      clearTimeout(this.forceTimer);
+      this.forceTimer = setTimeout(() => {
+        if (this.active !== child) return;
+        try { this.signalGroup(pid, 'SIGKILL'); } catch { child.kill?.('SIGKILL'); }
+      }, graceMs);
+      this.forceTimer.unref?.();
+      child.once?.('exit', () => clearTimeout(this.forceTimer));
+    }
+    return true;
   }
 }
 

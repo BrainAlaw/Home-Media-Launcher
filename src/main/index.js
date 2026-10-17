@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { app, BrowserWindow, dialog, ipcMain, safeStorage, shell, protocol } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, safeStorage, shell, protocol, screen } = require('electron');
 const { loadConfig, saveConfig } = require('./config');
 const { scanDesktopEntries } = require('./desktop-entry');
 const { ProcessManager } = require('./process-manager');
@@ -26,6 +26,7 @@ const { WallpaperPlaylist } = require('../../backend/wallpaper-playlist');
 const { loadEnv, readSecrets } = require('../../backend/env');
 const { registerExtensions } = require('./ext-registry');
 const remoteExt = require('./ext/remote');
+const sessionExt = require('./ext/session');
 
 loadEnv();
 
@@ -62,6 +63,7 @@ let navigationHints;
 let wallpaperPlaylist;
 let onlineWallpapers = null;
 let focusedAppId = null;
+let hostPausedBySession = false;
 const menuIndicators = new MenuIndicators();
 const mediaAssets = new MediaAssets();
 const processManager = new ProcessManager();
@@ -209,7 +211,9 @@ function openWebsite(tile) {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      partition: `persist:web-${partitionId}`
+      partition: `persist:web-${partitionId}`,
+      // Read by web-preload.js for the "Close <name>?" overlay.
+      additionalArguments: [`--hml-app-name=${encodeURIComponent(String(tile.name || tile.title || 'this app').slice(0, 80))}`]
     }
   });
   webWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -217,20 +221,24 @@ function openWebsite(tile) {
   webWindow.webContents.on('will-navigate', allowHttp);
   webWindow.webContents.on('will-redirect', allowHttp);
   webWindow.webContents.on('before-input-event', (event, input) => {
-    if (input.key === 'Escape' || input.key === 'BrowserBack') { event.preventDefault(); webWindow?.close(); }
+    // Escape is hold-to-close and handled by web-preload.js (the page keeps ordinary Escape taps); Back and Alt+F4 close at once.
+    if (input.type === 'keyDown' && (input.key === 'BrowserBack' || (input.alt && input.key === 'F4'))) { event.preventDefault(); webWindow?.close(); }
   });
   webWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   webWindow.webContents.session.setPermissionCheckHandler(() => false);
-  webWindow.once('ready-to-show', () => { if (window && !window.isDestroyed()) window.hide(); webWindow?.show(); });
+  // The launcher keeps covering the screen (black) until the web window is visibly up; only then is it hidden.
+  webWindow.once('ready-to-show', () => {
+    webWindow?.show();
+    void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
+  });
+  // Raise the (already black) launcher before the web window disappears so the desktop never flashes through.
+  webWindow.on('close', () => {
+    sessionExt.controller.closing();
+    showLauncher();
+  });
   webWindow.once('closed', () => {
     webWindow = null;
-    if (!window || window.isDestroyed()) return;
-    window.show();
-    window.setFullScreen(!windowed);
-    window.focus();
-    const result = { tileId: tile.id, website: true, ...(loadError ? { error: loadError } : {}) };
-    window.webContents.send('launcher:process-finished', result);
-    window.webContents.send('launcher:app-closed', result);
+    returnToLauncher({ tileId: tile.id, website: true, ...(loadError ? { error: loadError } : {}) });
   });
   webWindow.webContents.once('did-fail-load', (_event, errorCode, errorDescription) => {
     if (errorCode !== -3) {
@@ -240,6 +248,24 @@ function openWebsite(tile) {
   });
   webWindow.loadURL(parsed.toString());
   return true;
+}
+
+function showLauncher() {
+  if (!window || window.isDestroyed()) return;
+  window.show();
+  window.setFullScreen(!windowed);
+  window.focus();
+}
+
+/** Single exit path for web windows and native processes: raise the launcher, report the result, end the session. */
+function returnToLauncher(result) {
+  sessionExt.controller.closing();
+  if (window && !window.isDestroyed()) {
+    showLauncher();
+    window.webContents.send('launcher:app-closed', result);
+    window.webContents.send('launcher:process-finished', result);
+  }
+  sessionExt.controller.finish();
 }
 
 function createWindow() {
@@ -280,6 +306,19 @@ app.whenReady().then(async () => {
   tokenPath = path.join(app.getPath('userData'), 'remote-token.json');
   localState = new LocalState(app.getPath('userData'));
   // EXT-HOOK: feature modules in src/main/ext/*.js register their namespaced IPC here.
+  sessionExt.controller.attach({
+    getLauncherWindow: () => window,
+    processManager,
+    closeWebWindow: () => { if (webWindow && !webWindow.isDestroyed()) webWindow.close(); },
+    showLauncher,
+    electron: { BrowserWindow, screen },
+    ozonePlatform: app.commandLine.getSwitchValue('ozone-platform') || app.commandLine.getSwitchValue('ozone-platform-hint'),
+    // Background polling is paused while an application owns the screen and resumed (with an immediate refresh) afterwards.
+    onPhase: (phase) => {
+      if (phase.phase === 'running') { hostMonitor?.stop(); hostPausedBySession = true; }
+      else if (phase.phase === 'idle' && hostPausedBySession) { hostPausedBySession = false; hostMonitor?.start(); void hostMonitor?.poll(); }
+    }
+  });
   registerExtensions({ ipcMain, getWindow: () => window, userData: app.getPath('userData'), secrets, config: () => model?.settings || {} });
   themeService = new ThemeService(app.getPath('userData'), mediaAssets);
   contextArtwork = new ContextArtwork(app.getPath('userData'), mediaAssets);
@@ -337,6 +376,7 @@ app.on('before-quit', (event) => {
     }
   }
   hostMonitor?.stop();
+  sessionExt.controller.dispose();
   if (webWindow && !webWindow.isDestroyed()) webWindow.destroy();
   if (processManager.active) processManager.terminate();
   themeService?.close();
@@ -447,14 +487,21 @@ async function launchTile(tileId) {
   if (webWindow || processManager.active) throw new Error('Another application is already running');
   const tile = model.rows.flatMap((row) => row.tiles).find((candidate) => candidate.id === tileId);
   if (!tile) throw new Error('Unknown tile');
-  if (tile.type === 'website') {
-    const opened = openWebsite(tile);
-    sendToWindow('launcher:app-launched', { tileId: tile.id, type: 'website' });
-    return opened;
+  if (!sessionExt.controller.begin(tile)) throw new Error('Another application is already running');
+  try {
+    if (tile.type === 'website') {
+      const opened = openWebsite(tile);
+      sendToWindow('launcher:app-launched', { tileId: tile.id, type: 'website' });
+      return opened;
+    }
+    const result = await processManager.launchChecked(tile);
+    // Not awaited: the launcher stays up (black) until the application took the focus, then hides itself.
+    void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); }, window, waitForBlur: true });
+    return result;
+  } catch (error) {
+    sessionExt.controller.fail();
+    throw error;
   }
-  const result = await processManager.launchChecked(tile);
-  window.hide();
-  return result;
 }
 
 handle('launcher:launch', (_event, tileId) => launchTile(tileId));
@@ -479,11 +526,4 @@ library.on('sync-progress', (progress) => {
   });
 });
 processManager.on('started', (event) => sendToWindow('launcher:app-launched', event));
-processManager.on('finished', (result) => {
-  if (!window || window.isDestroyed()) return;
-  window.webContents.send('launcher:app-closed', result);
-  window.show();
-  window.setFullScreen(!windowed);
-  window.focus();
-  window.webContents.send('launcher:process-finished', result);
-});
+processManager.on('finished', (result) => returnToLauncher(result));

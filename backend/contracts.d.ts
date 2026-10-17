@@ -259,7 +259,9 @@ export interface IconSizes { tile: IconSizeSpec; appIcon: IconSizeSpec; poster: 
 /** ns `icons` also: cacheCandidate(url): IconResult, addPresetWebsites(websites, ids), firstRunWebsites(), sizes(), hasSteamGridDb(). */
 export interface WebPreset { id: string; name: string; url: string; icon: string; color: string; category: 'video' | 'music' | 'other' }
 
-/** ns `session` (agent E). Events: `phase` (SessionPhase). Methods: `closeActive()`. */
+/** ns `session` (agent E). Events: `phase` (SessionPhase), `notice` (SessionNotice). Methods: `closeActive()`, `getPhase()`, `getStatus()`. */
+export interface SessionNotice { message: string }
+export interface SessionStatus { phase: SessionPhase["phase"]; guideAvailable: boolean; guideReason: string; overlayMode: "overlay" | "direct" }
 export type SessionPhase =
   | { phase: 'idle' }
   | { phase: 'launching'; tileId: string; name: string }

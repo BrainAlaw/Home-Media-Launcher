@@ -4,6 +4,8 @@ Theme storage, typed IPC, streaming media and contextual artwork contracts are d
 
 Menu schemas, RAM slideshow prefetch, navigation hints and independent status indicators are documented in [MENU-PERFORMANCE.md](MENU-PERFORMANCE.md).
 
+Launch/close transitions, session phases and the controller-only exit gesture (Guide button hold) are documented in [SESSION.md](SESSION.md).
+
 Run `bash scripts/bootstrap.sh` on Linux or `pwsh -File scripts/bootstrap.ps1` on Windows. The scripts install missing dependencies through the OS package manager, install Moonlight (Flatpak on Linux, winget on Windows), then run `npm ci`. Run Linux bootstrap as the desktop user, with sudo available for system packages. Node.js 22 or newer is required. Pair Moonlight with the host once using the Moonlight UI; pairing is deliberately not bypassed. Linux desktop runtime libraries required by Electron must also be supplied by the desktop distribution.
 
 ## Remote applications

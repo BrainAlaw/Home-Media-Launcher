@@ -67,11 +67,22 @@ const hostBadge = window.HomeSections.createHostBadge(document);
 const HOST_BADGE_REFRESH_MS = 60_000;
 let hostBadgeTimer = 0;
 
+const launchTransition = window.LaunchTransition.createLaunchTransition({ isReducedMotion: () => reducedMotionQuery.matches });
+let suspendToken = 0;
+
 const launchSession = window.LaunchSession.createLaunchSession({
   api: window.api,
   legacyLaunch: (tileId) => window.launcher.launch(tileId),
-  onSuspend: suspendUi,
-  onResume: resumeUi
+  // Rendering is only suspended once the screen is fully black, so the expand/fade transition is not frozen half-way.
+  onSuspend: () => {
+    const token = ++suspendToken;
+    void launchTransition.whenCovered().then(() => { if (token === suspendToken && launchSession.busy) suspendUi(); });
+  },
+  onResume: (event) => {
+    suspendToken += 1;
+    resumeUi(event);
+    void launchTransition.reveal(event.appId);
+  }
 });
 
 const spatialGrid = new window.SpatialGrid.SpatialGrid({
@@ -536,13 +547,16 @@ async function activate(element) {
   if (!tile) return;
   state.locked = true;
   element.classList.add('launching');
+  void launchTransition.cover(element);
   try {
-    if (!(await launchSession.launch(tile))) return;
+    if (!(await launchSession.launch(tile))) { state.locked = false; void launchTransition.reveal(tile.id); return; }
     state.recents = pushRecent(state.recents, tile.id);
     saveRecents();
   } catch (error) {
     state.locked = false;
     element.classList.remove('launching');
+    // Animate back to the launcher and tell the user why nothing started.
+    void launchTransition.reveal(tile.id);
     showToast(`Launch failed: ${error.message}`);
   }
 }
@@ -748,6 +762,10 @@ document.querySelector('#autostart').addEventListener('change', async (event) =>
   try { event.target.checked = await window.launcher.setAutostart(event.target.checked); }
   catch (error) { showToast(`Unable to change startup setting: ${error.message}`); }
 });
+
+// Session phase (ns `session`) keeps the black cover consistent when a session was started or ended outside this renderer.
+window.launcher.ext?.on('session', 'phase', (phase) => launchTransition.onPhase(phase));
+window.launcher.ext?.on('session', 'notice', (notice) => { if (notice?.message) showToast(notice.message); });
 
 // Both the new `onAppClosed` event and the legacy `process-finished` event end the session; the transition is idempotent.
 window.launcher.onProcessFinished((result) => launchSession.notifyClosed({ appId: result.tileId || '', ...(result.error ? { error: String(result.error) } : {}) }));
