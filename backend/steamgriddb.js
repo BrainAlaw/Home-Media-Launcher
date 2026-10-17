@@ -19,6 +19,19 @@ function isSteamGridDbImage(value) {
   } catch { return false; }
 }
 
+const MIN_ICON_EDGE = 256;
+
+/**
+ * Orders icon candidates for use as an app icon: square images of at least 256 px first (largest
+ * first), then everything else by size. Entries without dimensions rank last.
+ */
+function rankIcons(list) {
+  const edge = (entry) => Math.min(Number(entry.width) || 0, Number(entry.height) || 0);
+  const square = (entry) => Number(entry.width) > 0 && Math.abs(Number(entry.width) - Number(entry.height)) <= Number(entry.width) * 0.02;
+  const good = (entry) => square(entry) && edge(entry) >= MIN_ICON_EDGE;
+  return [...list].sort((left, right) => (good(right) - good(left)) || (edge(right) - edge(left)));
+}
+
 /** SteamGridDB API v2 client. The key is only ever sent in the Authorization header of main-process requests. */
 function createSteamGridDb({ apiKey, requestBuffer = defaultRequestBuffer }) {
   async function get(route) {
@@ -45,7 +58,9 @@ function createSteamGridDb({ apiKey, requestBuffer = defaultRequestBuffer }) {
     if (!ART_KINDS.includes(art)) throw new Error('Unknown artwork kind');
     let list = await get(artRoute(art, target, true));
     if (!list.length && DIMENSIONS[art]) list = await get(artRoute(art, target, false));
-    return list.filter((entry) => isSteamGridDbImage(entry && entry.url)).slice(0, limit).map((entry) => ({
+    list = list.filter((entry) => isSteamGridDbImage(entry && entry.url));
+    if (art === 'icon') list = rankIcons(list);
+    return list.slice(0, limit).map((entry) => ({
       id: Number(entry.id), art, url: entry.url, thumb: isSteamGridDbImage(entry.thumb) ? entry.thumb : entry.url,
       width: Number(entry.width) || undefined, height: Number(entry.height) || undefined
     }));
@@ -54,4 +69,4 @@ function createSteamGridDb({ apiKey, requestBuffer = defaultRequestBuffer }) {
   return { search, images };
 }
 
-module.exports = { ART_KINDS, createSteamGridDb, isSteamGridDbImage };
+module.exports = { ART_KINDS, MIN_ICON_EDGE, rankIcons, createSteamGridDb, isSteamGridDbImage };

@@ -4,6 +4,8 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const PRESET_DIRECTORY = path.join(__dirname, '..', 'src', 'renderer', 'icons', 'presets');
+const ICON_TOKEN = /^preset:([a-z0-9-]+)$/;
+const BUNDLED_ICON_URL = /\/icons\/presets\/([a-z0-9-]+)\.svg(?:[?#].*)?$/i;
 
 /** `hosts` lists every hostname suffix that identifies the service (used by the icon resolver). */
 const PRESET_DEFINITIONS = Object.freeze([
@@ -25,10 +27,43 @@ const PRESET_DEFINITIONS = Object.freeze([
   { id: 'tidal', name: 'Tidal', url: 'https://listen.tidal.com/', category: 'music', color: '#000000', hosts: ['tidal.com'] }
 ]);
 
+/**
+ * Where each service's own icon is fetched from at runtime (see backend/ICONS.md for the verified
+ * results). `pages` are scanned for apple-touch-icon / manifest / icon links, `assets` are direct
+ * official URLs tried as well. `mono` is the monogram of the fallback tile. Services that block bots
+ * or only offer favicons below 128 px simply use the monogram tile.
+ */
+const ICON_SOURCES = Object.freeze({
+  netflix: { mono: 'N' },
+  youtube: { mono: 'YT' },
+  'youtube-music': { mono: 'YM' },
+  spotify: { assets: ['https://www.spotify.com/apple-touch-icon.png'], mono: 'S' },
+  'disney-plus': { mono: 'D+' },
+  'prime-video': { mono: 'PV' },
+  max: { mono: 'M' },
+  twitch: { mono: 'T' },
+  plex: { mono: 'P' },
+  jellyfin: { pages: ['https://jellyfin.org/'], mono: 'J' },
+  'apple-tv-plus': { mono: 'TV+' },
+  player: { mono: 'P' },
+  'canal-plus': { mono: 'C+' },
+  skyshowtime: { mono: 'S' },
+  crunchyroll: { mono: 'CR' },
+  tidal: { mono: 'T' }
+});
+
 /** Presets that are added to a fresh configuration. */
 const FIRST_RUN_PRESET_IDS = Object.freeze(['netflix', 'youtube', 'spotify', 'disney-plus', 'prime-video', 'twitch']);
 
 function iconFile(preset) { return path.join(PRESET_DIRECTORY, `${preset.id}.svg`); }
+
+/** Internal view for the icon service: definition plus fetch sources (never sent to the renderer). */
+function getPresetSources(id) {
+  const preset = PRESET_DEFINITIONS.find((candidate) => candidate.id === id);
+  if (!preset) return null;
+  const extra = ICON_SOURCES[id] || {};
+  return { id, name: preset.name, color: preset.color, mono: extra.mono, pages: extra.pages || [new URL(preset.url).origin + '/'], assets: extra.assets || [] };
+}
 
 function toPublic(preset) {
   return { id: preset.id, name: preset.name, url: preset.url, icon: pathToFileURL(iconFile(preset)).href, color: preset.color, category: preset.category };
@@ -58,7 +93,33 @@ function matchPresetByHostname(hostname) {
 /** Matches the config.json `websites[]` schema ({ id, name, url, icon }) validated in src/main/config.js. */
 function presetToWebsite(preset) {
   if (!preset || typeof preset.id !== 'string' || typeof preset.name !== 'string' || typeof preset.url !== 'string') throw new Error('Invalid web preset');
-  return { id: `preset:${preset.id}`, name: preset.name, url: preset.url, icon: preset.icon || '' };
+  // The icon is an install-path independent token; the renderer / icon service resolves it at runtime.
+  return { id: `preset:${preset.id}`, name: preset.name, url: preset.url, icon: `preset:${preset.id}` };
+}
+
+/** Preset id for an icon value: a `preset:<id>` token or a legacy absolute bundled-icon URL / path; otherwise null. */
+function presetIdFromIcon(icon) {
+  if (typeof icon !== 'string') return null;
+  const token = ICON_TOKEN.exec(icon);
+  if (token) return token[1];
+  const legacy = BUNDLED_ICON_URL.exec(icon.split(String.fromCharCode(92)).join('/'));
+  return legacy ? legacy[1] : null;
+}
+
+/**
+ * Rewrites legacy absolute file URLs of bundled preset icons (stored by earlier versions, tied to the
+ * install path) to `preset:<id>` tokens. Returns the same array instance when nothing changed.
+ */
+function migratePresetIcons(websites) {
+  if (!Array.isArray(websites)) return websites;
+  let changed = false;
+  const result = websites.map((site) => {
+    const id = site && typeof site.icon === 'string' && !ICON_TOKEN.test(site.icon) ? presetIdFromIcon(site.icon) : null;
+    if (!id || !getPreset(id)) return site;
+    changed = true;
+    return { ...site, icon: `preset:${id}` };
+  });
+  return changed ? result : websites;
 }
 
 /**
@@ -82,4 +143,4 @@ function addPresetWebsites(websites, presetIds) {
 /** Websites for a brand-new configuration (`config.websites` is empty/undefined). */
 function firstRunWebsites() { return addPresetWebsites([], FIRST_RUN_PRESET_IDS); }
 
-module.exports = { PRESET_DIRECTORY, FIRST_RUN_PRESET_IDS, listPresets, getPreset, matchPresetByHostname, presetToWebsite, addPresetWebsites, firstRunWebsites };
+module.exports = { PRESET_DIRECTORY, FIRST_RUN_PRESET_IDS, listPresets, getPreset, getPresetSources, presetIdFromIcon, migratePresetIcons, matchPresetByHostname, presetToWebsite, addPresetWebsites, firstRunWebsites };
