@@ -310,7 +310,9 @@ export interface Iteration4Settings {
 /* ------------------------------------------------------------------ Iteration 5: ns `media` (Spotify Web API, PKCE)
  * Backend: M1 (src/main/ext/media.js + backend/spotify/). Widget: M2. Music view: M3. Tokens never reach the renderer.
  * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId),
- *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp().
+ *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp(),
+ *          setActive(active: boolean) -> { ok, active }  (iteration 6, additive: the renderer reports whether any media UI is
+ *          visible; the backend polls GET /me/player only while active, default inactive, immediate fetch on activation).
  * Events:  `state` (MediaState, pushed on change and polled adaptively), `auth` (MediaAuthState). */
 export type MediaAuthState =
   | { status: 'unconfigured' }                       // SPOTIFY_CLIENT_ID missing

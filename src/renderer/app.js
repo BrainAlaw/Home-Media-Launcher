@@ -113,11 +113,20 @@ const mediaWidget = window.MediaWidget.init({
   showToast,
   canControl: () => state.view === 'home' && !state.locked,
   requestFocus: (element) => { if (state.view === 'home' && !state.locked) setFocus(element); },
-  onLeave: leaveMediaWidget
+  onLeave: leaveMediaWidget,
+  // The widget is on screen behind the quick-settings panel too, but not under the settings dialog or a launched app.
+  isSurfaceVisible: () => (state.view === 'home' || state.view === 'system') && !state.locked
 });
 
-/** Up goes to the header, anything else returns to the remembered tile (same column memory as the grid). */
+// Report view changes to the widget so the backend stops polling Spotify while no media UI can be seen.
+for (const key of ['view', 'locked']) {
+  let value = state[key];
+  Object.defineProperty(state, key, { enumerable: true, get: () => value, set: (next) => { value = next; mediaWidget.syncActivity(); } });
+}
+
+/** Up goes to the header, Back to the quick-settings button (like tiles), anything else returns to the remembered tile (same column memory as the grid). */
 function leaveMediaWidget(direction) {
+  if (direction === 'system') { setFocus(systemButton, { scroll: false }); return; }
   if (direction === 'up') { setFocus(headerButtons().at(-1) || systemButton, { scroll: false }); return; }
   const coordinate = spatialGrid.coordinate;
   if (coordinate && spatialGrid.focusAt(coordinate[0], coordinate[1], { rememberColumn: false })) return;

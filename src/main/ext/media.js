@@ -5,7 +5,8 @@ const { MediaService } = require('../../../backend/spotify/service');
 /**
  * ns `media` (agent M1): Spotify Web API remote control (PKCE). See backend/SPOTIFY.md and the `media` block in backend/contracts.d.ts.
  * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId),
- *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp().
+ *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp(),
+ *          setActive(active) (renderer reports whether any media UI is visible; polling runs only while active).
  * Events:  `state` (MediaState), `auth` (MediaAuthState).
  * Tokens and the client id stay in the main process; payloads carry only mapped playback data and the auth status.
  */
@@ -35,7 +36,8 @@ module.exports = {
     playlists: (_ctx, offset) => service.playlists(optionalInt(offset)),
     playlistTracks: (_ctx, id, offset) => service.playlistTracks(text(id, 64), optionalInt(offset)),
     play: (_ctx, request) => service.play(request && typeof request === 'object' ? request : {}),
-    openSpotifyApp: () => service.openSpotifyApp()
+    openSpotifyApp: () => service.openSpotifyApp(),
+    setActive: (_ctx, active) => service.setActive(active === true)
   },
   start(ctx) {
     // Electron is required lazily so the module can also be loaded in plain Node tests.

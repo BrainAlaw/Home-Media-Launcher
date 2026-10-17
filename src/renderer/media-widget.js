@@ -58,16 +58,29 @@
    *   ext?: { invoke: Function, on: Function },
    *   showToast?: (message: string) => void,
    *   canControl?: () => boolean,
-   *   onLeave?: (direction: 'up' | 'down') => void,
+   *   onLeave?: (direction: 'up' | 'down' | 'system') => void,
+   *   isSurfaceVisible?: () => boolean,
    *   requestFocus?: (element: HTMLElement) => void
    * }} options
    */
+  /** Backend polling gate: active while the widget is shown on a visible surface, or the music view is open. */
+  const activity = { widget: false, view: false, reported: null, ext: null };
+
+  function reportActivity() {
+    const wanted = activity.widget || activity.view;
+    if (wanted === activity.reported || !activity.ext) return;
+    activity.reported = wanted;
+    Promise.resolve().then(() => activity.ext.invoke('media', 'setActive', wanted)).catch(() => { activity.reported = null; });
+  }
+
   function init(options = {}) {
     const showToast = options.showToast || (() => {});
     const canControl = options.canControl || (() => true);
     const onLeave = options.onLeave || (() => {});
+    const isSurfaceVisible = options.isSurfaceVisible || (() => true);
     const requestFocus = options.requestFocus || ((node) => node.focus({ preventScroll: true }));
     let ext = options.ext || (window.launcher && window.launcher.ext) || null;
+    activity.ext = ext;
 
     // The slot normally comes from the home layout (H1); create it before #rows when it is missing.
     let slot = document.getElementById(SLOT_ID);
@@ -277,6 +290,11 @@
       }
     }
 
+    function syncActivity() {
+      activity.widget = enabled && !disposed && !document.hidden && isSurfaceVisible();
+      reportActivity();
+    }
+
     function updateTicker() {
       const wanted = enabled && view.kind === 'playing' && !document.hidden;
       if (wanted && !ticker) ticker = setInterval(() => paintProgress(), TICK_MS);
@@ -401,7 +419,7 @@
       void run(command, { toastMessage: message || '' });
     });
 
-    document.addEventListener('visibilitychange', () => { updateTicker(); if (!document.hidden) paintProgress(true); });
+    document.addEventListener('visibilitychange', () => { updateTicker(); syncActivity(); if (!document.hidden) paintProgress(true); });
 
     /* -------------------------------------------------------------- lifecycle */
 
@@ -417,12 +435,13 @@
 
     const params = new URLSearchParams(location.search);
     const boot = params.has('media-mock')
-      ? loadMock(params.get('media-mock') || 'playing').then((mock) => { ext = mock.ext; window.__mediaMock = mock; })
+      ? loadMock(params.get('media-mock') || 'playing').then((mock) => { ext = mock.ext; activity.ext = ext; window.__mediaMock = mock; })
       : Promise.resolve();
     boot.catch((error) => console.warn('Media mock unavailable:', error.message)).then(() => {
       if (disposed) return;
       subscribe();
       render();
+      syncActivity();
       void refresh();
     });
 
@@ -437,6 +456,7 @@
         enabled = next;
         slot.hidden = !enabled;
         updateTicker();
+        syncActivity();
         if (turnedOn && !disposed) void refresh();
       },
       /** True when the widget can take focus right now. */
@@ -444,10 +464,13 @@
       owns: (node) => node === root,
       handleAction,
       openView,
+      /** Re-evaluates whether any media UI is visible and tells the backend (call after view or lock changes). */
+      syncActivity,
       /** Test hook: current view model. */
       get view() { return view; },
       dispose() {
         disposed = true;
+        syncActivity();
         clearInterval(ticker); clearTimeout(endRefresh);
         for (const off of unsubscribers) off();
         slot.removeChild(root);
@@ -458,6 +481,8 @@
   window.MediaWidget = {
     init,
     /** Opens the full music view (M3 listens to `launcher:open-media-view`). Usable without an initialised widget. */
-    openView() { document.dispatchEvent(new CustomEvent('launcher:open-media-view', { detail: { source: 'api' } })); }
+    openView() { document.dispatchEvent(new CustomEvent('launcher:open-media-view', { detail: { source: 'api' } })); },
+    /** Called by the music view on open/close so the backend keeps polling while it is on screen. */
+    setViewOpen(open) { activity.view = Boolean(open); reportActivity(); }
   };
 })();

@@ -247,7 +247,7 @@
   /**
    * Widget-internal focus model: one focus stop in the home navigation, Left/Right between its buttons.
    * `handle` returns an effect for the renderer to execute.
-   * @typedef {{ type: 'focus', index: number } | { type: 'activate', id: ActionId } | { type: 'leave', direction: 'up'|'down' } | { type: 'none' }} Effect
+   * @typedef {{ type: 'focus', index: number } | { type: 'activate', id: ActionId } | { type: 'leave', direction: 'up'|'down'|'system' } | { type: 'none' }} Effect
    */
   class WidgetFocusModel {
     /** @param {ActionId[]} [order] */
@@ -274,7 +274,7 @@
     /** @param {'up'|'down'|'left'|'right'|'confirm'|'back'|'menu'} action @returns {Effect} */
     handle(action) {
       if (!this.order.length) return action === 'up' || action === 'down' || action === 'back' || action === 'menu'
-        ? { type: 'leave', direction: action === 'up' ? 'up' : 'down' } : { type: 'none' };
+        ? { type: 'leave', direction: action === 'up' ? 'up' : action === 'back' ? 'system' : 'down' } : { type: 'none' };
       switch (action) {
         case 'left': case 'right': {
           const next = clamp(this.index + (action === 'left' ? -1 : 1), 0, this.order.length - 1);
@@ -284,7 +284,9 @@
         }
         case 'confirm': return { type: 'activate', id: this.order[this.index] };
         case 'up': return { type: 'leave', direction: 'up' };
-        case 'down': case 'back': case 'menu': return { type: 'leave', direction: 'down' };
+        // Back mirrors the tiles: focus goes to the quick-settings button. Down returns to the remembered tile.
+        case 'back': return { type: 'leave', direction: 'system' };
+        case 'down': case 'menu': return { type: 'leave', direction: 'down' };
         default: return { type: 'none' };
       }
     }

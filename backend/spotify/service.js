@@ -51,6 +51,8 @@ class MediaService {
     this.playback = { playing: false, idle: true };
     this.stale = false;
     this.fetchedAt = 0;
+    /** Whether the renderer shows any media UI. Polling runs only while true; inactive until the renderer reports otherwise. */
+    this.active = false;
     this.authState = clientId ? { status: 'signed-out' } : { status: 'unconfigured' };
     this.auth = new SpotifyAuth({ clientId, fetch: fetchImpl, safeStorage, tokenPath: userData ? path.join(userData, 'spotify-tokens.json') : '', openExternal, ports, loginTimeoutMs, createServer, now });
     this.client = createClient({ auth: this.auth, fetch: fetchImpl, sleep, now, openApp: () => (openExternal ? openExternal('spotify:') : Promise.reject(new Error('No launcher'))), getLastDeviceId: () => this.lastDeviceId });
@@ -162,7 +164,8 @@ class MediaService {
 
   #schedule(delay) {
     clearTimeout(this.timer);
-    if (this.stopped || !this.auth.signedIn) return;
+    this.timer = null;
+    if (this.stopped || !this.active || !this.auth.signedIn) return;
     this.timer = setTimeout(() => { void this.#tick(); }, delay);
     this.timer.unref?.();
   }
@@ -171,6 +174,20 @@ class MediaService {
     // No network while a launched application owns the screen.
     if (!this.isSuspended()) await this.refresh();
     this.#schedule(this.#interval());
+  }
+
+  /**
+   * Renderer report: true while any media UI is visible (widget enabled on the home view, or the music view open).
+   * Activation fetches immediately; deactivation cancels the poll timer so no request is made while nothing is shown.
+   * Auth and token refresh are event driven (no heartbeat needed) and the on-disk state cache keeps working.
+   */
+  setActive(active) {
+    const next = active === true;
+    if (next === this.active) return { ok: true, active: next };
+    this.active = next;
+    if (!next) { clearTimeout(this.timer); this.timer = null; }
+    else if (!this.stopped && this.autoPoll !== false) this.#schedule(0);
+    return { ok: true, active: next };
   }
 
   /** Fetches the playback state once (single-flight). Never throws; offline keeps the last known state and flags it stale. */
@@ -207,7 +224,7 @@ class MediaService {
   }
 
   #afterCommand(result) {
-    if (!this.stopped && this.auth.signedIn) {
+    if (!this.stopped && this.active && this.auth.signedIn) {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => { void this.#tick(); }, POST_COMMAND_REFRESH_MS);
       this.timer.unref?.();

@@ -906,9 +906,10 @@
     if (S.open) return;
     ensureDom();
     S.open = true;
+    window.MediaWidget?.setViewOpen(true);
     S.onClose = onClose || null;
     clearTimeout(S.closeTimer);
-    try { S.bridge = S.bridge || await createBridge(); } catch (error) { S.open = false; throw error; }
+    try { S.bridge = S.bridge || await createBridge(); } catch (error) { S.open = false; window.MediaWidget?.setViewOpen(false); throw error; }
     dom.root.hidden = false;
     measure();
     S.cursor = null;
@@ -960,6 +961,7 @@
   function close() {
     if (!S.open) return;
     S.open = false;
+    window.MediaWidget?.setViewOpen(false);
     S.osk?.close();
     clearTimeout(S.searchTimer);
     clearTimeout(S.bannerTimer);
