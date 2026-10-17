@@ -1,0 +1,164 @@
+/*
+ * HIG TOKEN LAYER (--hig-*)
+ * ---------------------------------------------------------------------------
+ * Apple Human Interface Guidelines (tvOS / visionOS / macOS materials) expressed as CSS custom properties.
+ * Loaded straight after theme.css, so every value is derived from the theme contract (--bg, --text, --accent,
+ * --ui-rounding ...). Each built-in theme therefore keeps its own identity while sharing one visual grammar.
+ * Documentation: backend/DESIGN.md. Rules enforced by backend/test/hig-css.test.js.
+ *
+ * Rules:
+ *  - No backdrop-filter in this file or on animated surfaces. Materials are opaque-ish gradients.
+ *  - Only transform and opacity animate on frequently used surfaces (tiles, rows, toast, dialogs, launch cover).
+ *  - will-change appears on the focused tile only.
+ */
+
+:root {
+  /* ------------------------------------------------------------------ scale
+   * tvOS is specified in points on a 1920x1080 canvas, so 1 point = 100vw / 1920. --hig-density maps tvOS's very
+   * large 10-foot sizes onto the launcher's denser layout (.72 keeps body copy near 21px at 1080p, 42px at 4K). */
+  --hig-px: calc(100vw / 1920);
+  --hig-density: .72;
+  --hig-unit: calc(var(--hig-px) * var(--hig-density));
+
+  /* ------------------------------------------------------------------ typography (tvOS text styles) */
+  --hig-fs-title1: max(34px, calc(76 * var(--hig-unit)));
+  --hig-fs-title2: max(28px, calc(57 * var(--hig-unit)));
+  --hig-fs-title3: max(24px, calc(48 * var(--hig-unit)));
+  --hig-fs-headline: max(19px, calc(38 * var(--hig-unit)));
+  --hig-fs-callout: max(16px, calc(31 * var(--hig-unit)));
+  --hig-fs-body: max(15px, calc(29 * var(--hig-unit)));
+  --hig-fs-caption1: max(13px, calc(25 * var(--hig-unit)));
+  --hig-fs-caption2: max(12px, calc(23 * var(--hig-unit)));
+  /* Font shorthands: weight size/line-height family. Family follows the theme's font choice. */
+  --hig-font-title1: 600 var(--hig-fs-title1) / 1.1 var(--font-display);
+  --hig-font-title2: 600 var(--hig-fs-title2) / 1.12 var(--font-display);
+  --hig-font-title3: 600 var(--hig-fs-title3) / 1.15 var(--font-display);
+  --hig-font-headline: 650 var(--hig-fs-headline) / 1.2 var(--font-ui);
+  --hig-font-callout: 600 var(--hig-fs-callout) / 1.25 var(--font-ui);
+  --hig-font-body: 500 var(--hig-fs-body) / 1.4 var(--font-ui);
+  --hig-font-caption1: 500 var(--hig-fs-caption1) / 1.35 var(--font-ui);
+  --hig-font-caption2: 600 var(--hig-fs-caption2) / 1.3 var(--font-ui);
+
+  /* ------------------------------------------------------------------ semantic colour (vibrancy levels)
+   * label > secondary > tertiary > quaternary. Contrast on every material is verified per theme by hig-css.test.js:
+   * label and secondary >= 4.5:1 (WCAG AA), tertiary >= 3:1. Quaternary is decorative only. */
+  --hig-label: var(--text);
+  --hig-label-secondary: color-mix(in srgb, var(--text) 92%, transparent);
+  --hig-label-tertiary: color-mix(in srgb, var(--text) 68%, transparent);
+  --hig-label-quaternary: color-mix(in srgb, var(--text) 24%, transparent);
+  --hig-fill: color-mix(in srgb, var(--text) 16%, transparent);
+  --hig-fill-secondary: color-mix(in srgb, var(--text) 12%, transparent);
+  --hig-fill-tertiary: color-mix(in srgb, var(--text) 8%, transparent);
+  --hig-fill-quaternary: color-mix(in srgb, var(--text) 5%, transparent);
+  --hig-separator: color-mix(in srgb, var(--text) 14%, transparent);
+  --hig-tint: var(--accent);
+  --hig-tint-fill: color-mix(in srgb, var(--accent) 24%, transparent);
+  --hig-on-tint: var(--accent-contrast);
+  --hig-destructive: var(--danger);
+
+  /* ------------------------------------------------------------------ materials (ultraThin .. thick)
+   * Static gradients, never backdrop-filter: they cost nothing per frame and can be animated freely. A faint top
+   * highlight stands in for the vibrant edge of real glass. Alpha only ever rises with thickness. */
+  --hig-highlight: linear-gradient(180deg, color-mix(in srgb, var(--text) 7%, transparent), transparent 42%);
+  --hig-material-ultrathin: var(--hig-highlight), color-mix(in srgb, var(--bg-elevated) 66%, transparent);
+  --hig-material-thin: var(--hig-highlight), color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  --hig-material-regular: var(--hig-highlight), color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  --hig-material-thick: var(--hig-highlight), color-mix(in srgb, var(--bg-elevated) 97%, transparent);
+  --hig-material-edge: 1px solid var(--glass-border);
+  --hig-scrim: color-mix(in srgb, var(--bg) 72%, transparent);
+
+  /* ------------------------------------------------------------------ shape
+   * Radii follow the theme's --ui-rounding, so sharp and retro themes stay sharp. Concentric rule: an inner
+   * element inside padding P of an outer radius R uses max(0, R - P), see --hig-radius-inner(). */
+  --hig-radius-xs: calc(var(--ui-rounding) * .4);
+  --hig-radius-sm: calc(var(--ui-rounding) * .6);
+  --hig-radius-md: calc(var(--ui-rounding) * .85);
+  --hig-radius-lg: var(--ui-rounding);
+  --hig-radius-xl: calc(var(--ui-rounding) * 1.4);
+  --hig-radius-pill: 999px;
+
+  /* ------------------------------------------------------------------ spacing: 8pt grid scaled by canvas width */
+  --hig-grid: max(6px, calc(8 * var(--hig-px)));
+  --hig-space-1: var(--hig-grid);
+  --hig-space-2: calc(var(--hig-grid) * 2);
+  --hig-space-3: calc(var(--hig-grid) * 3);
+  --hig-space-4: calc(var(--hig-grid) * 4);
+  --hig-space-6: calc(var(--hig-grid) * 6);
+  --hig-space-8: calc(var(--hig-grid) * 8);
+
+  /* ------------------------------------------------------------------ elevation (shadow tiers)
+   * Largest extent is tier 4 (offset 24 + blur 56). Scroll containers that hold elevated content reserve at
+   * least that much padding (see --hig-clip-safe) so shadows are never clipped. */
+  --hig-elev-1: 0 1px 2px rgba(0, 0, 0, .35), 0 2px 8px rgba(0, 0, 0, .22);
+  --hig-elev-2: 0 2px 4px rgba(0, 0, 0, .3), 0 8px 20px rgba(0, 0, 0, .3);
+  --hig-elev-3: 0 4px 8px rgba(0, 0, 0, .3), 0 16px 36px rgba(0, 0, 0, .38);
+  --hig-elev-4: 0 8px 16px rgba(0, 0, 0, .32), 0 24px 56px rgba(0, 0, 0, .45);
+  --hig-clip-safe: 80px;
+
+  /* ------------------------------------------------------------------ motion
+   * Durations 200 / 350 / 500 ms. Springs are sampled damped oscillators (linear()), with a cubic-bezier fallback
+   * for engines without linear(). Reduced motion collapses durations and removes overshoot, see the media query. */
+  --hig-dur-fast: 200ms;
+  --hig-dur-base: 350ms;
+  --hig-dur-slow: 500ms;
+  --hig-ease-standard: cubic-bezier(.32, .72, 0, 1);
+  --hig-ease-in: cubic-bezier(.4, 0, 1, 1);
+  --hig-ease-out: cubic-bezier(.2, .8, .2, 1);
+  --hig-ease-spring: cubic-bezier(.34, 1.36, .5, 1);
+  --hig-ease-spring-soft: cubic-bezier(.3, 1.15, .5, 1);
+
+  /* ------------------------------------------------------------------ focus (tvOS)
+   * Lift, scale, parallax and a specular sheen. No hard outline: a hairline edge keeps focus visible against
+   * busy artwork and satisfies WCAG 2.4.7 without looking like a selection box. */
+  --hig-focus-scale: clamp(1.08, var(--focus-scale, 1.08), 1.1);
+  --hig-focus-edge: 0 0 0 max(1px, calc(var(--ring-width) * .8)) color-mix(in srgb, var(--focus-ring) 70%, transparent);
+  --hig-focus-lift: color-mix(in srgb, var(--accent) 38%, #000);
+  --hig-focus-sheen: color-mix(in srgb, var(--text) 24%, transparent);
+  --hig-parallax: 1.08;
+}
+
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --hig-ease-spring: linear(0, .09 2.1%, .32 5%, .62 8.4%, .88 12%, 1.03 15.5%, 1.1 19%, 1.11 22.5%, 1.08 26.5%, 1.03 31%, .99 36%, .98 41%, 1 49%, 1.005 58%, 1 70%, 1);
+    --hig-ease-spring-soft: linear(0, .12 3%, .42 7%, .76 11.5%, .97 16%, 1.04 21%, 1.04 26%, 1.01 33%, .995 42%, 1 55%, 1);
+  }
+}
+
+/* Reduced motion: short fades, no overshoot, no parallax, gentler focus scale. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --hig-dur-fast: 1ms;
+    --hig-dur-base: 120ms;
+    --hig-dur-slow: 160ms;
+    --hig-ease-spring: linear;
+    --hig-ease-spring-soft: linear;
+    --hig-ease-standard: linear;
+    --hig-ease-out: linear;
+    --hig-focus-scale: 1.04;
+    --hig-parallax: 1;
+  }
+}
+
+/* Continuous (squircle) corners where the engine supports them; plain circular arcs elsewhere. */
+@supports (corner-shape: squircle) {
+  .tile, .tile .art, dialog, #toast, .host-badge, .wallpaper-credit, .menu-panel { corner-shape: squircle; }
+}
+
+/* ---------------------------------------------------------------------------
+ * Surface overrides for owner-restricted files. appearance.css (wallpaper credit) and perf.css load later and
+ * still carry a backdrop-filter / glass background; `body` raises specificity so the material wins without
+ * editing those files. The credit consumes only tokens (material, edge, radius, type).
+ * ------------------------------------------------------------------------- */
+body .wallpaper-credit {
+  background: var(--hig-material-thin);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: var(--hig-material-edge);
+  border-radius: var(--hig-radius-md);
+  box-shadow: var(--hig-elev-2);
+  padding: var(--hig-space-1) var(--hig-space-2);
+  transition: opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-base) var(--hig-ease-standard);
+}
+body .wallpaper-credit strong { font: var(--hig-font-callout); color: var(--hig-label); }
+body .wallpaper-credit span { font: var(--hig-font-caption1); color: var(--hig-label-secondary); }
+body .wallpaper-credit small { font: var(--hig-font-caption2); color: var(--hig-label-tertiary); }

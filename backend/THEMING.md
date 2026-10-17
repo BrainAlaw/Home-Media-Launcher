@@ -81,6 +81,10 @@ For the lowest focus latency, initialize a renderer Map from `getAppBackgrounds(
 
 `builtin-themes.js` derives 44 built-in themes (`builtin-<preset>`, `extensions.uiPreset` = renderer preset) from the palette table in `src/renderer/theme.js`. They are seeded into new stores, and missing ones are added to existing stores on startup without overwriting user edits (the legacy `builtin-dark` stays the default). Token blocks in `src/renderer/theme.css` between the GENERATED markers come from `renderThemeCss()`; after editing the table, regenerate them (a test fails when they drift). Tests enforce unique IDs, schema validity and WCAG contrast (text 7:1 on background, muted text 4.5:1 on surface, accent 3:1).
 
+## HIG layer
+
+`src/renderer/hig.css` (loaded straight after `theme.css`) derives the `--hig-*` tokens (type scale, vibrancy labels, materials, radii, 8pt spacing, elevation, motion, focus) from the theme contract, so a preset only has to supply the tokens above. Generated presets use the lighter focus recipes (glow blur at most 28px, `--focus-scale` 1.08 to 1.1) and `--text-dim` / `--text-faint` at 0.78 / 0.62 alpha. `--hig-focus-scale` clamps `--focus-scale` to 1.08-1.1. `backend/test/hig-css.test.js` checks label contrast on every material in every preset (secondary 4.5:1, tertiary 3:1). See `backend/DESIGN.md`.
+
 ## Fonts
 
 `src/renderer/fonts.css` declares 18 bundled OFL families (woff2 in `src/renderer/fonts/`, licences in `fonts/LICENSES.md`), so fonts work fully offline. `ThemeEngine.FONTS` lists `{ id, name, stack, category }` (plus a `system` entry). Every preset carries a `fontId` (`ThemeEngine.PALETTES`, backend `Theme.fontId`), emitted as `--font-ui` in the generated token blocks. `ThemeEngine.applyFont(element, fontId | 'theme')` overrides `--font-ui`/`--font-display` inline, or removes the override when following the theme. Custom themes may set an optional top-level `fontId`; unknown ids are rejected by `validateTheme`.

@@ -58,33 +58,33 @@ const BUILTIN_THEMES = Object.freeze(PALETTES.map((palette) => Object.freeze(toB
 const STYLES = {
   glass: {
     rounding: '20px', ring: '3px', cut: '0px', glassAlpha: 0.56, blur: '38px', saturate: '170%', glassBorder: 0.2,
-    dim: '.46', backdropBlur: '30px', backdropSaturate: '140%', scanlines: '0', scale: '1.08', ring2: 'text',
-    glow: (p) => `0 24px 56px rgba(0, 0, 0, .55), 0 0 0 5px ${rgba(p.accent, 0.4)}`,
-    hero: (p) => `0 28px 70px rgba(0, 0, 0, .55), 0 0 0 6px ${rgba(p.accent, 0.32)}`,
+    dim: '.46', backdropBlur: '30px', backdropSaturate: '140%', scanlines: '0', scale: '1.1', ring2: 'text',
+    glow: (p) => `0 10px 28px rgba(0, 0, 0, .45), 0 0 16px ${rgba(p.accent, 0.3)}`,
+    hero: (p) => `0 16px 40px rgba(0, 0, 0, .5), 0 0 24px ${rgba(p.accent, 0.26)}`,
     motion: ['140ms', '260ms', '460ms', '900ms'], ease: 'cubic-bezier(.2, .8, .2, 1)', easeFocus: 'cubic-bezier(.34, 1.28, .5, 1)',
     title: ['650', '-.03em', 'none', '0']
   },
   soft: {
     rounding: '14px', ring: '1.5px', cut: '0px', glassAlpha: 0.84, blur: '26px', saturate: '125%', glassBorder: 0.14,
-    dim: '.88', backdropBlur: '44px', backdropSaturate: '110%', scanlines: '0', scale: '1.05', ring2: 'text',
-    glow: (p) => `0 0 30px ${rgba(p.accent, 0.34)}`,
-    hero: (p) => `0 0 44px ${rgba(p.accent, 0.24)}`,
+    dim: '.88', backdropBlur: '44px', backdropSaturate: '110%', scanlines: '0', scale: '1.08', ring2: 'text',
+    glow: (p) => `0 0 22px ${rgba(p.accent, 0.3)}`,
+    hero: (p) => `0 0 32px ${rgba(p.accent, 0.22)}`,
     motion: ['120ms', '200ms', '380ms', '700ms'], ease: 'cubic-bezier(.22, .8, .24, 1)', easeFocus: 'cubic-bezier(.22, .8, .24, 1)',
     title: ['600', '-.035em', 'none', '0']
   },
   sharp: {
     rounding: '4px', ring: '2px', cut: '0px', glassAlpha: 0.74, blur: '18px', saturate: '170%', glassBorder: 0.42,
-    dim: '.68', backdropBlur: '18px', backdropSaturate: '150%', scanlines: '0', scale: '1.06', ring2: 'accent2',
-    glow: (p) => `0 0 22px ${rgba(p.accent, 0.85)}, 0 0 54px ${rgba(p.accent2, 0.42)}`,
-    hero: (p) => `0 0 30px ${rgba(p.accent, 0.5)}`,
+    dim: '.68', backdropBlur: '18px', backdropSaturate: '150%', scanlines: '0', scale: '1.08', ring2: 'accent2',
+    glow: (p) => `0 0 16px ${rgba(p.accent, 0.7)}, 0 0 28px ${rgba(p.accent2, 0.3)}`,
+    hero: (p) => `0 0 24px ${rgba(p.accent, 0.45)}`,
     motion: ['80ms', '150ms', '300ms', '420ms'], ease: 'cubic-bezier(.3, .9, .3, 1)', easeFocus: 'cubic-bezier(.3, .9, .3, 1)',
     title: ['700', '.04em', 'uppercase', '.08em']
   },
   retro: {
     rounding: '0px', ring: '2px', cut: '0px', glassAlpha: 0.78, blur: '14px', saturate: '150%', glassBorder: 0.5,
-    dim: '.76', backdropBlur: '14px', backdropSaturate: '130%', scanlines: '.22', scale: '1.05', ring2: 'accent2',
-    glow: (p) => `0 0 18px ${rgba(p.accent, 0.8)}, 0 0 40px ${rgba(p.accent, 0.3)}`,
-    hero: (p) => `0 0 26px ${rgba(p.accent, 0.5)}`,
+    dim: '.76', backdropBlur: '14px', backdropSaturate: '130%', scanlines: '.22', scale: '1.08', ring2: 'accent2',
+    glow: (p) => `0 0 12px ${rgba(p.accent, 0.7)}, 0 0 24px ${rgba(p.accent, 0.25)}`,
+    hero: (p) => `0 0 20px ${rgba(p.accent, 0.45)}`,
     motion: ['90ms', '160ms', '320ms', '480ms'], ease: 'cubic-bezier(.3, .9, .3, 1)', easeFocus: 'cubic-bezier(.3, .9, .3, 1)',
     title: ['700', '.06em', 'uppercase', '.1em']
   }
@@ -106,8 +106,8 @@ function renderPresetBlock(palette) {
   --surface: ${surface};
   --surface-hover: ${mix(surface, text, 0.1)};
   --text: ${text};
-  --text-dim: ${rgba(text, 0.72)};
-  --text-faint: ${rgba(text, 0.44)};
+  --text-dim: ${rgba(text, 0.78)};
+  --text-faint: ${rgba(text, 0.62)};
   --accent: ${accent};
   --accent-contrast: ${accentContrast};
   --accent-2: ${accent2};
