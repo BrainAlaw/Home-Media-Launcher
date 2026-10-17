@@ -1,59 +1,66 @@
-# Current state (17 October 2026)
+# Current state (17 October 2026, end of iteration 5)
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
 
 ## Git
 
-- Working branch: `feat/iteration-4` (HEAD `363e9ca`). `master` holds only the baseline commit `7abda50`; nothing has been merged to `main` or pushed to GitHub.
-- All feature branches (`iter4/a`–`g`, `fix/p`, `q1`, `q2`, `r`, `s`, `t`) are merged into `feat/iteration-4`.
-- Helper worktrees live in `D:\Github Repos\Home-Media-Launcher-wt\` (14 entries incl. main). Safe to delete once nothing else is pending:
-  `git worktree remove --force ../Home-Media-Launcher-wt/<name>` for each, then `git branch -D` the iter4/fix branches if wanted.
-- `.env` is git-ignored (`.env.example` is committed). Keys: `VP_API`, `VP_HOST`, `VP_IP`, `WEATHER_API`, `STEAMDB_API`. They are read by `backend/env.js`, scrubbed from `process.env` after `readSecrets()` and never reach the renderer.
-- Checks: `npm run check` → 297 tests, 0 failures. Run Electron with `unset ELECTRON_RUN_AS_NODE` (the VS Code terminal can set it, which breaks `require('electron')`).
+- Working branch: `iter5` (HEAD `09a3f62`), branched from `feat/iteration-4`. Nothing has been merged to `main` or pushed to GitHub (`master` holds only the baseline commit `7abda50`).
+- All iteration 5 branches (`i5/ap`, `sa`, `qa`, `h1`, `h2`, `m1`, `m2`, `m3`) are merged into `iter5`. Iteration 4 branches (`iter4/*`, `fix/*`) are merged into `feat/iteration-4`.
+- Helper worktrees live in `D:\Github Repos\Home-Media-Launcher-wt\` (22 entries incl. main). Safe to delete when nothing is pending: `git worktree remove --force ../Home-Media-Launcher-wt/<name>`, then `git branch -D` the iter4/fix/i5 branches if wanted. The `q1` and `m*`/`qa` worktrees contain `node_modules` junctions to the main checkout.
+- `.env` is git-ignored (`.env.example` is committed). Keys: `VP_API`, `VP_HOST`, `VP_IP`, `WEATHER_API`, `STEAMDB_API`, `SPOTIFY_CLIENT_ID`. Read by `backend/env.js`, scrubbed from `process.env` after `readSecrets()`, never sent to the renderer.
+- Checks: `npm run check` → 409 tests, 0 failures. Run Electron with `unset ELECTRON_RUN_AS_NODE`.
+- A read-only review of `c5e4e27..HEAD` was started after the final merge; **its findings have not been applied yet** (see "Next steps").
 
-## What exists (all 26 requested items implemented)
+## What exists
 
-Round 1 (17 items): new home layout (Home Theatre + Gaming with Vibepollo host badge), tile focus/hover motion, concentric header radii, 16 web presets with icons, network/VPN status chips, weather via OpenWeatherMap, launch/close transitions with Guide-hold exit overlay, Fire TV / Google TV remote input (no CEC), wallpaper credits and sources editor, Appearance page, namespaced IPC (`window.launcher.ext.invoke/on`, modules in `src/main/ext/`).
+Iterations 1–4 (see git history): home layout, presets, VPN/network status, weather, launch/close transitions, remote input, wallpaper sources, HIG token layer (`src/renderer/hig.css`, `backend/DESIGN.md`), software compositing default on Windows (`src/main/gpu-flags.js`), Surfshark via rasdial/WireGuard service/OpenVPN GUI (`backend/VPN.md`).
 
-Round 2 (9 items): top navigation bar and Library removed (Settings is reached via the Quick settings sheet); Appearance uses dropdowns with a fixed preview pane; Applications page redesigned (cards, inline icon picker); icons resolved from the services' own sites (10 of 16 real icons, 6 monogram fallbacks); Vibepollo apps now shown by default (`settings.hiddenAppIds`); launch bug fixed (`launchIdFrom` accepts `appId`); Surfshark on Windows via `rasdial` / WireGuard service / OpenVPN GUI (`backend/VPN.md`); Quick settings legibility; HIG token layer (`src/renderer/hig.css`, `backend/DESIGN.md`).
+Iteration 5 (14 requested items):
 
-Key docs: `backend/MENU-PERFORMANCE.md`, `backend/DESIGN.md`, `backend/ICONS.md`, `backend/VPN.md`, `backend/REMOTES.md`, `backend/SESSION.md`.
+- **Home screen:** tile rows anchored to the bottom; large date (left) + large thin clock (right), weather under the date (default location `High Wycombe,GB`); alternative `centred` header; OLED options (pixel shift, idle dim, fade-in) in `settings.homeHeader`; rows generated from `settings.categories` (default Home Theatre + Gaming; custom ones can be added). Code: `home-header.js`, `home-layout.css`, `tile-model.js`, `categories.js`.
+- **Tile motion:** new spring lift, colour-sampled glow (`tile-accent.js`), masked edge, parallax, neighbour recession; hover uses the same language; lite/reduced-motion variants; focus pad prevents clipping (`--tile-focus-pad`).
+- **Quick settings:** iOS-style switches (fixed slot, no jumping), MK-PC host card above Ethernet, header chips for host/Tailscale/Surfshark/network with status dots, coherent settings-button state model, opaque sheet. The Gaming-row host banner was removed.
+- **Settings:** dialog typography scaled down (`--hig-dialog-unit` in `hig.css`); Appearance has tile-label switch, categories editor, header layout/OLED/fade-in/seconds, media-widget switch; Applications/Websites cards have a pencil badge and a centred icon popup (`icon-popup.js`); websites have a category selector (`website.category`).
+- **Spotify (Web API, PKCE):** backend `backend/spotify/*` + `src/main/ext/media.js` (ns `media`), home widget `media-widget.js` (one focus stop, global media keys, toasts), music view `media-view.js` (search, playlists, devices) and an on-screen keyboard `on-screen-keyboard.js` (`data-osk` inputs; enabled on the settings text inputs). Docs: `backend/SPOTIFY.md`. Mocks for offline UI work: `?media-mock` (`media-mock.js` for the widget, `media-view-mock.js` for the view; main only appends the query for `--perf`, so use a scratch script or one-line change in `main`).
 
-## Latest fix: grey screen on `npm start`
+## Spotify setup (user action, not done yet)
 
-- Cause: `in-process-gpu` (added for the 30 fps cap) presents a flat grey fullscreen window on the reference host, although `capturePage` shows a correct page.
-- Fullscreen measurements (600 rAF frames, 5120x1440 desktop with two 2560x1440 displays, RTX 3080 + Sunshine/Parsec/SudoMaker virtual displays):
-  - separate GPU process: 30.5 ms avg (~33 fps), correct output;
-  - `in-process-gpu`: 6.1 ms but grey;
-  - `disable-gpu-compositing` (now the Windows default): 7.1 ms avg, p95 12.2 ms, correct output.
-- Opt-ins: `HML_GPU_PROCESS=inprocess`, `HML_GPU_COMPOSITING=gpu`, `HML_GPU_SAFE=1` (all off). Code in `src/main/gpu-flags.js`.
-- The user has **not yet confirmed** that `npm start` now shows the UI after this fix.
-- Lesson: verify rendering against the real display (`desktopCapturer`), not `capturePage`. `scripts/bench-ui.cjs` measures windowed only and its "163 fps" numbers are not representative of fullscreen.
+1. Create an app at developer.spotify.com/dashboard with a **Premium** account (Development mode requires an active Premium owner; 5 allowlisted users).
+2. Register redirect URIs `http://127.0.0.1:8888/callback` … `:8891/callback` (loopback IP literal; `localhost` is not allowed).
+3. Add the user's own account under User management.
+4. Put the Client ID in `.env` as `SPOTIFY_CLIENT_ID=...`, restart, press "Connect Spotify" in the widget (one-time browser login).
+- Limits from the verified API rules: player endpoints are Premium-only; playlist tracks only for playlists the user owns/collaborates on (`/playlists/{id}/items`); search limit 10; `/me` no longer returns `product`. `NO_ACTIVE_DEVICE` handling is matched by message and **unverified**.
 
-## Known open issues (from the last real-profile screenshot)
+## Windows display / GPU notes (important)
 
-1. Preset tiles show small coloured squares with a letter: the bundled monogram tiles are composed too small, and the real icons are fetched in the background so they may not be cached yet on first run. Netflix, Spotify, Jellyfin, Canal+, Crunchyroll and Tidal have no real icon (sites return a tiny icon or 403). SkyShowtime's wordmark looks cropped.
-2. Gaming tiles (Desktop, Gaming, Remote Input, Remote Monitor, TV) show only large letters: no cover art. Vibepollo artwork / SteamGridDB is not being applied to them.
-3. The focused Netflix tile appears to extend above its row (clipping/scale overlap with the section title) — check against the HIG focus spec.
-4. Quick settings sheet is ~95% opaque without blur; tile names showed through faintly in one screenshot. Increase the surface opacity or add a scrim.
-5. Fullscreen frame pacing relies on software compositing (higher CPU). Re-benchmark in fullscreen on the target Linux HTPC; nothing was measured on Linux.
-6. Dead selectors for the removed nav bar remain in `src/renderer/perf.css`; unused `.preset-card/.preset-grid/.font-list` rules remain in `styles.css`/`theme.css`.
-7. Review items deliberately left: VPN/network/input polling continues while an app is running; `migratePresetIcons` is not called (legacy `file://` icon values still work through `asset-url.js`).
+- `in-process-gpu` presents a **grey fullscreen window** on the reference host; do not enable it (`HML_GPU_PROCESS=inprocess` is an explicit opt-in). Default on Windows is `disable-gpu-compositing` (~7 ms avg frame, correct output). Opt-ins: `HML_GPU_COMPOSITING=gpu`, `HML_GPU_SAFE=1`.
+- Always verify visuals against the real display (`desktopCapturer.getSources({types:['screen']})` or Win32 `CopyFromScreen`), never `capturePage` alone. Display layout on the dev machine: two 2560x1440 displays at x=-2560 and x=0; the launcher opens on the x=0 display. Other agents' windows can cover captures; set the window always-on-top before capturing.
+- `scripts/bench-ui.cjs` measures windowed only; do not quote its numbers for fullscreen.
+
+## Known open issues
+
+1. Gaming tiles (Desktop, Gaming, Remote Input, Remote Monitor, TV, Tekken 6) show only big letters: no cover art applied from Vibepollo/SteamGridDB.
+2. Preset icons (Netflix, Spotify, …) show as small coloured squares with a letter in profiles without cached art; real icons exist for 10 of 16 presets (see `backend/ICONS.md`). Check on the real profile after the background fetch has run. The bundled monogram tile is composed too small.
+3. The user's real config has `header.showWeather: false`; weather only appears after enabling Settings → General → Weather (or editing the config). Defaults changed only in `config.example.json`.
+4. (Fixed) `homeHeader.oledProtection` now defaults to `true` everywhere (OLED TV).
+5. Dead CSS remains: `.icon-field`, `.catalog-icon-panel`, `.catalog-thumb` in `appearance.css`; unused `.preset-card/.preset-grid/.font-list` in `styles.css`/`theme.css`.
+6. Surfshark chip is grey on this machine ("cannot be scripted"); needs the Windows IKEv2 profile named "Surfshark" (see `backend/VPN.md`).
+7. Polling (VPN/network/input) continues while a launched app runs; `migratePresetIcons` is never called (legacy `file://` icon values still work via `asset-url.js`).
 
 ## Unverified (never run for real)
 
-- Surfshark connect/disconnect on Windows (create an IKEv2 profile named "Surfshark", see `backend/VPN.md`), Tailscale toggle on Linux, WireGuard service ACLs.
-- Guide-button hold exit overlay, Moonlight quit chord, Wayland behaviour, evdev reading on Linux.
-- Fire TV / Google TV remote key mapping on a physical remote.
-- Gamepad navigation through the new Settings page (custom dropdowns, icon picker).
-- Weather via OpenWeatherMap with the real key; SteamGridDB lookups with the real key.
+- Spotify against a real account (consent page, token exchange, live responses, device handoff, launching the desktop app via `spotify:`).
+- Gamepad/remote operation of: widget, music view, OSK, icon popup, categories editor, switches. Only mock/keyboard paths were driven.
+- 3840x2160 settings dialog, General settings page visuals, tile-label hiding, OLED pixel shift/dim and fade-in on screen.
+- Surfshark connect/disconnect, Tailscale toggle on Linux, WireGuard service ACLs, Guide-button exit overlay, Moonlight quit chord, Wayland behaviour, Linux HTPC in general (nothing measured on Linux).
 
-## Suggested next steps
+## Next steps
 
-1. Ask the user to run `npm start` and confirm the grey screen is gone.
-2. Fix open issues 1–4 (icons composition and cached art, Gaming artwork, focus overlap, sheet opacity).
-3. Decide whether to merge `feat/iteration-4` into `main`, push, and clean up the worktrees.
-4. Test on the Linux HTPC target (Wayland/X11, evdev access, NetworkManager polkit rule from `backend/VPN.md`).
+1. Apply the findings of the read-only review (check the latest task notification; if lost, re-run a review of `c5e4e27..HEAD`).
+2. Resolve known issues 1–4 (cover art for Gaming tiles, icon composition, weather default, OLED default).
+3. Ask the user to run `npm start`, set `SPOTIFY_CLIENT_ID`, and try the Spotify flow plus gamepad navigation end to end.
+4. Decide whether to merge `iter5` into `main`, push, and clean up the worktrees.
+5. Test on the Linux HTPC target (Wayland/X11, evdev access, NetworkManager polkit rule from `backend/VPN.md`, MPRIS is not used).
 
 ## Useful commands
 
@@ -61,7 +68,6 @@ Key docs: `backend/MENU-PERFORMANCE.md`, `backend/DESIGN.md`, `backend/ICONS.md`
 npm start                                  # real profile, fullscreen
 npm run check                              # syntax checks + all tests
 unset ELECTRON_RUN_AS_NODE; npx electron . --test-profile --windowed   # throwaway profile
-npx electron scripts/bench-ui.cjs          # windowed frame-pacing benchmark
 ```
 
-User data: `%APPDATA%\home-media-launcher` (real), `%APPDATA%\Vibepollo-Test` (`--test-profile`). Never print `remote-token.json` or `.env` values.
+User data: `%APPDATA%\home-media-launcher` (real), `%APPDATA%\Vibepollo-Test` (`--test-profile`). Never print `remote-token.json`, `spotify-tokens.json` or `.env` values.

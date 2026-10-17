@@ -130,7 +130,7 @@ window.AppearanceSettings = (function () {
     $('#show-tile-labels').checked = settings.showTileLabels !== false;
     $('#media-widget').checked = settings.mediaWidget !== false;
     $('#header-seconds').checked = header.showSeconds === true;
-    $('#header-oled').checked = header.oledProtection === true;
+    $('#header-oled').checked = header.oledProtection !== false;
     $('#header-fade').checked = header.fadeIn !== false;
     $('#category-name').value = '';
     say('');
