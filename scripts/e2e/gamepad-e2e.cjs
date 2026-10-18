@@ -14,7 +14,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { app, BrowserWindow, desktopCapturer, screen } = require('electron');
 
-const ROOT = path.resolve(__dirname, '..', '..');
+// HML_E2E_ROOT points the run at the checkout that holds the real .env (the main repo), defaulting to this worktree.
+const ROOT = process.env.HML_E2E_ROOT ? path.resolve(process.env.HML_E2E_ROOT) : path.resolve(__dirname, '..', '..');
 const COPY_FILES = ['config.json', 'remote-apps.json', 'themes.json'];
 const BUTTON = Object.freeze({ A: 0, B: 1, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 });
 const PRESS_MS = 120;
