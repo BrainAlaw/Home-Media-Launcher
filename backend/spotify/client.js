@@ -1,6 +1,6 @@
 'use strict';
 
-const { mapPlayback, mapDevice, mapPlaylist, mapPlaylistTracks, mapSearch } = require('./mappers');
+const { mapPlayback, mapDevice, mapPlaylist, mapPlaylistTracks, mapSearch, mapForYou } = require('./mappers');
 
 const API_BASE = 'https://api.spotify.com/v1';
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -259,7 +259,26 @@ function createClient({ auth, fetch: fetchImpl = globalThis.fetch, sleep = defau
     return unwrap(result, (data) => ({ items: mapPlaylistTracks(data), ...pageInfo(data, start, (data?.items || []).length) }));
   }
 
-  return { request, me, getState, devices, transfer, openSpotifyApp, control, setVolume, play, search, playlists, playlistTracks };
+  /** Home shelves in one call. A shelf whose request fails is left empty; `needsReauth` flags a 403 (token lacks a new scope). */
+  async function forYou() {
+    const calls = {
+      playlists: ['/me/playlists', { limit: PAGE_SIZE }],
+      recent: ['/me/player/recently-played', { limit: 30 }],
+      topTracks: ['/me/top/tracks', { limit: 20, time_range: 'short_term' }],
+      topArtists: ['/me/top/artists', { limit: 20, time_range: 'medium_term' }],
+      savedAlbums: ['/me/albums', { limit: 20 }],
+      newReleases: ['/browse/new-releases', { limit: 20 }]
+    };
+    const entries = await Promise.all(Object.entries(calls).map(async ([key, [path, query]]) => [key, await request('GET', path, { query })]));
+    const results = Object.fromEntries(entries);
+    const auth = entries.find(([, result]) => !result.ok && result.code === 'AUTH');
+    if (auth) return auth[1];
+    if (entries.every(([, result]) => !result.ok)) return entries[0][1];
+    const raw = Object.fromEntries(entries.map(([key, result]) => [key, result.ok ? result.data : null]));
+    return { ok: true, ...mapForYou(raw), needsReauth: entries.some(([, result]) => !result.ok && result.status === 403) };
+  }
+
+  return { request, me, forYou, getState, devices, transfer, openSpotifyApp, control, setVolume, play, search, playlists, playlistTracks };
 }
 
 module.exports = { createClient, planCommand, buildPlayRequest, FRIENDLY, API_BASE, PAGE_SIZE, SEARCH_LIMIT };

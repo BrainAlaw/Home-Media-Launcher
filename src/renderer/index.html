@@ -39,11 +39,12 @@
         <div id="weather"></div>
       </div>
       <div id="clock"></div>
+      <div id="media-widget-slot"></div>
       <div class="header-actions">
         <div id="header-status" class="header-status">
-          <button id="host-indicator" class="status-chip" type="button" data-target="host" data-state="disabled" aria-label="Game host status" aria-controls="system-panel" hidden></button>
-          <button id="tailscale-indicator" class="status-chip" type="button" data-target="tailscale" data-state="unavailable" aria-label="Tailscale unavailable" aria-controls="system-panel" hidden></button>
-          <button id="surfshark-indicator" class="status-chip" type="button" data-target="surfshark" data-state="unavailable" aria-label="Surfshark unavailable" aria-controls="system-panel" hidden></button>
+          <div id="host-indicator" class="status-chip" role="img" data-target="host" aria-label="Game host status" hidden></div>
+          <div id="tailscale-indicator" class="status-chip" role="img" data-target="tailscale" aria-label="Tailscale unavailable" hidden></div>
+          <div id="surfshark-indicator" class="status-chip" role="img" data-target="surfshark" aria-label="Surfshark unavailable" hidden></div>
           <div id="network-indicator" class="status-chip" role="img" aria-label="Network status unavailable" hidden></div>
         </div>
         <button id="system-button" class="icon-button" aria-label="System menu" aria-expanded="false" aria-controls="system-panel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></button>
@@ -51,24 +52,15 @@
     </header>
     <div id="empty" hidden>No tiles selected. Press B or Esc, then open Settings to add some.</div>
     <section id="rows" role="tabpanel" aria-label="Applications" tabindex="-1">
-      <!-- Mount point for the media widget (agent M2): left-aligned, takes space only while it has content. -->
-      <div id="media-widget-slot"></div>
       <div id="grid-content"></div>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
-  <aside id="system-panel" class="panel menu-panel" role="dialog" aria-modal="true" aria-labelledby="system-heading" aria-hidden="true" hidden inert>
-    <div class="menu-heading">
-      <h2 id="system-heading">Quick settings</h2>
-    </div>
-    <section class="status-cards" aria-label="Game host, network and weather">
+  <aside id="system-panel" class="panel menu-panel" role="dialog" aria-modal="true" aria-label="Quick settings" aria-hidden="true" hidden inert>
+    <section class="status-cards" aria-label="Game host and weather">
       <div id="host-card" class="status-card" data-kind="host" data-state="disabled" hidden>
         <span class="status-card-icon" aria-hidden="true"></span>
         <span class="status-card-copy"><strong>Game host</strong><small></small><small class="host-sync"></small></span>
-      </div>
-      <div id="network-card" class="status-card" data-kind="network">
-        <span class="status-card-icon" aria-hidden="true"></span>
-        <span class="status-card-copy"><strong>Network</strong><small>Checking…</small></span>
       </div>
       <div id="weather-card" class="status-card" data-kind="weather" hidden>
         <span class="status-card-icon" aria-hidden="true"></span>
@@ -77,6 +69,12 @@
       </div>
     </section>
     <div class="menu-items">
+      <button id="network-card" type="button" class="menu-action network-action" data-tone="idle" aria-label="Network. Run a 20 second speed test">
+        <span class="menu-symbol" aria-hidden="true"></span>
+        <span class="menu-copy"><strong>Network</strong><small>Checking…</small></span>
+        <span class="net-action" aria-hidden="true">Speed test</span>
+        <span class="net-progress" aria-hidden="true"><i></i></span>
+      </button>
       <button id="settings-button" class="menu-action primary">
         <span class="menu-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M8 4v6m8 4v6"/></svg></span>
         <span class="menu-copy"><strong>Settings</strong><small>Appearance, wallpapers, apps, remote host</small></span>
@@ -140,6 +138,7 @@
             <div id="font-picker" class="select-field" role="group" aria-label="Interface font"></div>
             <h3>Home screen</h3>
             <label class="toggle-row"><span>Show labels on tiles</span><input id="show-tile-labels" type="checkbox"></label>
+            <label class="toggle-row"><span>Show category headings</span><input id="show-category-headings" type="checkbox"></label>
             <label class="toggle-row"><span>Show media widget</span><input id="media-widget-toggle" type="checkbox"></label>
             <h4>Header layout</h4>
             <div id="header-layout" class="segmented" role="group" aria-label="Header layout">
@@ -306,6 +305,7 @@
   <script src="on-screen-keyboard.js"></script>
   <script src="media-view-model.js"></script>
   <script src="media-view.js"></script>
+  <script src="spotify-web.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

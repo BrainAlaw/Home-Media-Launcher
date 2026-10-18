@@ -219,7 +219,7 @@ export interface ExtBridge {
   invoke<T = unknown>(namespace: ExtNamespace, method: string, ...args: unknown[]): Promise<T>;
   on<T = unknown>(namespace: ExtNamespace, event: string, callback: (value: T) => void): () => void;
 }
-export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input' | 'media' | 'soloist';
+export type ExtNamespace = 'system' | 'vpn' | 'icons' | 'session' | 'remote' | 'weather' | 'input' | 'media' | 'soloist' | 'spotifyweb';
 
 /** ns `system` (agent B). Events: `network` (NetworkStatus). Methods: `getNetwork()`. */
 export interface NetworkStatus {
@@ -309,7 +309,7 @@ export interface Iteration4Settings {
 
 /* ------------------------------------------------------------------ Iteration 5: ns `media` (Spotify Web API, PKCE)
  * Backend: M1 (src/main/ext/media.js + backend/spotify/). Widget: M2. Music view: M3. Tokens never reach the renderer.
- * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId),
+ * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId), connectDesktop(),
  *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp(),
  *          setActive(active: boolean) -> { ok, active }  (iteration 6, additive: the renderer reports whether any media UI is
  *          visible; the backend polls GET /me/player only while active, default inactive, immediate fetch on activation).
@@ -347,6 +347,8 @@ export interface Iteration5Settings {
   categories?: Array<{ id: string; label: string; builtin?: 'theatre' | 'gaming' }>;
   /** AP: show labels on tiles */
   showTileLabels?: boolean;
+  /** AP: show category headings above home screen tile rows */
+  showCategoryHeadings?: boolean;
   /** H1/AP: header layout */
   homeHeader?: { layout: 'split' | 'centred'; showSeconds?: boolean; oledProtection?: boolean; fadeIn?: boolean };
   /** M2: show the media widget on the home screen */

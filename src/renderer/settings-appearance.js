@@ -128,6 +128,7 @@ window.AppearanceSettings = (function () {
     const header = settings.homeHeader || {};
     headerLayout = header.layout === 'centred' ? 'centred' : 'split';
     $('#show-tile-labels').checked = settings.showTileLabels !== false;
+    $('#show-category-headings').checked = settings.showCategoryHeadings !== false;
     $('#media-widget-toggle').checked = settings.mediaWidget !== false;
     $('#header-seconds').checked = header.showSeconds === true;
     $('#header-oled').checked = header.oledProtection !== false;
@@ -143,6 +144,7 @@ window.AppearanceSettings = (function () {
     return {
       categories: Categories.normalise(categories),
       showTileLabels: $('#show-tile-labels').checked,
+      showCategoryHeadings: $('#show-category-headings').checked,
       mediaWidget: $('#media-widget-toggle').checked,
       homeHeader: {
         layout: headerLayout,

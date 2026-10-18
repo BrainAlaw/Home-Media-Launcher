@@ -8,7 +8,9 @@ const SCOPES = Object.freeze([
   'user-read-currently-playing',
   'playlist-read-private',
   'playlist-read-collaborative',
-  'user-library-read'
+  'user-library-read',
+  'user-top-read',
+  'user-read-recently-played'
 ]);
 
 const AUTHORIZE_URL = 'https://accounts.spotify.com/authorize';

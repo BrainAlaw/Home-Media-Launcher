@@ -68,7 +68,10 @@ class MediaService {
     this.active = false;
     this.authState = clientId ? { status: 'signed-out' } : { status: 'unconfigured' };
     this.auth = new SpotifyAuth({ clientId, fetch: fetchImpl, safeStorage, tokenPath: userData ? path.join(userData, 'spotify-tokens.json') : '', openExternal, ports, loginTimeoutMs, createServer, now });
-    this.client = createClient({ auth: this.auth, fetch: fetchImpl, sleep, now, openApp: () => (openExternal ? openExternal('spotify:') : Promise.reject(new Error('No launcher'))), getLastDeviceId: () => this.lastDeviceId });
+    this.client = createClient({ auth: this.auth, fetch: fetchImpl, sleep, now, openApp: async () => {
+      const result = await require('../spotify-desktop').ensureSpotifyDesktop();
+      if (!result.ok) throw new Error(result.error || 'Could not start Spotify on this PC.');
+    }, getLastDeviceId: () => this.lastDeviceId });
     this.auth.onChange((event) => { void this.#onAuth(event); });
   }
 
@@ -399,6 +402,40 @@ class MediaService {
     return this.#afterCommand(result);
   }
 
+  /** Connects the web player to this PC's Spotify desktop device, waiting briefly for the device to appear. */
+  async connectDesktop() {
+    const blocked = this.#guard();
+    if (blocked) return blocked;
+    const desktop = await require('../spotify-desktop').ensureSpotifyDesktop();
+    if (!desktop.ok) return { ok: false, code: 'APP_LAUNCH', error: desktop.error || 'Could not start Spotify on this PC.' };
+    const hostname = String(process.env.COMPUTERNAME || require('node:os').hostname()).trim().toLowerCase();
+    for (let attempt = 0; attempt < 14; attempt += 1) {
+      const listing = await this.client.devices();
+      if (!listing.ok) {
+        if (listing.code === 'AUTH') return listing;
+        if (listing.code !== 'HTTP_404') return { ok: false, error: listing.error, code: listing.code };
+      } else {
+        const computers = listing.devices.filter((device) => device.type === 'computer');
+        const target = computers.find((device) => device.name.trim().toLowerCase() === hostname)
+          || computers.find((device) => device.id === this.lastDeviceId)
+          || (computers.length === 1 ? computers[0] : null);
+        if (target) {
+          if (!target.active) {
+            const moved = await this.client.transfer(target.id, true);
+            if (!moved.ok) return { ok: false, error: moved.error, code: moved.code };
+          }
+          this.lastDeviceId = target.id;
+          this.playback = { ...this.playback, device: { ...target, active: true } };
+          this.#publish();
+          return { ok: true, deviceId: target.id };
+        }
+      }
+      if (attempt === 13) break;
+      await new Promise((resolve) => setTimeout(resolve, 750));
+    }
+    return { ok: false, code: 'NO_DESKTOP_DEVICE', error: 'Spotify desktop is not available on this PC.' };
+  }
+
   async search(query, types) {
     const blocked = this.#guard();
     const empty = { tracks: [], albums: [], playlists: [], artists: [] };
@@ -412,6 +449,14 @@ class MediaService {
     if (blocked) return { ...blocked, items: [], total: 0, offset: 0, nextOffset: null };
     const result = await this.client.playlists(offset);
     return result.ok ? result : { ok: false, error: result.error, code: result.code, items: [], total: 0, offset: 0, nextOffset: null };
+  }
+
+  async forYou() {
+    const blocked = this.#guard();
+    const empty = { madeForYou: [], recent: [], topTracks: [], topArtists: [], albums: [], newReleases: [] };
+    if (blocked) return { ...blocked, ...empty };
+    const result = await this.client.forYou();
+    return result.ok ? result : { ok: false, error: result.error, code: result.code, ...empty };
   }
 
   async playlistTracks(id, offset) {

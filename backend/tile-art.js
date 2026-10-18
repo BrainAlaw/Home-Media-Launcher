@@ -208,14 +208,15 @@ function glyphForName(name) {
 }
 
 /** Placement of a poster (aspect = width / height) centred in the tile at 86% of its height. */
-function posterBox(width, height, aspect) {
+function posterBox(width, height, aspect, fill = false) {
+  if (fill) return { x: 0, y: 0, width, height };
   const boxHeight = Math.round(height * 0.86);
   const boxWidth = Math.round(boxHeight * (aspect > 0.2 && aspect < 3 ? aspect : 2 / 3));
   return { x: Math.round((width - boxWidth) / 2), y: Math.round((height - boxHeight) / 2), width: boxWidth, height: boxHeight };
 }
 
 /**
- * Premium 16:9 tile: soft brand gradient with a top light and one of
+ * Premium 16:9 tile (or a 2:3 portrait tile for game rows with `portrait`): soft brand gradient with a top light and one of
  * - a centred continuous-corner mark (46% of the height) holding the service icon,
  * - the same mark holding a bold monogram or a stroke glyph (no icon available),
  * - a centred game poster (86% of the height) on the gradient, or a full-bleed hero crop.
@@ -223,14 +224,14 @@ function posterBox(width, height, aspect) {
  *
  * With `logoDataUrl` (a wide, usually transparent logo) the logo is shown contained and centred instead of the mark.
  *
- * @param {{ name: string, mono?: string, glyph?: string | null, color?: string, iconDataUrl?: string | null, logoDataUrl?: string | null, posterDataUrl?: string | null, posterAspect?: number, heroDataUrl?: string | null, iconLuminance?: number, iconTransparent?: boolean, width?: number, height?: number }} options
+ * @param {{ portrait?: boolean (2:3 tile, 600x900 by default), name: string, mono?: string, glyph?: string | null, color?: string, iconDataUrl?: string | null, logoDataUrl?: string | null, posterDataUrl?: string | null, posterAspect?: number, heroDataUrl?: string | null, iconLuminance?: number, iconTransparent?: boolean, width?: number, height?: number }} options
  * @returns {string}
  */
-function composeTile({ name, mono, glyph = null, color = '#3a3f4b', iconDataUrl = null, logoDataUrl = null, posterDataUrl = null, posterAspect = 2 / 3, heroDataUrl = null, iconLuminance = 0.5, iconTransparent = false, width = ICON_SIZES.tile.width, height = ICON_SIZES.tile.height }) {
+function composeTile({ name, mono, glyph = null, color = '#3a3f4b', iconDataUrl = null, logoDataUrl = null, posterDataUrl = null, posterAspect = 2 / 3, heroDataUrl = null, iconLuminance = 0.5, iconTransparent = false, portrait = false, width = portrait ? ICON_SIZES.poster.width : ICON_SIZES.tile.width, height = portrait ? ICON_SIZES.poster.height : ICON_SIZES.tile.height }) {
   const base = parseHex(color);
   const top = toHex(mix(base, [255, 255, 255], 0.22));
   const bottom = toHex(mix(base, [0, 0, 0], 0.5));
-  const size = Math.round(height * 0.46);
+  const size = Math.round(Math.min(width, height) * 0.46);
   const x = Math.round((width - size) / 2);
   const y = Math.round((height - size) / 2);
   const path = squirclePath(x, y, size);
@@ -258,12 +259,13 @@ function composeTile({ name, mono, glyph = null, color = '#3a3f4b', iconDataUrl 
   }
   parts.push(`<rect width="${width}" height="${height}" fill="url(#bg)"/>`, `<rect width="${width}" height="${height}" fill="url(#glow)"/>`);
   if (posterDataUrl) {
-    const box = posterBox(width, height, posterAspect);
-    const radius = Math.round(height * 0.018);
+    // Portrait tiles show the poster edge to edge (the tile's own rounded corners clip it); landscape tiles float it on the gradient.
+    const box = posterBox(width, height, posterAspect, portrait);
+    const radius = portrait ? 0 : Math.round(height * 0.018);
     const rect = `x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" rx="${radius}"`;
     parts.push(
       `<clipPath id="poster"><rect ${rect}/></clipPath>`,
-      `<rect ${rect} fill="#000" filter="url(#shadow)"/>`,
+      ...(portrait ? [] : [`<rect ${rect} fill="#000" filter="url(#shadow)"/>`]),
       `<image href="${posterDataUrl}" xlink:href="${posterDataUrl}" x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}" preserveAspectRatio="xMidYMid slice" clip-path="url(#poster)"/>`,
       `<rect ${rect} fill="none" stroke="#fff" stroke-opacity="0.2" stroke-width="2"/>`
     );

@@ -56,7 +56,6 @@ const bundledCredit = (entry) => window.WallpaperCredit.fromBundled(entry);
 const systemPanel = document.querySelector('#system-panel');
 const systemButton = document.querySelector('#system-button');
 const settingsDialog = document.querySelector('#settings-dialog');
-const headerStatus = document.querySelector('#header-status');
 const autostartSwitch = document.querySelector('#autostart');
 let toastTimer;
 let cursorTimer;
@@ -467,9 +466,9 @@ function preloadMedia(source) {
   if (mediaPreloadCache.size > 8) mediaPreloadCache.delete(mediaPreloadCache.keys().next().value);
 }
 
-/** Focusable header controls in visual order (left to right). */
+/** Focusable header controls in visual order (left to right). The status indicators are display only. */
 function headerButtons() {
-  return [...headerStatus.querySelectorAll('button.status-chip:not([hidden])'), systemButton];
+  return [systemButton];
 }
 
 function focusables() {
@@ -479,6 +478,7 @@ function focusables() {
 /** Tile name labels are hidden by CSS; the tile button keeps its aria-label. */
 function applyTileLabels(settings) {
   document.body.classList.toggle('tile-labels-off', settings?.showTileLabels === false);
+  document.body.classList.toggle('category-headings-off', settings?.showCategoryHeadings === false);
 }
 
 function render(model) {
@@ -506,7 +506,7 @@ function render(model) {
   if (widgetWasFocused && !mediaWidget.canFocus()) { state.focusEl.classList.remove('focused'); state.focusEl = null; }
 
   const previous = state.focusEl && { element: state.focusEl, id: state.focusEl.dataset.tileId, row: state.focusEl.dataset.row };
-  const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles, ...(row.emptyMessage ? { emptyMessage: row.emptyMessage } : {}) }));
+  const gridRows = layout.rows.map((row) => ({ id: row.id, title: row.title, items: row.tiles, shape: row.shape, ...(row.emptyMessage ? { emptyMessage: row.emptyMessage } : {}) }));
   spatialGrid.setRows(gridRows);
   const empty = document.querySelector('#empty');
   empty.hidden = tiles.length > 0;
@@ -674,7 +674,7 @@ async function toggleSystemPanel(force) {
   systemButton.setAttribute('aria-expanded', String(open));
   state.view = open ? 'system' : 'home';
   if (open) {
-    focusMenu(0);
+    focusMenu(menuItems().indexOf(document.querySelector('#settings-button')));
     try {
       const enabled = await window.launcher.getAutostart();
       if (request === systemRequest && state.view === 'system') window.MenuSwitch.setSwitch(autostartSwitch, enabled);
@@ -736,6 +736,7 @@ function handleAction(action) {
   homeHeader.wake();
   if (state.locked) return;
   // Overlays with their own input: the on-screen keyboard (above everything) and the music view.
+  if (state.view === 'spotifyweb') { window.SpotifyWeb.handleAction(action); return; }
   if (window.OnScreenKeyboard.handleAction(action) || window.MediaView.handleAction(action)) return;
   const isDirection = ['up', 'down', 'left', 'right'].includes(action);
   if (state.view === 'home') {
@@ -758,6 +759,31 @@ function handleAction(action) {
     else if (action === 'back' && !window.SettingsDialog.dismissPopup()) closeSettings();
   }
 }
+
+/** Spotify web player panel (opened by the home media widget): the page owns input while `state.view === 'spotifyweb'`. */
+document.addEventListener('launcher:open-spotify-web', () => {
+  if (state.view !== 'home' || state.locked) return;
+  const opener = state.focusEl;
+  state.view = 'spotifyweb';
+  const opened = window.SpotifyWeb.show({
+    onClose: () => {
+      state.view = 'home';
+      if (opener?.isConnected) setFocus(opener, { scroll: false });
+      else setFocus(state.focusEl || systemButton, { scroll: false });
+    }
+  });
+  if (!opened) { state.view = 'home'; showToast('Spotify web is unavailable'); }
+  else if (window.launcher?.ext) {
+    void window.launcher.ext.invoke('media', 'connectDesktop').then((result) => {
+      if (result && !result.ok) showToast(`Spotify: ${result.error || 'Could not connect to this PC.'}`);
+    }).catch((error) => showToast(`Spotify: ${error.message || 'Could not connect to this PC.'}`));
+  }
+});
+
+document.addEventListener('launcher:toggle-spotify-web', () => {
+  if (window.SpotifyWeb?.isOpen) window.SpotifyWeb.hide();
+  else document.dispatchEvent(new CustomEvent('launcher:open-spotify-web'));
+});
 
 /** Music view (opened by the home media widget): owns input while `state.view === 'media'`; focus returns to the opener. */
 document.addEventListener('launcher:open-media-view', () => {
@@ -825,14 +851,6 @@ systemPanel.addEventListener('focusin', (event) => { const index = menuItems().i
 document.querySelector('#settings-button').addEventListener('click', openSettings);
 window.StatusWidgets.init({ showToast });
 window.SoloistStatus.init({ showToast });
-// Header status chips (host, Tailscale, Surfshark) open quick settings with focus on their own row.
-headerStatus.addEventListener('click', async (event) => {
-  const chip = event.target.closest('button.status-chip');
-  if (!chip || state.view !== 'home') return;
-  await toggleSystemPanel(true);
-  const index = menuItems().indexOf(window.StatusWidgets.controlFor(chip.dataset.target));
-  if (index >= 0) focusMenu(index);
-});
 document.querySelector('#quit-button').addEventListener('click', () => window.launcher.systemAction('quit'));
 document.querySelector('#poweroff-button').addEventListener('click', () => {
   if (confirm('Shut down this PC? All open applications will be closed.')) window.launcher.systemAction('poweroff');

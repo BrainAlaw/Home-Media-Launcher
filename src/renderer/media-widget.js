@@ -29,7 +29,8 @@
     repeat: '<path d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
     'volume-down': '<path d="M4 9.5v5h3.6L13 19V5L7.6 9.5z" fill="currentColor"/><path d="M16.2 9.4a3.6 3.6 0 0 1 0 5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     'volume-up': '<path d="M3 9.5v5h3.6L12 19V5L6.6 9.5z" fill="currentColor"/><path d="M15.2 9.4a3.6 3.6 0 0 1 0 5.2M18.2 6.6a7.6 7.6 0 0 1 0 10.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-    library: '<path d="M4 6h11M4 11h7M4 16h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 8v8.2a2.4 2.4 0 1 1-2-2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    fullscreen: '<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+    spotify: '<circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M6.9 9.5c3.7-1.1 7.7-.8 10.5 1M7.5 12.6c3-.9 6.2-.6 8.7.9M8.1 15.6c2.4-.7 4.7-.4 6.6.7" fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round"/>',
     note: '<path d="M9 18V5.5l11-2V16M9 18a3 3 0 1 1-3-3 3 3 0 0 1 3 3zm11-2a3 3 0 1 1-3-3 3 3 0 0 1 3 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
   });
 
@@ -126,6 +127,10 @@
     slot.hidden = true;
     let current = MC.normaliseState({ auth: { status: 'signed-out' } });
     let view = MC.buildViewModel(current);
+    let volumeTarget = null;
+    let volumeQueue = Promise.resolve();
+    let volumeGeneration = 0;
+    let volumeTimer = 0;
     let lastUpdatedAt = 0;
     let structureKey = '';
     let artUrl = '';
@@ -145,8 +150,8 @@
 
     function makeButton(id) {
       const button = el('button', `mw-btn mw-${id}`, { type: 'button', tabindex: '-1', 'data-action': id });
-      if (id === 'library') button.innerHTML = `${svg('library')}<span class="mw-btn-label">Library</span>`;
-      else if (id === 'open-spotify' || id === 'login' || id === 'retry') button.innerHTML = '<span class="mw-btn-label"></span>';
+      if (id === 'spotify') button.innerHTML = `${svg('fullscreen')}<span class="mw-btn-label">Fullscreen</span>`;
+      else if (id === 'login' || id === 'retry') button.innerHTML = '<span class="mw-btn-label"></span>';
       else if (id === 'repeat') button.innerHTML = `${svg('repeat')}<b class="mw-badge" aria-hidden="true">1</b>`;
       else if (id === 'toggle') button.innerHTML = `${svg('play')}${svg('pause')}`;
       else button.innerHTML = svg(id);
@@ -268,7 +273,8 @@
         if (id === 'shuffle') button.setAttribute('aria-pressed', String(view.shuffle));
         if (id === 'repeat') { button.setAttribute('aria-pressed', String(view.repeat !== 'off')); button.dataset.repeat = view.repeat; }
         const labelNode = button.querySelector('.mw-btn-label');
-        if (labelNode && id !== 'library') labelNode.textContent = label;
+        if (labelNode && id === 'spotify') labelNode.textContent = activity.web ? 'Hide Spotify' : 'Fullscreen';
+        if (id === 'spotify') button.setAttribute('aria-label', activity.web ? 'Hide Spotify' : 'Open Spotify fullscreen');
       }
       const level = controls.querySelector('.mw-volume');
       if (level) {
@@ -316,6 +322,7 @@
       if (updatedAt) lastUpdatedAt = updatedAt;
       const previousTrack = current.track && current.track.id;
       current = MC.normaliseState(raw);
+      if (volumeTarget !== null && current.auth.status === 'signed-in') current.volume = volumeTarget;
       if (pendingTrackToast && Date.now() - pendingTrackToast.at < NEXT_TOAST_WINDOW_MS && current.track && current.track.id !== (pendingTrackToast.trackId || previousTrack)) {
         pendingTrackToast = null;
         showToast(`Now playing: ${current.track.title}${current.track.artists.length ? ` - ${current.track.artists.join(', ')}` : ''}`);
@@ -330,6 +337,10 @@
         render();
         void refresh();
       } else {
+        volumeGeneration += 1;
+        clearTimeout(volumeTimer);
+        volumeTimer = 0;
+        volumeTarget = null;
         current = MC.normaliseState({ auth });
         render();
       }
@@ -374,13 +385,43 @@
       }
     }
 
+    /** Serialises absolute volume writes so rapid clicks build on the latest requested level, not a stale poll. */
+    function changeVolume(direction) {
+      if (!enabled) return;
+      const base = volumeTarget ?? current.volume ?? 50;
+      volumeTarget = Math.max(0, Math.min(100, base + direction * MC.VOLUME_STEP));
+      volumeGeneration += 1;
+      current.volume = volumeTarget;
+      render();
+      clearTimeout(volumeTimer);
+      volumeTimer = window.setTimeout(() => {
+        volumeTimer = 0;
+        const target = volumeTarget;
+        const generation = volumeGeneration;
+        volumeQueue = volumeQueue.then(async () => {
+          if (generation !== volumeGeneration) return;
+          try {
+            await call('setVolume', target);
+            if (generation === volumeGeneration) { volumeTarget = null; void refresh(); }
+          } catch (error) {
+            if (generation === volumeGeneration) {
+              volumeTarget = null;
+              showToast(`Spotify: ${describeFailure(error)}`);
+              void refresh();
+            }
+          }
+        });
+      }, 140);
+    }
+
     async function activate(id) {
       if (!enabled) return;
       try {
-        if (id === 'library') openView();
+        if (id === 'spotify') document.dispatchEvent(new CustomEvent('launcher:toggle-spotify-web'));
         else if (id === 'login') await call('login');
         else if (id === 'retry') { showToast('Reconnecting to Spotify...'); await refresh(); }
-        else if (id === 'open-spotify') { showToast('Opening Spotify...'); await call('openSpotifyApp'); window.setTimeout(() => { void refresh(); }, 2500); }
+        else if (id === 'volume-up') changeVolume(1);
+        else if (id === 'volume-down') changeVolume(-1);
         else {
           const command = MC.commandFor(id, view);
           if (command) await run(command);
@@ -456,6 +497,14 @@
 
     return {
       element: root,
+      setSpotifyWebOpen(open) {
+        activity.web = Boolean(open);
+        root.classList.toggle('web-open', activity.web);
+        const button = buttons.get('spotify');
+        const label = button?.querySelector('.mw-btn-label');
+        if (label) label.textContent = activity.web ? 'Hide Spotify' : 'Fullscreen';
+        if (button) button.setAttribute('aria-label', activity.web ? 'Hide Spotify' : 'Open Spotify fullscreen');
+      },
       /** Hides the widget and reserves no space when disabled (settings.mediaWidget === false). */
       setEnabled(value) {
         const next = value !== false;
@@ -478,7 +527,7 @@
       dispose() {
         disposed = true;
         syncActivity();
-        clearInterval(ticker); clearTimeout(endRefresh);
+        clearInterval(ticker); clearTimeout(endRefresh); clearTimeout(volumeTimer);
         for (const off of unsubscribers) off();
         slot.removeChild(root);
       }
@@ -490,6 +539,19 @@
     /** Opens the full music view (M3 listens to `launcher:open-media-view`). Usable without an initialised widget. */
     openView() { document.dispatchEvent(new CustomEvent('launcher:open-media-view', { detail: { source: 'api' } })); },
     /** Called by the music view on open/close so the backend keeps polling while it is on screen. */
-    setViewOpen(open) { activity.view = Boolean(open); reportActivity(); }
+    setSpotifyWebOpen(open) {
+      const value = Boolean(open);
+      activity.web = value;
+      const root = document.getElementById('media-widget');
+      root?.classList.toggle('web-open', value);
+      const label = root?.querySelector('[data-action="spotify"] .mw-btn-label');
+      if (label) label.textContent = value ? 'Hide Spotify' : 'Fullscreen';
+      const button = root?.querySelector('[data-action="spotify"]');
+      if (button) button.setAttribute('aria-label', value ? 'Hide Spotify' : 'Open Spotify fullscreen');
+    },
+    setViewOpen(open) {
+      activity.view = Boolean(open);
+      reportActivity();
+    }
   };
 })();

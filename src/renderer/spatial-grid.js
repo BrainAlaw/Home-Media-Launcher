@@ -125,6 +125,7 @@
         const section = document.createElement('section');
         section.className = 'row';
         section.dataset.row = data.id;
+        if (data.shape) section.dataset.shape = data.shape;
         section.setAttribute('role', 'group');
 
         const head = document.createElement('div');

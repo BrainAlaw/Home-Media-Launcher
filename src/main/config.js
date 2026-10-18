@@ -93,7 +93,7 @@ function validateConfig(config) {
   if (config.settings?.performance !== undefined && !['auto', 'quality', 'lite'].includes(config.settings.performance)) throw new Error('performance must be "auto", "quality" or "lite"');
   if (config.settings?.fontId !== undefined && (typeof config.settings.fontId !== 'string' || !/^[a-z0-9-]{1,40}$/.test(config.settings.fontId))) throw new Error('fontId must be a font identifier');
   if (config.settings?.categories !== undefined) Categories.validate(config.settings.categories);
-  for (const key of ['showTileLabels', 'mediaWidget']) {
+  for (const key of ['showTileLabels', 'showCategoryHeadings', 'mediaWidget']) {
     if (config.settings?.[key] !== undefined && typeof config.settings[key] !== 'boolean') throw new Error(`${key} must be boolean`);
   }
   validateSoloistSettings(config.settings?.soloist);

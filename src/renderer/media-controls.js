@@ -16,7 +16,7 @@
   const MAX_VOLUME = 100;
   const REPEAT_CYCLE = Object.freeze({ off: 'context', context: 'track', track: 'off' });
 
-  /** @typedef {'prev'|'toggle'|'next'|'shuffle'|'repeat'|'volume-down'|'volume-up'|'library'|'open-spotify'|'login'|'retry'} ActionId */
+  /** @typedef {'prev'|'toggle'|'next'|'shuffle'|'repeat'|'volume-down'|'volume-up'|'spotify'|'login'|'retry'} ActionId */
 
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -92,8 +92,7 @@
 
   const ACTION_LABELS = Object.freeze({
     prev: 'Previous', toggle: 'Play', next: 'Next', shuffle: 'Shuffle', repeat: 'Repeat',
-    'volume-down': 'Volume down', 'volume-up': 'Volume up', library: 'Library',
-    'open-spotify': 'Open Spotify', login: 'Connect Spotify', retry: 'Retry'
+    'volume-down': 'Volume down', 'volume-up': 'Volume up', spotify: 'Open Spotify fullscreen', login: 'Connect Spotify', retry: 'Retry'
   });
 
   /**
@@ -117,20 +116,20 @@
     const auth = state.auth;
     switch (auth.status) {
       case 'unconfigured':
-        return finish({ ...base, kind: 'unconfigured', title: 'Spotify is not set up', subtitle: 'Add SPOTIFY_CLIENT_ID to .env and restart.', detail: 'See backend/spotify/README for the 2-minute setup.' });
+        return finish({ ...base, kind: 'unconfigured', title: 'Spotify is not set up', subtitle: 'Add SPOTIFY_CLIENT_ID to .env and restart.', detail: 'See backend/spotify/README for the 2-minute setup.', controls: ['spotify'] });
       case 'signed-out':
-        return finish({ ...base, kind: 'signed-out', title: 'Connect Spotify', subtitle: 'Control your music from the couch.', cardActions: ['login'] });
+        return finish({ ...base, kind: 'signed-out', title: 'Connect Spotify', subtitle: 'Control your music from the couch.', cardActions: ['login'], controls: ['spotify'] });
       case 'signing-in':
-        return finish({ ...base, kind: 'signing-in', title: 'Finish signing in in your browser', subtitle: typeof auth.url === 'string' && auth.url ? auth.url : 'Waiting for Spotify...', detail: typeof auth.url === 'string' ? auth.url : '', cardActions: ['login'] });
+        return finish({ ...base, kind: 'signing-in', title: 'Finish signing in in your browser', subtitle: typeof auth.url === 'string' && auth.url ? auth.url : 'Waiting for Spotify...', detail: typeof auth.url === 'string' ? auth.url : '', cardActions: ['login'], controls: ['spotify'] });
       case 'error':
-        return finish({ ...base, kind: 'error', title: 'Spotify is unavailable', subtitle: friendlyError(auth.message), cardActions: ['retry', 'login'] });
+        return finish({ ...base, kind: 'error', title: 'Spotify is unavailable', subtitle: friendlyError(auth.message), cardActions: ['retry', 'login'], controls: ['spotify'] });
       default:
         break;
     }
     // signed-in
     const track = state.track;
     if (!track || state.idle) {
-      return finish({ ...base, kind: 'idle', title: 'Nothing playing', subtitle: 'Start Spotify on this device.', cardActions: ['open-spotify'], controls: ['library'] });
+      return finish({ ...base, kind: 'idle', title: 'Nothing playing', subtitle: 'Start Spotify on this device.', controls: ['spotify'] });
     }
     return finish({
       ...base,
@@ -139,7 +138,7 @@
       subtitle: track.artists.join(', ') || track.album,
       artUrl: track.artUrl || '',
       hasTrack: true,
-      controls: ['prev', 'toggle', 'next', 'shuffle', 'repeat', 'volume-down', 'volume-up', 'library'],
+      controls: ['prev', 'toggle', 'next', 'shuffle', 'repeat', 'volume-down', 'volume-up', 'spotify'],
       shuffle: Boolean(state.shuffle),
       repeat: state.repeat || 'off',
       volume: Number.isFinite(state.volume) ? state.volume : null

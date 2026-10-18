@@ -11,14 +11,14 @@
   --mw-card-w: max(360px, calc(660 * var(--hig-unit)));
   --mw-ease: var(--hig-ease-spring-soft);
   position: relative;
-  z-index: 2;
+  z-index: 4;
   flex: none;
-  padding: 0 var(--gutter);
-  margin-bottom: var(--hig-space-3);
+  padding: 0;
+  margin: 0;
 }
 #media-widget-slot[hidden] { display: none; }
 
-.mw { position: relative; isolation: isolate; display: flex; align-items: stretch; gap: var(--hig-space-2); height: var(--mw-h); outline: none; }
+.mw { position: relative; isolation: isolate; display: inline-flex; align-items: stretch; gap: 0; height: var(--mw-h); max-width: calc(100vw - 2 * var(--gutter)); overflow: hidden; outline: none; border: var(--hig-material-edge); border-radius: var(--hig-radius-lg); background: rgb(19 29 49 / .96); box-shadow: var(--hig-elev-2); }
 .mw[data-interactive="false"] .mw-card { opacity: .92; }
 
 /* ---------------------------------------------------------------- glow (opacity only) */
@@ -30,10 +30,10 @@
 .mw-glow.on { opacity: 1; }
 
 /* ---------------------------------------------------------------- compact card */
-.mw-card { position: relative; z-index: 2; display: flex; align-items: center; gap: var(--mw-pad); box-sizing: border-box; width: var(--mw-card-w); padding: var(--mw-pad); border: var(--hig-material-edge); border-radius: var(--hig-radius-lg); background: var(--hig-material-thin); box-shadow: var(--hig-elev-1); transition: transform var(--hig-dur-slow) var(--mw-ease); }
+.mw-card { position: relative; z-index: 2; display: flex; flex: none; align-items: center; gap: var(--mw-pad); box-sizing: border-box; width: var(--mw-card-w); height: 100%; padding: var(--mw-pad); border: 0; border-radius: 0; background: transparent; box-shadow: none; transition: transform var(--hig-dur-slow) var(--mw-ease); }
 .mw.focused .mw-card { transform: translate3d(0, -3px, 0); }
 .mw-card::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: var(--hig-focus-edge); opacity: 0; pointer-events: none; transition: opacity var(--hig-dur-base) var(--hig-ease-standard); }
-.mw.focused .mw-card::after { opacity: 1; }
+.mw.focused::after { content: ''; position: absolute; z-index: 5; inset: 0; border-radius: inherit; box-shadow: var(--hig-focus-edge); pointer-events: none; }
 .mw[data-kind="signed-out"] .mw-card, .mw[data-kind="signing-in"] .mw-card, .mw[data-kind="error"] .mw-card, .mw[data-kind="idle"] .mw-card { width: auto; min-width: min(var(--mw-card-w), 60vw); max-width: calc(var(--mw-card-w) * 1.15); }
 
 .mw-art { position: relative; flex: none; display: grid; place-items: center; width: calc(var(--mw-h) - var(--mw-pad) * 2); height: calc(var(--mw-h) - var(--mw-pad) * 2); overflow: hidden; border-radius: max(2px, calc(var(--hig-radius-lg) - var(--mw-pad))); background: var(--hig-fill-tertiary); color: var(--hig-label-tertiary); }
@@ -44,8 +44,8 @@
 .mw-cover:not([src]) { display: none; }
 
 .mw-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
-.mw-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--hig-font-headline); font-weight: 600; color: var(--hig-label); letter-spacing: var(--title-tracking, 0); }
-.mw-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--hig-font-body); font-weight: 500; color: var(--hig-label-tertiary); }
+.mw-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 clamp(18px, 1.45vw, 30px) / 1.15 var(--font-ui); color: var(--hig-label); letter-spacing: normal; }
+.mw-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 clamp(15px, 1.1vw, 23px) / 1.2 var(--font-ui); color: var(--hig-label-tertiary); }
 .mw[data-kind="signed-out"] .mw-title, .mw[data-kind="signing-in"] .mw-title, .mw[data-kind="error"] .mw-title, .mw[data-kind="idle"] .mw-title, .mw[data-kind="unconfigured"] .mw-title { font: var(--hig-font-callout); font-weight: 600; }
 .mw[data-kind="signed-out"] .mw-subtitle, .mw[data-kind="signing-in"] .mw-subtitle, .mw[data-kind="error"] .mw-subtitle, .mw[data-kind="idle"] .mw-subtitle, .mw[data-kind="unconfigured"] .mw-subtitle { font: var(--hig-font-caption1); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .mw[data-kind="signing-in"] .mw-subtitle { white-space: nowrap; display: block; }
@@ -58,7 +58,7 @@
 /* ---------------------------------------------------------------- buttons (call-to-action group and controls pill) */
 .mw-btn { display: inline-grid; place-items: center; flex: none; box-sizing: border-box; min-width: var(--mw-btn); height: var(--mw-btn); padding: 0; border: 0; border-radius: var(--hig-radius-pill); background: transparent; color: var(--hig-label-secondary); font: var(--hig-font-callout); transition: transform var(--hig-dur-base) var(--mw-ease), background-color var(--hig-dur-fast) var(--hig-ease-standard), color var(--hig-dur-fast) var(--hig-ease-standard); cursor: pointer; }
 .mw-btn svg { width: 46%; height: 46%; }
-.mw-btn:not(.mw-library):not(.mw-open-spotify):not(.mw-login):not(.mw-retry) svg { grid-area: 1 / 1; }
+.mw-btn:not(.mw-spotify):not(.mw-login):not(.mw-retry) svg { grid-area: 1 / 1; }
 .mw-btn[aria-pressed="true"] { color: var(--hig-tint); }
 .mw-btn.active { color: var(--hig-label); background: var(--hig-fill); transform: scale(var(--hig-focus-scale)); box-shadow: var(--hig-focus-edge); }
 .mw.focused .mw-btn.active { background: var(--hig-fill); }
@@ -73,8 +73,10 @@
 .mw-repeat .mw-badge { position: absolute; right: 18%; top: 14%; display: none; font: 700 max(10px, calc(20 * var(--hig-unit)))/1 var(--font-ui); color: var(--hig-tint); }
 .mw-repeat[data-repeat="track"] .mw-badge { display: block; }
 
-.mw-library, .mw-open-spotify, .mw-login, .mw-retry { display: inline-flex; align-items: center; justify-content: center; gap: var(--hig-space-1); padding: 0 var(--hig-space-3); }
-.mw-library svg { width: calc(var(--mw-btn) * .42); height: calc(var(--mw-btn) * .42); }
+.mw-spotify, .mw-login, .mw-retry { display: inline-flex; align-items: center; justify-content: center; gap: var(--hig-space-1); padding: 0 var(--hig-space-3); }
+.mw-spotify svg { width: calc(var(--mw-btn) * .42); height: calc(var(--mw-btn) * .42); }
+.mw-spotify { width: var(--mw-btn); min-width: var(--mw-btn); height: var(--mw-btn); padding: 0; border-radius: var(--hig-radius-pill); }
+.mw-spotify .mw-btn-label { display: none; }
 .mw-btn-label { font: var(--hig-font-callout); font-weight: 600; white-space: nowrap; }
 
 /* Call-to-action group (sign in, open Spotify, retry): always visible, accent filled. */
@@ -84,19 +86,19 @@
 .mw-ctas .mw-btn + .mw-btn { background: var(--hig-fill); color: var(--hig-label); }
 .mw-ctas .mw-btn.active { box-shadow: var(--hig-focus-edge), var(--hig-elev-2); }
 
-/* Controls pill: reserved space, revealed by focus (opacity + translate from behind the card). */
-.mw-controls { position: relative; z-index: 1; display: flex; align-items: center; gap: calc(var(--hig-space-1) * .5); box-sizing: border-box; padding: 0 var(--mw-pad); border: var(--hig-material-edge); border-radius: var(--hig-radius-lg); background: var(--hig-material-thin); box-shadow: var(--hig-elev-1); opacity: 0; visibility: hidden; transform: translate3d(calc(var(--hig-space-3) * -1), 0, 0) scale(.96); transform-origin: left center; transition: opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-slow) var(--mw-ease), visibility 0s linear var(--hig-dur-base); pointer-events: none; }
-.mw.focused .mw-controls { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; pointer-events: auto; }
+/* Controls unfold from the same navy surface as the artwork and track name. */
+.mw-controls { position: relative; z-index: 1; display: flex; flex: 0 1 0; align-items: center; gap: 0; box-sizing: border-box; width: 0; min-width: 0; padding: 0; border: 0; background: transparent; opacity: 0; visibility: hidden; overflow: hidden; transform: translate3d(-10px, 0, 0); transform-origin: left center; transition: flex-basis var(--hig-dur-slow) var(--mw-ease), opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-slow) var(--mw-ease), visibility 0s linear var(--hig-dur-base), padding var(--hig-dur-slow) var(--mw-ease); pointer-events: none; }
+.mw.focused .mw-controls, .mw:hover .mw-controls { flex-basis: max-content; width: auto; gap: max(10px, calc(var(--mw-pad) * .65)); padding: 0 calc(var(--mw-pad) * 1.25); opacity: 1; visibility: visible; transform: none; transition-delay: 0s; pointer-events: auto; }
 
 .mw-volume { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-width: calc(var(--mw-btn) * .8); color: var(--hig-label-secondary); }
 .mw-volume b { font: var(--hig-font-caption1); font-weight: 650; font-variant-numeric: tabular-nums; }
-.mw-volume i { display: block; width: 100%; height: max(3px, calc(5 * var(--hig-unit))); border-radius: var(--hig-radius-pill); background: var(--hig-tint); transform-origin: left center; transform: scaleX(0); transition: transform 200ms var(--hig-ease-standard); }
+.mw-volume i { display: block; width: 100%; height: max(3px, calc(5 * var(--hig-unit))); border-radius: var(--hig-radius-pill); background: var(--hig-tint); transform-origin: left center; transform: scaleX(0); transition: transform 100ms linear; }
 .mw-volume::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: max(3px, calc(5 * var(--hig-unit))); border-radius: var(--hig-radius-pill); background: var(--hig-fill); z-index: -1; }
 .mw-volume[data-known="false"] i { opacity: .25; }
 
 /* ---------------------------------------------------------------- Lite mode and reduced motion: instant, no glow */
 body.perf-lite .mw-glows { display: none; }
-body.perf-lite .mw-card, body.perf-lite .mw-controls { background: var(--menu-material-solid, #20242e); box-shadow: none; }
+body.perf-lite .mw, body.perf-lite .mw-card, body.perf-lite .mw-controls { background: var(--menu-material-solid, #20242e); box-shadow: none; }
 body.perf-lite .mw *, body.perf-lite .mw, body.perf-lite .mw-card::after { transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   .mw *, .mw, .mw-card::after, .mw-controls { transition: none !important; animation: none !important; }
@@ -106,6 +108,27 @@ body.perf-lite .mw *, body.perf-lite .mw, body.perf-lite .mw-card::after { trans
   .mw-btn.active { transform: none; }
 }
 
-/* Primary buttons keep their tint fill while active (the generic active rule above would grey them). */
-.mw.focused .mw-toggle.active, .mw.focused .mw-ctas .mw-btn:first-child.active { background: var(--hig-tint); color: var(--hig-on-tint); }
-.mw.focused .mw-ctas .mw-btn + .mw-btn.active { background: var(--hig-fill); }
+.mw-spotify { background: #1ed760; color: #101b14; font-weight: 700; }
+.mw-spotify svg { width: calc(var(--mw-btn) * .42); height: calc(var(--mw-btn) * .42); }
+.mw-spotify:hover, .mw-spotify.active { background: #1ed760; color: #101b14; box-shadow: 0 0 0 2px rgb(255 255 255 / .72); }
+
+/* The player stays in the header; opening Spotify only compacts its card and reveals the controls. */
+body.sw-open #media-widget-slot { z-index: 10; }
+body.sw-open #media-widget-slot .mw { max-width: 50vw; }
+body.sw-open .mw-controls { flex-basis: max-content; width: auto; gap: max(10px, calc(var(--mw-pad) * .65)); padding: 0 calc(var(--mw-pad) * 1.25); opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+body.sw-open #media-widget-slot .mw-card { width: min(var(--mw-card-w), 25vw); }
+.mw.web-open { height: auto; max-width: none; overflow: visible; border: 0; background: transparent; box-shadow: none; }
+.mw.web-open .mw-glows, .mw.web-open .mw-card, .mw.web-open .mw-ctas { display: none; }
+.mw.web-open .mw-controls { display: flex; flex: none; width: auto; max-width: none; min-width: 0; gap: 0; padding: 0; overflow: visible; opacity: 1; visibility: visible; transform: none; transition: none; pointer-events: auto; }
+.mw.web-open .mw-controls > :not(.mw-spotify) { display: none; }
+.mw.web-open .mw-spotify { min-width: 0; width: clamp(176px, 12vw, 224px); height: max(58px, calc(82 * var(--hig-unit))); padding: 0 22px; border: 1px solid rgb(255 255 255 / .2); border-radius: var(--hig-radius-lg); background: rgb(19 29 49 / .94); color: var(--hig-label); font: 600 clamp(16px, 1vw, 20px) / 1 var(--font-ui); box-shadow: var(--hig-elev-2); }
+.mw.web-open .mw-spotify svg { display: none; }
+.mw.web-open .mw-spotify .mw-btn-label { display: inline; }
+.mw.web-open .mw-spotify:hover, .mw.web-open .mw-spotify.active { background: rgb(34 47 70 / .98); color: var(--hig-label); box-shadow: 0 0 0 2px rgb(255 255 255 / .55), var(--hig-elev-2); }
+@media (max-width: 700px) { .mw.web-open .mw-spotify { width: clamp(150px, 34vw, 190px); height: 54px; } }
+@media (max-width: 1400px) {
+  #media-widget-slot { --mw-h: max(64px, calc(82 * var(--hig-unit))); --mw-btn: max(36px, calc(48 * var(--hig-unit))); --mw-card-w: min(34vw, 440px); }
+  .mw-controls { max-width: 58vw; }
+  .mw.focused .mw-controls, .mw:hover .mw-controls, body.sw-open .mw-controls { overflow-x: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .mw-controls { transition: none; } }

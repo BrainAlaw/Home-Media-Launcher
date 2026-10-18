@@ -360,7 +360,7 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
 
   /* ---------------------------------------------------------------- game tile art (host apps) */
 
-  const gameDirectory = path.join(directory, 'games');
+  const gameDirectory = path.join(directory, 'games-poster');
   const gamePending = new Map();
   const gameKey = (name) => createHash('sha256').update(String(name).trim().toLowerCase()).digest('hex');
 
@@ -387,7 +387,7 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     return null;
   }
 
-  /** Composes SteamGridDB art (poster on a gradient, else hero crop) into a 16:9 tile; null without art. */
+  /** Composes SteamGridDB art (poster edge to edge, else hero crop) into a 2:3 portrait tile; null without art. */
   async function buildGameTile(name) {
     if (!grid) return null;
     const target = await findGame({ name });
@@ -397,10 +397,10 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
     if (poster) {
       const analysis = analyseImage(decodePng(poster.body));
       const aspect = poster.size.width && poster.size.height ? poster.size.width / poster.size.height : 2 / 3;
-      svg = composeTile({ name, color: analysis.color || nameColor(name), posterDataUrl: poster.dataUrl, posterAspect: aspect });
+      svg = composeTile({ name, color: analysis.color || nameColor(name), posterDataUrl: poster.dataUrl, posterAspect: aspect, portrait: true });
     } else {
       const hero = await downloadGridImage('hero', target).catch(() => null);
-      if (hero) svg = composeTile({ name, heroDataUrl: hero.dataUrl });
+      if (hero) svg = composeTile({ name, heroDataUrl: hero.dataUrl, portrait: true });
     }
     if (!svg) return null;
     const file = path.join(gameDirectory, `${gameKey(name)}.svg`);
@@ -410,12 +410,12 @@ function createIconResolver({ userData, secrets = {}, trustedHosts = () => [], f
 
   /** Refined monogram / glyph tile as an SVG data URL (no network, nothing written to disk). */
   function monogramGameTile(name) {
-    const svg = composeTile({ name, glyph: glyphForName(name), color: nameColor(name) });
+    const svg = composeTile({ name, glyph: glyphForName(name), color: nameColor(name), portrait: true });
     return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
   }
 
   /**
-   * 16:9 tile art for a host application without cover art. Host built-ins (`builtin: true`, e.g. Desktop, TV)
+   * 2:3 portrait tile art for a host application without cover art. Host built-ins (`builtin: true`, e.g. Desktop, TV)
    * get a glyph tile; other names are looked up on SteamGridDB (cached 14 days, failures retried after 6 hours)
    * and fall back to a monogram tile. Resolves with { url, source: 'steamgriddb' | 'monogram' }, never rejects.
    */

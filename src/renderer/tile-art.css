@@ -24,3 +24,17 @@
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / .34), 0 .5em 1.2em rgb(0 0 0 / .35);
 }
 .tile .art.has-image > .fallback { display: none; }
+
+/* Gaming row: tiles take the 2:3 shape of a game poster (Tekken 6, ...) instead of the 16:9 landscape tile. The width
+   token is scoped to the row, so the virtual grid measures the real tile and every pitch follows the new shape. */
+.row[data-shape="poster"] { --tile-width: calc(clamp(220px, 16vw, 360px) * .506); }
+.row[data-shape="poster"] .tile { aspect-ratio: 2 / 3; }
+.row[data-shape="poster"] .tile::after {
+  inset: -7% -8%;
+  border-radius: var(--hig-radius-lg);
+  background: radial-gradient(ellipse 72% 42% at 50% 50%, color-mix(in srgb, var(--tile-accent) 24%, transparent) 0%, color-mix(in srgb, var(--tile-accent) 12%, transparent) 58%, transparent 100%);
+}
+.row[data-shape="poster"] .tile.focused::after { opacity: .72; }
+@media (hover: hover) {
+  .row[data-shape="poster"] .tile:hover:not(.focused)::after { opacity: .28; }
+}

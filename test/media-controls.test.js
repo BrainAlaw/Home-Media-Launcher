@@ -38,7 +38,7 @@ test('formatClock', () => {
 test('view model per state', () => {
   const vm = (raw) => MC.buildViewModel(MC.normaliseState(raw));
   const unconfigured = vm({ auth: { status: 'unconfigured' } });
-  assert.deepEqual([unconfigured.kind, unconfigured.interactive], ['unconfigured', false]);
+  assert.deepEqual([unconfigured.kind, unconfigured.interactive], ['unconfigured', true]);
   assert.match(unconfigured.subtitle, /SPOTIFY_CLIENT_ID/);
   const out = vm({ auth: { status: 'signed-out' } });
   assert.deepEqual([out.kind, out.title, out.cardActions], ['signed-out', 'Connect Spotify', ['login']]);
@@ -50,10 +50,10 @@ test('view model per state', () => {
   assert.deepEqual([error.kind, error.cardActions], ['error', ['retry', 'login']]);
   assert.match(error.subtitle, /No connection/);
   const idle = vm({ auth: signedIn, idle: true, playing: false });
-  assert.deepEqual([idle.kind, idle.cardActions, idle.controls], ['idle', ['open-spotify'], ['library']]);
+  assert.deepEqual([idle.kind, idle.cardActions, idle.controls], ['idle', [], ['spotify']]);
   const live = MC.buildViewModel(playing());
   assert.deepEqual([live.kind, live.title, live.subtitle, live.volume, live.shuffle, live.repeat], ['playing', 'Song', 'A, B', 40, true, 'context']);
-  assert.deepEqual(live.controls, ['prev', 'toggle', 'next', 'shuffle', 'repeat', 'volume-down', 'volume-up', 'library']);
+  assert.deepEqual(live.controls, ['prev', 'toggle', 'next', 'shuffle', 'repeat', 'volume-down', 'volume-up', 'spotify']);
   assert.equal(MC.buildViewModel(playing({ playing: false })).kind, 'paused');
 });
 
@@ -66,7 +66,7 @@ test('labels and commands follow the state', () => {
   assert.equal(MC.commandFor('toggle', live), 'pause');
   assert.equal(MC.commandFor('toggle', paused), 'play');
   assert.equal(MC.commandFor('prev', live), 'previous');
-  assert.equal(MC.commandFor('library', live), null);
+  assert.equal(MC.commandFor('spotify', live), null);
 });
 
 test('optimistic effects', () => {
@@ -95,13 +95,13 @@ test('global media keys map to commands and toasts', () => {
 });
 
 test('focus model: left/right inside, up/down/back leave, confirm activates', () => {
-  const model = new MC.WidgetFocusModel(['prev', 'toggle', 'next', 'library']);
+  const model = new MC.WidgetFocusModel(['prev', 'toggle', 'next', 'spotify']);
   model.resetToDefault();
   assert.equal(model.current, 'toggle');
   assert.deepEqual(model.handle('right'), { type: 'focus', index: 2 });
   assert.deepEqual(model.handle('right'), { type: 'focus', index: 3 });
   assert.deepEqual(model.handle('right'), { type: 'none' }, 'stops at the edge');
-  assert.deepEqual(model.handle('confirm'), { type: 'activate', id: 'library' });
+  assert.deepEqual(model.handle('confirm'), { type: 'activate', id: 'spotify' });
   model.handle('left'); model.handle('left'); model.handle('left');
   assert.deepEqual(model.handle('left'), { type: 'none' });
   assert.equal(model.current, 'prev');
@@ -111,12 +111,12 @@ test('focus model: left/right inside, up/down/back leave, confirm activates', ()
 });
 
 test('focus model keeps the focused action across a state change and falls back to the primary stop', () => {
-  const model = new MC.WidgetFocusModel(['prev', 'toggle', 'next', 'library']);
+  const model = new MC.WidgetFocusModel(['prev', 'toggle', 'next', 'spotify']);
   model.index = 2;
-  model.setOrder(['prev', 'toggle', 'next', 'shuffle', 'library']);
+  model.setOrder(['prev', 'toggle', 'next', 'shuffle', 'spotify']);
   assert.equal(model.current, 'next');
-  model.setOrder(['open-spotify', 'library']);
-  assert.equal(model.current, 'open-spotify');
+  model.setOrder(['spotify']);
+  assert.equal(model.current, 'spotify');
   assert.equal(new MC.WidgetFocusModel([]).handle('left').type, 'none');
   assert.deepEqual(new MC.WidgetFocusModel([]).handle('down'), { type: 'leave', direction: 'down' });
   assert.deepEqual(new MC.WidgetFocusModel([]).handle('back'), { type: 'leave', direction: 'system' });

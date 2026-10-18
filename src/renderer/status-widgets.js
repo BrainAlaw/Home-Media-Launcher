@@ -74,8 +74,43 @@ function hostChipView(info, sections, now = Date.now()) {
   return { hidden: false, tone, label: `Game host ${view.name}: ${view.statusLabel}` };
 }
 
+/**
+ * Tone of the network dot from the latest ping. Unknown (no probe yet) is grey, a failed probe red, then green/amber/red by latency.
+ * @param {{ ms: number | null } | null | undefined} ping
+ * @returns {'idle' | 'on' | 'warn' | 'off'}
+ */
+function pingTone(ping) {
+  if (!ping) return 'idle';
+  if (!Number.isFinite(ping.ms)) return 'off';
+  return ping.ms < 60 ? 'on' : ping.ms < 150 ? 'warn' : 'off';
+}
+
+/** Mbps with sensible precision: whole numbers from 100 up, one decimal below. */
+function formatMbps(value) {
+  const mbps = Number.isFinite(value) ? Math.max(0, value) : 0;
+  return mbps >= 100 ? String(Math.round(mbps)) : mbps.toFixed(1);
+}
+
+/**
+ * Subtitle of the network row: link detail plus live ping, or the speed test progress/result while one is relevant.
+ * @param {{ detail: string, ping?: { ms: number | null } | null, speed?: { state: string, mbps?: number, averageMbps?: number, elapsedMs?: number, durationMs?: number, pingMs?: number } | null }} input
+ */
+function networkLine({ detail, ping, speed }) {
+  if (speed?.state === 'running') {
+    const left = Math.max(0, Math.ceil(((speed.durationMs || 0) - (speed.elapsedMs || 0)) / 1000));
+    return `Testing… ${formatMbps(speed.mbps)} Mbps · ${left}s left`;
+  }
+  if (speed?.state === 'done') {
+    const pingMs = Number.isFinite(speed.pingMs) ? speed.pingMs : ping?.ms;
+    return `↓ ${formatMbps(speed.averageMbps)} Mbps${Number.isFinite(pingMs) ? ` · ping ${pingMs} ms` : ''}`;
+  }
+  if (speed?.state === 'error') return 'Speed test failed. Check the connection.';
+  const pingText = !ping ? '' : Number.isFinite(ping.ms) ? `ping ${ping.ms} ms` : 'no internet';
+  return [detail, pingText].filter(Boolean).join(' · ');
+}
+
 if (typeof module === 'object' && module.exports) {
-  module.exports = { shortenMiddle, shortenError, vpnSubtitle, vpnChipView, hostChipView };
+  module.exports = { shortenMiddle, shortenError, vpnSubtitle, vpnChipView, hostChipView, pingTone, formatMbps, networkLine };
 } else (function () {
   'use strict';
 
@@ -87,6 +122,9 @@ if (typeof module === 'object' && module.exports) {
   const ext = () => window.launcher?.ext;
 
   let showToast = () => {};
+  let lastNetwork = null;
+  let lastPing = null;
+  let speed = null;
   let vpnList = [];
   const vpnRows = new Map();
   let weatherTimer = null;
@@ -130,23 +168,55 @@ if (typeof module === 'object' && module.exports) {
     return svg(bars + slash, 'status-glyph');
   }
 
-  function renderNetwork(status) { whenPanelIdle('network', () => paintNetwork(status)); }
+  function renderNetwork(status) { lastNetwork = status; whenPanelIdle('network', paintNetwork); }
+  function applyPing(ping) { lastPing = ping || null; whenPanelIdle('network', paintNetwork); }
 
-  function paintNetwork(status) {
+  /** Progress events arrive a few times a second while a test runs; the finished result stays on the row until the next test. */
+  function applySpeed(snapshot) {
+    speed = snapshot && snapshot.state !== 'idle' ? snapshot : null;
+    whenPanelIdle('network', paintNetwork);
+  }
+
+  function statusDot() {
+    const dot = document.createElement('span');
+    dot.className = 'chip-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    return dot;
+  }
+
+  function paintNetwork() {
+    const status = lastNetwork;
+    const tone = status?.connected ? pingTone(lastPing) : 'off';
     const indicator = $('#network-indicator');
     if (indicator) {
       indicator.hidden = false;
       indicator.dataset.state = status?.connected ? status.type : 'offline';
+      indicator.dataset.tone = tone;
+      const ping = Number.isFinite(lastPing?.ms) ? ` — ping ${lastPing.ms} ms` : '';
       indicator.setAttribute('aria-label', networkLabel(status));
-      indicator.title = `${networkLabel(status)}${status?.connected ? ` — ${networkDetail(status)}` : ''}`;
-      indicator.replaceChildren(networkGlyph(status));
+      indicator.title = `${networkLabel(status)}${status?.connected ? ` — ${networkDetail(status)}` : ''}${ping}`;
+      indicator.replaceChildren(networkGlyph(status), statusDot());
     }
     const card = $('#network-card');
-    if (card) {
-      card.querySelector('.status-card-icon').replaceChildren(networkGlyph(status));
-      card.querySelector('strong').textContent = networkLabel(status);
-      card.querySelector('small').textContent = networkDetail(status);
-    }
+    if (!card) return;
+    card.dataset.tone = tone;
+    card.dataset.speed = speed?.state || 'idle';
+    card.querySelector('.menu-symbol').replaceChildren(networkGlyph(status), statusDot());
+    card.querySelector('strong').textContent = networkLabel(status);
+    card.querySelector('small').textContent = networkLine({ detail: networkDetail(status), ping: lastPing, speed });
+    card.querySelector('.net-action').textContent = speed?.state === 'running' ? 'Cancel' : 'Speed test';
+    card.setAttribute('aria-label', `${networkLabel(status)}. ${speed?.state === 'running' ? 'Cancel the speed test' : 'Run a 20 second speed test'}`);
+    const fill = card.querySelector('.net-progress i');
+    const fraction = speed?.state === 'running' ? Math.min(1, (speed.elapsedMs || 0) / (speed.durationMs || 1)) : 0;
+    fill.style.transform = `scaleX(${fraction})`;
+  }
+
+  async function onSpeedToggle() {
+    const bridge = ext();
+    if (!bridge) return;
+    try {
+      applySpeed(await bridge.invoke('system', speed?.state === 'running' ? 'cancelSpeedTest' : 'startSpeedTest'));
+    } catch (error) { showToast(`Speed test: ${error.message}`); }
   }
 
   /* ------------------------------------------------------------------ glyphs */
@@ -164,17 +234,14 @@ if (typeof module === 'object' && module.exports) {
 
   /* ------------------------------------------------------------------ chips */
 
-  /** Paints a header chip: glyph, bottom-right status dot, accessible name and visibility. */
+  /** Paints a header status indicator: glyph, bottom-right status dot, accessible name and visibility. */
   function paintChip(chip, view, glyph) {
     if (!chip) return;
     chip.hidden = view.hidden;
     chip.dataset.tone = view.tone;
-    chip.setAttribute('aria-label', `${view.label}. Open quick settings`);
+    chip.setAttribute('aria-label', view.label);
     chip.title = view.label;
-    const dot = document.createElement('span');
-    dot.className = 'chip-dot';
-    dot.setAttribute('aria-hidden', 'true');
-    chip.replaceChildren(glyph, dot);
+    chip.replaceChildren(glyph, statusDot());
   }
 
   function renderVpnIndicators() {
@@ -260,11 +327,6 @@ if (typeof module === 'object' && module.exports) {
       }
     }
     renderVpnIndicators();
-  }
-
-  /** Quick-settings control a header chip should land on: a VPN switch row, or the first action for the host chip. */
-  function controlFor(target) {
-    return vpnRows.get(target) || $('#settings-button');
   }
 
   /* ------------------------------------------------------------------ weather */
@@ -358,8 +420,6 @@ if (typeof module === 'object' && module.exports) {
     if (sessionSuspended) return;
     if (weatherLoad) weatherTimer = setInterval(weatherLoad, WEATHER_REFRESH_MS);
     hostTimer = setInterval(() => whenPanelIdle('host', paintHost), HOST_REFRESH_MS);
-    bridge.on('session', 'phase', applySessionPhase);
-    bridge.invoke('session', 'getPhase').then(applySessionPhase).catch(() => {});
   }
 
   /** Pauses the polling timers while a session is launching/running/closing; resumes with ONE immediate refresh. */
@@ -382,8 +442,15 @@ if (typeof module === 'object' && module.exports) {
     if (!bridge) return;
     bridge.on('system', 'network', renderNetwork);
     bridge.invoke('system', 'getNetwork').then(renderNetwork).catch(() => {});
+    bridge.on('system', 'ping', applyPing);
+    bridge.invoke('system', 'getPing').then((ping) => { if (ping?.at) applyPing(ping); }).catch(() => {});
+    bridge.on('system', 'speedtest', applySpeed);
+    bridge.invoke('system', 'getSpeedTest').then(applySpeed).catch(() => {});
+    $('#network-card')?.addEventListener('click', onSpeedToggle);
     bridge.on('vpn', 'status', applyVpnList);
     bridge.invoke('vpn', 'list').then(applyVpnList).catch(() => {});
+    bridge.on('session', 'phase', applySessionPhase);
+    bridge.invoke('session', 'getPhase').then(applySessionPhase).catch(() => {});
     bridge.on('remote', 'host', applyHost);
     bridge.invoke('remote', 'getHostInfo').then(applyHost).catch(() => {});
     // The "synced N min ago" label ages on its own.
@@ -392,5 +459,5 @@ if (typeof module === 'object' && module.exports) {
 
   window.addEventListener('pagehide', () => clearInterval(hostTimer), { once: true });
 
-  window.StatusWidgets = { init, updateWeather, controlFor };
+  window.StatusWidgets = { init, updateWeather };
 })();

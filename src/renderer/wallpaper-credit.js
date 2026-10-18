@@ -55,9 +55,8 @@
     const location = text(credit.location);
     const via = sourceLabel(credit.source);
     if (!title && !author && !via) return null;
-    const heading = title && location && !title.toLowerCase().includes(location.toLowerCase()) ? `${title} · ${location}` : (title || location);
-    const byline = [author, license].filter(Boolean).join(' · ');
-    return { title: heading, byline, via: via ? `via ${via}` : '', key: [heading, byline, via].join('|') };
+    const heading = title || location;
+    return { title: heading, byline: author, via: '', key: [heading, author, license, via].join('|') };
   }
 
   /**

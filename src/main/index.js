@@ -8,6 +8,7 @@ const activity = require('./activity');
 const { migrateConfigPresetIcons } = require('./preset-migration');
 const { scanDesktopEntries } = require('./desktop-entry');
 const { ProcessManager } = require('./process-manager');
+const { TvBrowserSession } = require('./tv-browser');
 const { getAutostart, setAutostart } = require('./autostart');
 const { listRemoteApps } = require('./remote-apps');
 const { scanWindowsApplications } = require('./windows-apps');
@@ -53,6 +54,7 @@ if (testProfile) app.setPath('userData', path.join(app.getPath('appData'), 'Vibe
 
 let window;
 let webWindow;
+let tvBrowser = null;
 let config;
 let model;
 let configPath;
@@ -276,6 +278,37 @@ function openWebsite(tile) {
   return true;
 }
 
+function isHomeTheatreWebsite(tile) {
+  if (!tile.category) return true;
+  const categories = Array.isArray(model?.settings?.categories) ? model.settings.categories : [];
+  const category = categories.find((entry) => entry.id === tile.category);
+  return !category || category.builtin === 'theatre' || category.id === 'theatre';
+}
+
+async function openTvWebsite(tile) {
+  let parsed;
+  try { parsed = new URL(tile.url); } catch { throw new Error('Invalid website URL'); }
+  if (!['https:', 'http:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error('TV apps require HTTP(S) without embedded credentials');
+  const session = new TvBrowserSession({ userData: app.getPath('userData') });
+  let ready = false;
+  tvBrowser = session;
+  session.once('closed', (result) => {
+    if (tvBrowser !== session) return;
+    tvBrowser = null;
+    if (ready) returnToLauncher({ tileId: tile.id, website: true, tvControls: true, ...(result?.error ? { error: result.error } : {}) });
+  });
+  try {
+    await session.start({ url: parsed.toString(), name: tile.name || tile.title || 'Home Theatre' });
+    ready = true;
+    sendToWindow('launcher:app-launched', { tileId: tile.id, type: 'website', tvControls: true });
+    void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
+    return true;
+  } catch (error) {
+    if (tvBrowser === session) tvBrowser = null;
+    throw error;
+  }
+}
+
 function showLauncher() {
   if (!window || window.isDestroyed()) return;
   window.show();
@@ -337,7 +370,10 @@ app.whenReady().then(async () => {
   sessionExt.controller.attach({
     getLauncherWindow: () => window,
     processManager,
-    closeWebWindow: () => { if (webWindow && !webWindow.isDestroyed()) webWindow.close(); },
+    closeWebWindow: () => {
+      if (tvBrowser) { void tvBrowser.terminate(); return; }
+      if (webWindow && !webWindow.isDestroyed()) webWindow.close();
+    },
     showLauncher,
     electron: { BrowserWindow, screen },
     ozonePlatform: app.commandLine.getSwitchValue('ozone-platform') || app.commandLine.getSwitchValue('ozone-platform-hint'),
@@ -408,6 +444,7 @@ app.on('before-quit', (event) => {
   hostMonitor?.stop();
   stopExtensions?.();
   sessionExt.controller.dispose();
+  void tvBrowser?.terminate();
   if (webWindow && !webWindow.isDestroyed()) webWindow.destroy();
   if (processManager.active) processManager.terminate({ graceMs: 0, force: true });
   themeService?.close();
@@ -524,14 +561,15 @@ handle('launcher:get-weather', async (_event, location) => {
 });
 async function launchTile(tileId) {
   if (typeof tileId !== 'string' || !tileId) throw new Error('Application ID is required');
-  if (webWindow || processManager.active) throw new Error('Another application is already running');
+  if (webWindow || tvBrowser || processManager.active) throw new Error('Another application is already running');
   const tile = model.rows.flatMap((row) => row.tiles).find((candidate) => candidate.id === tileId);
   if (!tile) throw new Error('Unknown tile');
   if (!sessionExt.controller.begin(tile)) throw new Error('Another application is already running');
   try {
     if (tile.type === 'website') {
-      const opened = openWebsite(tile);
-      sendToWindow('launcher:app-launched', { tileId: tile.id, type: 'website' });
+      const tvControls = isHomeTheatreWebsite(tile);
+      const opened = tvControls ? await openTvWebsite(tile) : openWebsite(tile);
+      if (!tvControls) sendToWindow('launcher:app-launched', { tileId: tile.id, type: 'website' });
       return opened;
     }
     const result = await processManager.launchChecked(tile);

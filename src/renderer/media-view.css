@@ -129,3 +129,6 @@ body:is([data-input-device="keyboard"], [data-input-device="remote"]) .mv-hints 
   .mv, .mv .mv-body, .mv-page, .mv-rail-track, .vg-content, .mv-popup, .mv-banner { transition-duration: var(--hig-dur-fast); transition-timing-function: linear; }
   .mv-tile.focused { transform: scale(1.04); }
 }
+
+/* "For you" shelves: track tiles share the album tile shape; the permission note sits above the first shelf. */
+.mv-note { margin: 0 0 var(--hig-space-2); color: var(--hig-label-tertiary); font: var(--hig-font-caption1); }

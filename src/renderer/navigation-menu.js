@@ -31,13 +31,17 @@
       this.listen(this.query, 'change', (event) => { this.motion.setReducedMotion(event.matches); });
       this.resize = new ResizeObserver(() => this.measure());
       this.resize.observe(panel);
-      for (const action of panel.querySelectorAll('.menu-action')) {
-        this.track(action);
-        this.listen(action, 'pointermove', (event) => {
-          if (!this.open || event.pointerType !== 'mouse' || !(event.movementX || event.movementY)) return;
-          action.focus({ preventScroll: true });
-        });
-      }
+      for (const action of panel.querySelectorAll('.menu-action')) this.register(action);
+    }
+
+    /** Gives a row the shared spring motion and hover focus. Idempotent, so rows created later (VPN providers) behave like the static ones. */
+    register(action) {
+      if (this.itemMotions.has(action)) return;
+      this.track(action);
+      this.listen(action, 'pointermove', (event) => {
+        if (!this.open || event.pointerType !== 'mouse' || !(event.movementX || event.movementY)) return;
+        action.focus({ preventScroll: true });
+      });
     }
 
     listen(element, type, callback) { element.addEventListener(type, callback, { signal: this.abort.signal }); }
@@ -67,6 +71,7 @@
 
     focusPanel(action) {
       if (!action) return;
+      this.register(action);
       let direction = 0;
       const previous = this.panel.querySelector('.menu-action[data-focused="true"]');
       if (previous) direction = Math.sign(action.offsetTop - previous.offsetTop);

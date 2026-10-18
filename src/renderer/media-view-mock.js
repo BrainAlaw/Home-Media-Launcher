@@ -105,6 +105,7 @@
           artists: wants('artist') ? range(8, artist) : []
         } });
       },
+      forYou: () => (scenario === 'rate-limit' ? fail('Rate limited', 'RATE_LIMITED') : delay({ ok: true, madeForYou: range(6, (i) => ({ ...playlist(i), name: `Daily Mix ${i + 1}` })), recent: range(12, (i) => track(i + 20)), topTracks: range(12, (i) => track(i + 40)), topArtists: range(8, artist), albums: range(9, album), newReleases: range(10, (i) => album(i + 30)), needsReauth: false })),
       playlists: (offset = 0) => pageOf(offset, PLAYLIST_TOTAL, playlist),
       playlistTracks: (id, offset = 0) => (scenario === 'private-playlist' ? fail('Forbidden', 'HTTP_403') : pageOf(offset, DETAIL_TRACKS, (i) => track(i + 10))),
       play: (request) => {

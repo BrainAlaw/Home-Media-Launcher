@@ -97,4 +97,28 @@ function mapPlaylistTracks(raw) {
   return items.map((entry) => mapTrack(entry?.item ?? entry?.track)).filter(Boolean);
 }
 
-module.exports = { pickImage, mapTrack, mapDevice, mapPlayback, mapPlaylist, mapAlbum, mapArtist, mapSearch, mapPlaylistTracks };
+/**
+ * Home shelves ("For you"). Spotify no longer exposes recommendations, featured playlists or the contents of its own
+ * algorithmic playlists to new apps, so the shelves come from the account itself: Spotify-owned playlists in the library
+ * (Daily Mix, Discover Weekly, ...), recently played, top tracks/artists, saved albums and new releases.
+ * Each argument is the raw payload of its endpoint, or null when that call failed.
+ */
+function mapForYou({ playlists, recent, topTracks, topArtists, savedAlbums, newReleases } = {}) {
+  const spotifyOwned = (Array.isArray(playlists?.items) ? playlists.items : []).filter((item) => item?.owner?.id === 'spotify');
+  const seen = new Set();
+  const recentTracks = (Array.isArray(recent?.items) ? recent.items : []).map((entry) => mapTrack(entry?.track)).filter((track) => {
+    if (!track || seen.has(track.uri)) return false;
+    seen.add(track.uri);
+    return true;
+  });
+  return {
+    madeForYou: spotifyOwned.map(mapPlaylist).filter(Boolean),
+    recent: recentTracks,
+    topTracks: compact(topTracks, mapTrack),
+    topArtists: compact(topArtists, mapArtist),
+    albums: (Array.isArray(savedAlbums?.items) ? savedAlbums.items : []).map((entry) => mapAlbum(entry?.album)).filter(Boolean),
+    newReleases: compact(newReleases?.albums, mapAlbum)
+  };
+}
+
+module.exports = { mapForYou, pickImage, mapTrack, mapDevice, mapPlayback, mapPlaylist, mapAlbum, mapArtist, mapSearch, mapPlaylistTracks };

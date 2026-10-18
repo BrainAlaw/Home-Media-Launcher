@@ -3,16 +3,14 @@
 
 /* ---------------------------------------------------------------- wallpaper credit (Google TV style) */
 .wallpaper-credit {
-  position: fixed; z-index: 3; right: var(--gutter, 32px); bottom: 4vh; display: grid; gap: 2px; max-width: min(34vw, 460px);
-  padding: 12px 18px; border: 1px solid var(--glass-border); border-radius: var(--ui-rounding);
-  background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate)); color: var(--text);
+  position: fixed; z-index: 3; right: var(--gutter, 32px); bottom: 5vh; display: grid; gap: 4px; max-width: min(48vw, 720px); text-align: right;
+  padding: 0; border: 0; border-radius: var(--radius-none); background: var(--color-transparent); color: var(--text); text-shadow: var(--shadow-tile-label);
   opacity: 0; transform: translateY(10px); pointer-events: none; user-select: none;
   transition: opacity var(--motion-slow) var(--ease), transform var(--motion-slow) var(--ease);
 }
 .wallpaper-credit.visible { opacity: 1; transform: translateY(0); }
-.wallpaper-credit strong { overflow: hidden; font-size: clamp(14px, 1.05vw, 20px); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.wallpaper-credit span { overflow: hidden; color: var(--text-dim); font-size: clamp(12px, .85vw, 16px); text-overflow: ellipsis; white-space: nowrap; }
-.wallpaper-credit small { overflow: hidden; color: var(--text-faint); font-size: clamp(11px, .75vw, 14px); text-overflow: ellipsis; white-space: nowrap; }
+.wallpaper-credit strong { overflow: hidden; font: 500 clamp(25px, 2.2vw, 42px) / 1.05 var(--font-display, var(--font-ui)); letter-spacing: .01em; text-overflow: ellipsis; white-space: nowrap; }
+.wallpaper-credit span { overflow: hidden; color: var(--hig-label-secondary); font: 500 clamp(13px, .9vw, 17px) / 1.2 var(--font-ui); letter-spacing: .12em; text-transform: uppercase; text-overflow: ellipsis; white-space: nowrap; }
 .wallpaper-credit [hidden] { display: none; }
 body.app-running .wallpaper-credit { display: none; }
 

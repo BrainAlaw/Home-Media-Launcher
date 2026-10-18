@@ -71,6 +71,24 @@
   }
 
   /**
+   * Maps the "For you" shelves to ordered, non-empty rail sections. Spotify-owned playlists play directly
+   * (their track lists are not readable through the Web API), so they carry `direct: true`.
+   * @returns {ViewSection[]}
+   */
+  function mapForYouResult(result) {
+    if (!result) return [];
+    const sections = [
+      { id: 'made', title: 'Made for you', layout: 'rail', items: (result.madeForYou || []).map((playlist) => ({ ...playlistItem(playlist), direct: true, subtitle: 'Made for you' })) },
+      { id: 'recent', title: 'Recently played', layout: 'rail', items: (result.recent || []).map(trackItem) },
+      { id: 'top', title: 'Your top songs', layout: 'rail', items: (result.topTracks || []).map(trackItem) },
+      { id: 'saved', title: 'Your albums', layout: 'rail', items: (result.albums || []).map(albumItem) },
+      { id: 'artists', title: 'Your top artists', layout: 'rail', items: (result.topArtists || []).map(artistItem) },
+      { id: 'new', title: 'New releases', layout: 'rail', items: (result.newReleases || []).map(albumItem) }
+    ];
+    return sections.filter((section) => section.items.length > 0);
+  }
+
+  /**
    * Normalises a paged response: either a bare array or `{ items, total?, next?, nextOffset? }`.
    * Without a total, a non-empty page is assumed to have a successor (the first empty page ends the list).
    * @returns {{ items: any[], hasMore: boolean, nextOffset: number }}
@@ -244,7 +262,7 @@
 
   return {
     PLAYLIST_PAGE_FALLBACK, LOAD_MORE_THRESHOLD,
-    formatDuration, trackItem, albumItem, artistItem, playlistItem, mapSearchResult,
+    formatDuration, trackItem, albumItem, artistItem, playlistItem, mapSearchResult, mapForYouResult,
     normalizePage, shouldLoadMore, mergePage,
     rowCount, visibleRows, itemRange, scrollToRow, scrollToColumn, gridColumns,
     rowBlock, gridBlock, moveCursor, firstCursor,

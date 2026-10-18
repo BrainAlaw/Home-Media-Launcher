@@ -31,9 +31,9 @@ test('sourceLabel names known hosts and falls back to the host or the text', () 
   assert.equal(Credit.sourceLabel(undefined), '');
 });
 
-test('creditLines formats title, location, author, licence and source and skips empty credits', () => {
+test('creditLines keeps only the image title and author visible', () => {
   assert.deepEqual(Credit.creditLines({ title: 'Misty Alps', location: 'Switzerland', author: 'Ann', license: 'CC0', source: 'https://commons.wikimedia.org/wiki/File:A.jpg' }),
-    { title: 'Misty Alps · Switzerland', byline: 'Ann · CC0', via: 'via Wikimedia Commons', key: 'Misty Alps · Switzerland|Ann · CC0|Wikimedia Commons' });
+    { title: 'Misty Alps', byline: 'Ann', via: '', key: 'Misty Alps|Ann|CC0|Wikimedia Commons' });
   assert.equal(Credit.creditLines({ title: 'Lake Bled', location: 'bled' }).title, 'Lake Bled');
   assert.equal(Credit.creditLines({ author: 'Ann' }).byline, 'Ann');
   assert.equal(Credit.creditLines({ license: 'CC0' }), null);
@@ -53,7 +53,7 @@ test('overlay fades in on change, out after the hold time and stays quiet for re
   assert.equal(root.attributes['aria-hidden'], 'true');
   overlay.show(credit);
   assert.equal(overlay.visible, true);
-  assert.deepEqual(texts(), ['Lofoten', 'Johannes · CC0', 'via Wikimedia Commons']);
+  assert.deepEqual(texts(), ['Lofoten', 'Johannes', '']);
   assert.equal(timers[0].delay, 8000);
   overlay.show(credit);
   assert.equal(timers.length, 1);

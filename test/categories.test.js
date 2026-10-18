@@ -54,9 +54,10 @@ test('normalise repairs bad data and restores built-ins', () => {
 
 test('config validation of categories and toggles', () => {
   const base = { rows: [] };
-  assert.doesNotThrow(() => validateConfig({ ...base, settings: { categories: C.defaults(), showTileLabels: false, mediaWidget: true } }));
+  assert.doesNotThrow(() => validateConfig({ ...base, settings: { categories: C.defaults(), showTileLabels: false, showCategoryHeadings: false, mediaWidget: true } }));
   assert.throws(() => validateConfig({ ...base, settings: { categories: [{ id: 'theatre', label: 'T', builtin: 'theatre' }] } }), /gaming/);
   assert.throws(() => validateConfig({ ...base, settings: { categories: [...C.defaults(), { id: 'gaming', label: 'x' }] } }), /duplicated/);
   assert.throws(() => validateConfig({ ...base, settings: { categories: [...C.defaults(), { id: 'A B', label: 'x' }] } }), /slug/);
   assert.throws(() => validateConfig({ ...base, settings: { showTileLabels: 'no' } }), /showTileLabels/);
+  assert.throws(() => validateConfig({ ...base, settings: { showCategoryHeadings: 'no' } }), /showCategoryHeadings/);
 });

@@ -99,9 +99,6 @@ header { position: relative; z-index: 6; align-items: center; }
   contain: layout paint style;
   will-change: transform, opacity;
 }
-#system-panel .menu-heading { padding: 4px 8px 16px; border: 0; }
-#system-panel .menu-eyebrow { color: var(--menu-text-muted); font: 650 14px / 1 var(--menu-font); letter-spacing: .12em; }
-#system-panel .menu-heading h2 { margin: 0; color: var(--menu-text); font: 650 30px / 1.1 var(--menu-font); letter-spacing: -.03em; text-transform: none; }
 #system-panel .menu-items { position: relative; display: grid; gap: 6px; }
 #system-panel .menu-action {
   position: relative;
@@ -199,21 +196,14 @@ header { position: relative; z-index: 6; align-items: center; }
   background: #fff;
   box-shadow: 0 2px 5px rgb(0 0 0 / .4);
   transform: translateX(0);
-  transition: transform 300ms var(--hig-ease-spring-soft, cubic-bezier(.3, 1.3, .5, 1));
+  /* Plain ease, no overshoot: a bouncing knob next to a settled row looks unstable. */
+  transition: transform 220ms cubic-bezier(.4, 0, .2, 1);
 }
 #system-panel .menu-toggle[aria-checked="true"] .switch { background-color: var(--ok, #34c759); box-shadow: none; }
 #system-panel .menu-toggle[aria-checked="true"] .switch-knob { transform: translateX(calc(var(--sw-w) - var(--sw-h))); }
-/* In-flight change: a ring pulses around the knob (transform + opacity only). */
-#system-panel .switch-knob::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  opacity: 0;
-}
-#system-panel .menu-toggle[data-busy="true"] .switch-knob::after { animation: switch-pulse 900ms ease-out infinite; }
-@keyframes switch-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.7); opacity: 0; } }
+/* In-flight change: the whole switch breathes (opacity only), nothing grows or moves. */
+#system-panel .menu-toggle[data-busy="true"] .switch { animation: switch-busy 800ms ease-in-out infinite alternate; }
+@keyframes switch-busy { from { opacity: 1; } to { opacity: .55; } }
 /* Unavailable stays readable: dimmed, never hidden, and the subtitle spells out why. */
 #system-panel .menu-toggle[aria-disabled="true"] .switch { opacity: .6; }
 #system-panel .menu-footer { margin: 16px 8px 2px; color: var(--menu-text-muted); font-size: 14px; text-align: right; letter-spacing: .01em; }
@@ -225,7 +215,7 @@ header { position: relative; z-index: 6; align-items: center; }
   .system-focus-lens { will-change: auto; }
   #system-panel .menu-copy, #system-panel .menu-symbol { transform: none !important; }
   #system-button.icon-button, #system-button svg, #system-panel .switch-knob { transition-duration: 1ms; }
-  #system-panel .menu-toggle[data-busy="true"] .switch-knob::after { animation: none; opacity: .8; }
+  #system-panel .menu-toggle[data-busy="true"] .switch { animation: none; opacity: .7; }
 }
 @media (prefers-reduced-transparency: reduce) {
   #system-panel.menu-panel { background: var(--menu-material-solid); backdrop-filter: none; }

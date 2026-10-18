@@ -113,6 +113,7 @@
         id: category.id,
         title: category.label,
         tiles: byRecency(members),
+        shape: category.builtin === 'gaming' ? 'poster' : 'wide',
         ...(!members.length && gamingEmptyMessage ? { emptyMessage: gamingEmptyMessage } : {})
       });
     }

@@ -1,36 +1,31 @@
-/* Header status chips, quick-settings status cards, VPN rows and weather glyphs. Colours come from the menu tokens. */
+/* Header status indicators, quick-settings status cards, VPN rows and weather glyphs. Colours come from the menu tokens. */
 .header-actions { gap: 16px; }
 .status-chip {
+  position: relative;
   display: grid;
   place-items: center;
   flex: none;
-  width: 44px;
+  width: 36px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--menu-stroke);
-  border-radius: 50%;
-  background: var(--menu-material);
+  border: 0;
+  background: transparent;
   color: var(--menu-text);
-  box-shadow: inset 0 1px 0 var(--menu-specular);
   font-family: var(--menu-font);
-  outline: none;
+  /* Dots sit on the wallpaper, so the ring is a dark halo rather than a surface colour. */
+  --chip-ring: rgb(16 19 28 / .92);
+  pointer-events: none;
 }
-div.status-chip { border-color: transparent; background: transparent; box-shadow: none; width: 36px; }
 .status-chip[hidden] { display: none; }
-button.status-chip { cursor: pointer; transition: transform 120ms ease-out; }
-button.status-chip:is(:focus, .focused) { background: var(--menu-lens); color: var(--menu-ink); border-color: var(--menu-lens); box-shadow: var(--menu-shadow); transform: scale(1.1); }
 .status-glyph { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .status-glyph .bar { fill: currentColor; stroke: none; opacity: .28; }
 .status-glyph .bar[data-lit="true"] { opacity: 1; }
 .status-glyph .slash { opacity: .85; }
 #network-indicator[data-state="offline"] { color: var(--danger, #ff6b6b); }
 
-/* Header status cluster: host, Tailscale and Surfshark chips (focusable) followed by the network glyph. */
+/* Header status cluster: host, Tailscale, Surfshark and network indicators. Display only (not focusable), each with a status dot. */
 .header-status { display: flex; align-items: center; gap: 16px; }
 .header-status:not(:has(> :not([hidden]))) { display: none; }
-button.status-chip { position: relative; --chip-ring: var(--menu-material-solid); }
-button.status-chip:is(:focus, .focused) { --chip-ring: var(--menu-lens); }
-button.status-chip .status-glyph { width: 24px; height: 24px; }
 .status-glyph .dot { fill: currentColor; stroke: none; }
 .status-glyph .dot[data-lit="false"] { opacity: .28; }
 .status-glyph .fin { fill: currentColor; stroke: none; }
@@ -101,3 +96,13 @@ button.status-chip .status-glyph { width: 24px; height: 24px; }
 #system-panel #host-card[data-tone="on"] { --chip-dot: var(--ok, #5ee08a); }
 #system-panel #host-card[data-tone="off"] { --chip-dot: var(--danger, #ff6b6b); }
 #system-panel #host-card[data-tone="warn"] { --chip-dot: var(--warn, #f1c66f); }
+
+/* Network row: link detail + live ping, and a 20 s speed test on press. The dot follows the ping tone. */
+#system-panel .network-action { grid-template-columns: 38px minmax(0, 1fr) auto; overflow: hidden; }
+#system-panel .network-action .menu-symbol { position: relative; }
+#system-panel .network-action .chip-dot { right: -2px; bottom: -2px; --chip-ring: var(--panel-base, #171b26); }
+#system-panel .network-action .status-glyph { width: 26px; height: 26px; }
+#system-panel .net-action { padding: 8px 12px; border-radius: 999px; background: rgb(255 255 255 / .12); color: inherit; font: 600 14px / 1 var(--menu-font); white-space: nowrap; }
+#system-panel .net-progress { position: absolute; left: 14px; right: 14px; bottom: 6px; height: 3px; border-radius: 2px; background: rgb(255 255 255 / .14); opacity: 0; pointer-events: none; }
+#system-panel .network-action[data-speed="running"] .net-progress { opacity: 1; }
+#system-panel .net-progress i { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--ok, #5ee08a); transform: scaleX(0); transform-origin: left center; transition: transform 260ms linear; }

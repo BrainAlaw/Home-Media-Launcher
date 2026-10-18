@@ -37,8 +37,8 @@ main::before {
 main { padding-top: clamp(28px, 5vh, 72px); }
 main > header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "title actions" "date clock" "weather clock";
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content) minmax(0, 1fr);
+  grid-template-areas: "title title actions" "date player clock" "weather . clock";
   align-items: start;
   column-gap: var(--hig-space-6);
   row-gap: 0;
@@ -76,11 +76,13 @@ main > header {
 
 .header-actions { grid-area: actions; justify-self: end; align-self: start; display: flex; align-items: center; gap: var(--hig-space-3); margin-bottom: var(--hig-space-2); }
 .header-status { display: flex; align-items: center; gap: var(--hig-space-2); min-width: 0; }
+#media-widget-slot { grid-area: player; justify-self: center; align-self: center; width: max-content; max-width: 50vw; min-width: 0; padding: 0; margin: 0; }
+#media-widget-slot:empty, #media-widget-slot[hidden] { display: none; }
 
 /* Centred: clock in the middle, date under it, weather beside the clock. */
 main > header[data-layout="centred"] {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  grid-template-areas: "title title title" "weather clock actions" ". date .";
+  grid-template-areas: "title title actions" "weather clock clock" ". date ." "player player player";
 }
 header[data-layout="centred"] #title { justify-self: center; text-align: center; }
 header[data-layout="centred"] #clock { justify-self: center; align-self: center; }
@@ -88,6 +90,7 @@ header[data-layout="centred"] #weather { justify-self: end; align-self: center; 
 header[data-layout="centred"] #date { justify-self: center; align-items: center; text-align: center; margin-top: var(--hig-space-1); }
 header[data-layout="centred"] #date .date-weekday { font-size: calc(var(--home-weekday-size) * .5); font-weight: 400; letter-spacing: .02em; }
 header[data-layout="centred"] .header-actions { align-self: start; margin-bottom: 0; }
+header[data-layout="centred"] #media-widget-slot { max-width: calc(100vw - 2 * var(--gutter)); margin-top: var(--hig-space-3); }
 
 /* ---------------------------------------------------------------- OLED protection: slow drift and idle dimming */
 /* `translate` is independent of `transform`, so the drift never fights the reveal animation. Steps are 30 s apart. */
@@ -100,9 +103,7 @@ body.header-dimmed :is(#title, #date, #weather, #clock) { opacity: .3; }
 #rows > * { flex: none; }
 /* Auto margins (not justify-content) keep the top reachable by scrolling when the rows are taller than the screen. */
 #grid-content { margin-top: auto; padding-bottom: var(--home-safe-bottom); }
-#media-widget-slot { margin-top: auto; padding: 0 var(--gutter); text-align: left; }
-#media-widget-slot:empty, #media-widget-slot[hidden] { display: none; }
-#rows:has(#media-widget-slot:not(:empty):not([hidden])) #grid-content { margin-top: 0; }
+#grid-content { min-height: 0; }
 #empty { margin-top: auto; }
 
 /* ---------------------------------------------------------------- staggered reveal (startup / first wallpaper) */
@@ -124,4 +125,23 @@ body.home-fade.home-ready #grid-content .row:nth-child(n + 3) { --reveal-delay: 
   #title, #date, #weather, #clock { transition-duration: 1ms, 1ms; }
   body.home-fade.home-ready :is(#title, #date, #weather, #clock, .header-actions, #media-widget-slot, #grid-content .row) { animation-name: home-reveal-fade; animation-duration: 300ms; }
   @keyframes home-reveal-fade { from { opacity: 0; } to { opacity: 1; } }
+}
+
+/* ---------------------------------------------------------------- Spotify web panel (spotify-web.js)
+   The tile rows slide down out of view (clipped by #rows) and the panel grows into the space they leave. The native
+   web view is attached over .sw-stage once the slide has settled, so it never has to follow a moving target. */
+#rows > #spotify-web-panel { flex: none; position: absolute; left: var(--gutter); right: var(--gutter); top: var(--sw-top, 12%); bottom: var(--home-safe-bottom, 32px); z-index: 3; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--hig-radius-lg, 28px); background: #121212; box-shadow: var(--hig-elev-3, 0 24px 60px rgb(0 0 0 / .5)), inset 0 0 0 1px rgb(255 255 255 / .1); opacity: 0; visibility: hidden; transform: translate3d(0, 56px, 0) scale(.985); transform-origin: 50% 100%; transition: opacity 280ms var(--hig-ease-standard, ease), transform 520ms var(--hig-ease-spring-soft, cubic-bezier(.3, 1.2, .5, 1)), visibility 0s linear 520ms; }
+#rows > #spotify-web-panel[hidden] { display: none; }
+body.sw-open #rows > #spotify-web-panel { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+#spotify-web-panel .sw-stage { flex: 1; min-height: 0; }
+#spotify-web-panel .sw-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--hig-label-secondary, #b3b3b3); font: var(--hig-font-callout); pointer-events: none; transition: opacity 200ms; }
+#spotify-web-panel[data-state="ready"] .sw-loading { opacity: 0; }
+#spotify-web-panel .sw-hint { display: none; }
+#grid-content { transition: transform 520ms var(--hig-ease-spring-soft, cubic-bezier(.3, 1.2, .5, 1)), opacity 300ms var(--hig-ease-standard, ease), visibility 0s linear 0s; }
+body.sw-open #grid-content { transform: translate3d(0, 105%, 0); opacity: 0; visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, 520ms; }
+body.sw-open #media-widget-slot { --mw-h: max(64px, calc(82 * var(--hig-unit))); --mw-btn: max(36px, calc(48 * var(--hig-unit))); --mw-card-w: min(34vw, 440px); }
+@media (prefers-reduced-motion: reduce) {
+  #rows > #spotify-web-panel, #grid-content { transition-duration: 1ms !important; transition-delay: 0s !important; }
+  #rows > #spotify-web-panel { transform: none; }
+  body.sw-open #grid-content { transform: none; }
 }

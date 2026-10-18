@@ -14,7 +14,7 @@
 
   const SEARCH_DEBOUNCE_MS = 380;
   const CLOSE_MS = 260;
-  const TABS = [{ id: 'search', label: 'Search' }, { id: 'playlists', label: 'Playlists' }];
+  const TABS = [{ id: 'foryou', label: 'For you' }, { id: 'search', label: 'Search' }, { id: 'playlists', label: 'Playlists' }];
   const CONTROLS = ['previous', 'toggle', 'next', 'devices'];
 
   const ICONS = {
@@ -152,7 +152,8 @@
     unsubscribe: null,
     auth: { status: 'signed-out' },
     playback: null,
-    tab: 'search',
+    tab: 'foryou',
+    forYou: { status: 'idle', sections: [], error: null, needsReauth: false },
     detail: null, // { playlist, items, hasMore, nextOffset, loading, error }
     query: '',
     search: { status: 'idle', sections: [], error: null, token: 0 },
@@ -375,6 +376,7 @@
       S.blocks.push(header, tabs);
       if (S.detail) renderDetail();
       else if (S.tab === 'playlists') renderPlaylists();
+      else if (S.tab === 'foryou') renderForYou();
       else renderSearch();
     }
     renderPopup();
@@ -436,6 +438,48 @@
       else S.blocks.push(buildRailSection(section, wrapper, page, viewport));
     }
     page.style.transform = 'translate3d(0, 0, 0)';
+  }
+
+  /* ---- for-you tab ---- */
+
+  function renderForYou() {
+    dom.field.hidden = true;
+    const state = S.forYou;
+    if (state.status === 'idle') loadForYou();
+    const viewport = el('div', 'mv-viewport');
+    dom.body.append(viewport);
+    if (state.status === 'idle' || (state.status === 'loading' && !state.sections.length)) { viewport.append(emptyState('Loading your music…', '').box); return; }
+    if (state.status === 'error') {
+      const message = emptyState(state.error.message, 'Press A to retry.', [{ label: 'Retry' }]);
+      viewport.append(message.box);
+      S.blocks.push({ id: 'cta', nav: VM.rowBlock(1), elementAt: () => message.buttons[0], activate: () => { state.status = 'idle'; render({ keepFocus: true }); } });
+      return;
+    }
+    if (!state.sections.length) { viewport.append(emptyState('Nothing here yet', 'Play something on Spotify and your recent music will show up here.').box); return; }
+    const page = el('div', 'mv-page');
+    viewport.append(page);
+    S.pageY = 0;
+    if (state.needsReauth) page.append(text('p', 'mv-note', 'Some shelves are missing. Sign out and sign in to Spotify again to grant the new permissions.'));
+    for (const section of state.sections) {
+      const wrapper = el('section', 'mv-section', { 'aria-label': section.title });
+      wrapper.append(text('h3', 'mv-section-title', section.title));
+      page.append(wrapper);
+      S.blocks.push(buildRailSection(section, wrapper, page, viewport));
+    }
+    page.style.transform = 'translate3d(0, 0, 0)';
+  }
+
+  async function loadForYou() {
+    const state = S.forYou;
+    if (state.status === 'loading') return;
+    state.status = 'loading';
+    try {
+      const result = await S.bridge.invoke('forYou');
+      S.forYou = { status: 'ready', sections: VM.mapForYouResult(result), error: null, needsReauth: Boolean(result?.needsReauth) };
+    } catch (error) {
+      S.forYou = { status: 'error', sections: [], error: VM.describeError(error), needsReauth: false };
+    }
+    if (S.open && !S.detail && S.tab === 'foryou') render({ keepFocus: true });
   }
 
   const offsetWithin = (node, ancestor) => { let y = 0; for (let n = node; n && n !== ancestor; n = n.offsetParent) y += n.offsetTop; return y; };
@@ -775,7 +819,8 @@
 
   function activateTile(item) {
     if (!item) return;
-    if (item.kind === 'playlist') openDetail(item);
+    if (item.kind === 'track') play({ uris: [item.trackUri] });
+    else if (item.kind === 'playlist' && !item.direct) openDetail(item);
     else play({ contextUri: item.uri });
   }
 
@@ -848,7 +893,7 @@
 
   function leaveDetail() {
     S.detail = null;
-    const col = 1;
+    const col = TABS.findIndex((tab) => tab.id === 'playlists');
     render();
     setCursor({ id: 'grid', row: 0, col: 0 });
     if (!S.focusedEl) setCursor({ id: 'tabs', row: 0, col });
@@ -916,6 +961,7 @@
     S.detail = null;
     S.popup = null;
     S.playlists = { items: [], hasMore: true, nextOffset: 0, loading: false, loaded: false, error: null };
+    S.forYou = { status: 'idle', sections: [], error: null, needsReauth: false };
     const offState = S.bridge.on('state', onState);
     const offAuth = S.bridge.on('auth', onAuth);
     S.unsubscribe = () => { if (typeof offState === 'function') offState(); if (typeof offAuth === 'function') offAuth(); };

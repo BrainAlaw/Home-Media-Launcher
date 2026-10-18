@@ -1,11 +1,12 @@
 'use strict';
 
 const { MediaService } = require('../../../backend/spotify/service');
+const { ensureSpotifyDesktop } = require('../../../backend/spotify-desktop');
 
 /**
  * ns `media` (agent M1): Spotify Web API remote control (PKCE). See backend/SPOTIFY.md and the `media` block in backend/contracts.d.ts.
- * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId),
- *          search(query, types?), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp(),
+ * Methods: status(), login(), logout(), nowPlaying(), control(command), setVolume(percent), devices(), transfer(deviceId), connectDesktop(),
+ *          search(query, types?), forYou() (home shelves), playlists(offset?), playlistTracks(id, offset?), play(request), openSpotifyApp(),
  *          setActive(active) (renderer reports whether any media UI is visible; polling runs only while active).
  * Events:  `state` (MediaState), `auth` (MediaAuthState).
  * Tokens and the client id stay in the main process; payloads carry only mapped playback data and the auth status.
@@ -32,7 +33,9 @@ module.exports = {
     setVolume: (_ctx, percent) => service.setVolume(Number(percent)),
     devices: () => service.devices(),
     transfer: (_ctx, deviceId) => service.transfer(text(deviceId, 128)),
+    connectDesktop: () => service.connectDesktop(),
     search: (_ctx, query, types) => service.search(text(query, 200), Array.isArray(types) ? types.map((type) => text(type, 16)) : undefined),
+    forYou: () => service.forYou(),
     playlists: (_ctx, offset) => service.playlists(optionalInt(offset)),
     playlistTracks: (_ctx, id, offset) => service.playlistTracks(text(id, 64), optionalInt(offset)),
     play: (_ctx, request) => service.play(request && typeof request === 'object' ? request : {}),
@@ -55,6 +58,9 @@ module.exports = {
         const window = ctx.getWindow();
         return Boolean(window && !window.isDestroyed() && window.isVisible() && !window.isMinimized());
       }
+    });
+    void ensureSpotifyDesktop().then((result) => {
+      if (!result.ok) console.warn('Spotify desktop could not start minimized:', result.error);
     });
     void service.start().catch((error) => console.warn('Media service failed to start:', error.message));
   },

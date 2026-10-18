@@ -210,15 +210,15 @@ dialog {
  * editing those files. The credit consumes only tokens (material, edge, radius, type).
  * ------------------------------------------------------------------------- */
 body .wallpaper-credit {
-  background: var(--hig-material-thin);
+  background: transparent;
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
-  border: var(--hig-material-edge);
-  border-radius: var(--hig-radius-md);
-  box-shadow: var(--hig-elev-2);
-  padding: var(--hig-space-1) var(--hig-space-2);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
   transition: opacity var(--hig-dur-base) var(--hig-ease-standard), transform var(--hig-dur-base) var(--hig-ease-standard);
 }
-body .wallpaper-credit strong { font: var(--hig-font-callout); color: var(--hig-label); }
-body .wallpaper-credit span { font: var(--hig-font-caption1); color: var(--hig-label-secondary); }
-body .wallpaper-credit small { font: var(--hig-font-caption2); color: var(--hig-label-tertiary); }
+body .wallpaper-credit strong { color: var(--hig-label); }
+body .wallpaper-credit span { color: var(--hig-label-secondary); }
+body .wallpaper-credit small { display: none; }
