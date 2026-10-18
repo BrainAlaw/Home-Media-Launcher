@@ -9,6 +9,8 @@
  *   - a long Home press (900 ms) closes it and the launcher is visible again.
  * Output: scripts/e2e/out/web-<run>/report.md, report.json and one PNG per step (real display, never capturePage).
  *
+ * The temporary website is in the Gaming category on purpose: Home Theatre websites open through TvBrowserSession,
+ * which does not use the web-preload path (see Requests for the coordinator in R02).
  * The temporary website tile lives only in the temp profile copy; the user's config.json is never written.
  * openWebsite accepts HTTP and HTTPS only, so the fixture is served from 127.0.0.1.
  *
@@ -43,7 +45,7 @@ const baseConfig = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(config
 // Fixed loopback port: the config must name the fixture URL before the launcher module reads it.
 const FIXTURE_PORT = 48231;
 const websites = (baseConfig.websites || []).filter((site) => site.id !== WEBSITE_ID);
-fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, websites: [...websites, { id: WEBSITE_ID, name: 'E2E keys', url: `http://127.0.0.1:${FIXTURE_PORT}/keys.html`, icon: '' }] }, null, 2));
+fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, websites: [...websites, { id: WEBSITE_ID, name: 'E2E keys', url: `http://127.0.0.1:${FIXTURE_PORT}/keys.html`, icon: '', category: 'gaming' }] }, null, 2));
 process.env.HOME_MEDIA_LAUNCHER_CONFIG = configPath;
 process.argv.push(ROOT);
 const results = [];
