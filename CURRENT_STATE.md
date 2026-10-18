@@ -2,6 +2,19 @@
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
 
+## Round status (18 October 2026)
+
+- **R01 merged into `main`:** Linux HTPC kit (`scripts/linux/*`, `backend/LINUX.md`), config round-trip tests, `npm run doctor`, dead code removed (hero binding, motion scheduler), user guides in `docs/`, gamepad end-to-end harness (`scripts/e2e/gamepad-e2e.cjs`, runs on the second monitor by default, `HML_E2E_DISPLAY=primary` to use the primary one). Fixes during merge: `t.pass/t.fail` in `test/linux-scripts.test.js` (not valid in `node:test`), and an unbound `USER` under `set -u` in `setup-permissions.sh`.
+- **R02 in progress (stage A, remote-friendly websites and webapps):** prompts in `agents/rounds/R02/`. Codex works in `D:\Github Repos\hml-r02-codex` (branch `r02/codex`), Claude's verification work in `D:\Github Repos\hml-r02-claude` (branch `r02/claude`). Not merged yet.
+- **Stage B (native apps, Linux `uinput`)** is planned after A is merged and checked on screen.
+
+### Open issues found by the R01 harness (second monitor, real display)
+
+1. **[M] First B after closing the icon popup is ignored** (Settings stays open; the second B closes it). Likely the Back swallow window in `icon-popup.js` starts after the close animation.
+2. **[S] Boot focus can stay on `body`** (about 1 of 3 runs): no tile focused until the first input.
+3. **[M] Music view opens without moving focus into it**: after `launcher:open-media-view`, focus stays on the home tile behind it.
+4. **[S] Spotify widget CTA is clipped at the right edge** on the home screen: "Connect Spotify" shows only the blue circle. Visible in `01-home.png` of run `2026-10-18T22-54-21-767Z`.
+
 ## Working rules (since 18 October 2026)
 
 - Multi-tool team: Claude Code (coordinator), Codex, GitHub Copilot, Freebuff, OpenCode, Cursor. Protocol in `AGENTS.md` section 3, coordinator duties in `CLAUDE.md`. Rounds live in `agents/rounds/R<NN>/`, agent reports in `agents/state/CURRENT_STATE_<agent>.md`.

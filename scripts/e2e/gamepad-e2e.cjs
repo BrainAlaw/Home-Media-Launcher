@@ -209,8 +209,15 @@ app.whenReady().then(async () => {
   await sleep(BOOT_MS);
   const win = mainWindow();
   if (!win) { console.error('E2E: launcher window not found'); app.exit(2); return; }
+  // Run on the secondary monitor (the one without the user's work). HML_E2E_DISPLAY=primary keeps it on the primary one.
+  const primaryId = screen.getPrimaryDisplay().id;
+  const target = process.env.HML_E2E_DISPLAY === 'primary'
+    ? screen.getPrimaryDisplay()
+    : (screen.getAllDisplays().find((display) => display.id !== primaryId) || screen.getPrimaryDisplay());
+  win.setBounds({ x: target.bounds.x, y: target.bounds.y, width: target.bounds.width, height: target.bounds.height });
   win.setAlwaysOnTop(true, 'screen-saver');
   win.focus();
+  await sleep(800);
   await run(INSTALL_PAD);
   await sleep(300);
   const shots = {};
