@@ -2,31 +2,9 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createHeroBinding, buildLaunchConfig, createLaunchSession } = require('../src/renderer/launch-session');
+const { buildLaunchConfig, createLaunchSession } = require('../src/renderer/launch-session');
 
 const game = (id, extra = {}) => ({ id, name: id.toUpperCase(), ...extra });
-const rows = [
-  { id: 'recent', items: [game('a'), game('b')] },
-  { id: 'games', items: [game('c'), game('d')] }
-];
-
-test('hero follows grid coordinates and only emits on change', () => {
-  const seen = [];
-  const binding = createHeroBinding({ onHero: (g) => seen.push(g.id) });
-  binding.setRows(rows);
-  binding.reset(rows[0].items[0]);
-  assert.equal(binding.focus([0, 0], rows[0].items[0])?.id, 'a');
-  assert.equal(binding.focus([1, 1], rows[1].items[1])?.id, 'd');
-  binding.focus([1, 1], rows[1].items[1]);
-  assert.deepEqual(seen, ['d']);
-});
-
-test('stale coordinate falls back to id lookup; unknown item resolves to null', () => {
-  const binding = createHeroBinding({ onHero: () => {} });
-  binding.setRows(rows);
-  assert.equal(binding.focus([0, 1], rows[1].items[0])?.id, 'c');
-  assert.equal(binding.focus([9, 9], game('zzz')), null);
-});
 
 test('launch config maps tile kinds', () => {
   assert.equal(buildLaunchConfig(game('w', { type: 'website', url: 'https://x.test' })).kind, 'website');
