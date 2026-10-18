@@ -17,7 +17,7 @@ Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator
 ## 2. Writing prompt files
 
 - **Self-contained.** The other tools do not see this conversation. Give the worktree path, the goal, the exact files to read, the owned files, the forbidden files, the interfaces they must keep, acceptance criteria, the commands to run and the state-file name.
-- **Sized to the budget** (`AGENTS.md` 3.1). Free tools get small, fully specified tasks in new or isolated files with clear tests; Codex gets one medium task; keep integration, cross-cutting refactors, visual verification and anything ambiguous for yourself.
+- **Sized to the tier** (`AGENTS.md` 3.1). Tier S (free tools) gets small, fully specified tasks within the stated limits, with every needed fact written into the prompt so the agent reads at most three files; Tier M (Codex) gets one medium task; keep integration, cross-cutting refactors, visual verification and anything ambiguous for yourself. When in doubt, make a Tier S task smaller or take it yourself.
 - **Disjoint ownership.** No file may be owned by two agents in the same round. Shared hot files (`src/renderer/index.html`, `src/renderer/app.js`, `src/main/index.js`, `src/main/preload.js`, `src/main/config.js`, `backend/contracts.d.ts`) are owned by at most one agent per round, or touched only through additive blocks the plan describes.
 - **Checkpoints.** Break every task into 2-6 items so a cut-off agent still leaves finished, committed items behind.
 - **Prompt caching.** Keep `main` stable while a round runs: do not reformat or mass-rename files mid-round.
