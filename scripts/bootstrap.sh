@@ -69,4 +69,3 @@ if [[ "$with_autostart" -eq 1 ]]; then
   "$project_root/scripts/linux/install-autostart.sh"
 fi
 printf 'Bootstrap complete. Run npm start. Pair Moonlight with your host before streaming.\n'
-
