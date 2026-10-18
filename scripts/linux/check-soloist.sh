@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+dry_run=0
+if (($#)); then
+  case "$1" in
+    --dry-run) dry_run=1 ;;
+    -h|--help) printf 'Usage: %s [--dry-run]\n' "${0##*/}"; exit 0 ;;
+    *) printf 'Unknown option: %s\n' "$1" >&2; exit 2 ;;
+  esac
+  shift
+fi
+if (($#)); then printf 'Unexpected arguments.\n' >&2; exit 2; fi
+
 architecture="$(uname -m)"
 case "$architecture" in
   x86_64) build="x86_64" ;;
