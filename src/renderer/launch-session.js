@@ -9,54 +9,7 @@
    * @typedef {import('../../backend/contracts').AppLaunchConfig} AppLaunchConfig
    * @typedef {import('../../backend/contracts').AppLifecycleEvent} AppLifecycleEvent
    * @typedef {import('../../backend/contracts').LauncherAppAPI} LauncherAppAPI
-   * @typedef {readonly [row: number, col: number]} GridCoordinate
-   * @typedef {{ id: string, items: GameMetadata[] }} GridRow
    */
-
-  /* ---------------------------------------------------------------- grid → hero binding */
-
-  /**
-   * Resolves grid focus events to library entries and notifies the hero only when the focused game changes.
-   * The grid coordinate is the primary key (row/column in the synced library layout); the item id is the
-   * cross-check, so a stale coordinate after a library resync falls back to an id lookup instead of showing the wrong game.
-   * @param {{ onHero: (game: GameMetadata) => void }} options
-   */
-  function createHeroBinding({ onHero }) {
-    /** @type {GridRow[]} */
-    let rows = [];
-    /** @type {Map<string, GameMetadata>} */
-    let byId = new Map();
-    /** @type {string | null} */
-    let currentId = null;
-
-    return {
-      /** Call with the same row array that is handed to the grid. @param {GridRow[]} nextRows */
-      setRows(nextRows) {
-        rows = nextRows;
-        byId = new Map();
-        for (const row of rows) for (const game of row.items) if (!byId.has(game.id)) byId.set(game.id, game);
-      },
-      /** Marks the game already shown by the hero so the first focus event does not re-emit it. @param {GameMetadata | null} game */
-      reset(game) { currentId = game?.id ?? null; },
-      /**
-       * @param {GridCoordinate | null} coordinate
-       * @param {GameMetadata | undefined} item
-       * @returns {GameMetadata | null} the resolved game, or null when it cannot be mapped to the library
-       */
-      focus(coordinate, item) {
-        const indexed = coordinate ? rows[coordinate[0]]?.items[coordinate[1]] : undefined;
-        const game = indexed && (!item || indexed.id === item.id) ? indexed : (item && byId.get(item.id)) || null;
-        if (!game) return null;
-        if (game.id !== currentId) {
-          currentId = game.id;
-          onHero(game);
-        }
-        return game;
-      },
-      get currentId() { return currentId; },
-      get size() { return byId.size; }
-    };
-  }
 
   /* ---------------------------------------------------------------- launch execution */
 
@@ -164,5 +117,5 @@
     };
   }
 
-  return { createHeroBinding, buildLaunchConfig, createLaunchSession, describeLaunchError };
+  return { buildLaunchConfig, createLaunchSession, describeLaunchError };
 });

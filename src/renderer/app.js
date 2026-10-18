@@ -68,8 +68,6 @@ let systemRequest = 0;
 const mediaPreloadCache = new Map();
 
 const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
-const motionScheduler = new window.MenuMotion.CompositorScheduler({ reducedMotion: reducedMotionQuery.matches });
-reducedMotionQuery.addEventListener('change', (event) => motionScheduler.setReducedMotion(event.matches));
 
 const launchTransition = window.LaunchTransition.createLaunchTransition({ isReducedMotion: () => reducedMotionQuery.matches });
 let suspendToken = 0;
