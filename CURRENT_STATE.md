@@ -1,4 +1,4 @@
-# Current state (17 October 2026, after iteration 7: Soloist)
+# Current state (18 October 2026, round R01 of the multi-agent workflow)
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
 
@@ -15,7 +15,7 @@ Resume point for the next session. Everything below is verified against the repo
 - **Regression fixed:** the merge of the Soloist UI made the home screen render black (only the header chips). Cause: `soloist-status.js` re-declared the global `SUBTITLE_MAX` that `status-widgets.js` already declares (classic scripts share one global scope), so the file failed to load and `app.js` threw on `window.SoloistStatus.init`. Fixed by renaming; guarded by `test/renderer-globals.test.js` (no duplicate top-level names across the scripts in `index.html`, every referenced file exists).
 - Verified on the real display after the fix: Home Theatre and Gaming rows, header, clock, Spotify "Connect Spotify" widget (client id is set in `.env`).
 - **Unverified:** the whole Soloist path on Linux (flags, `soloist --version` output, `ws.port`/`ws.addr` files, `timestamp_ms` clock base, device handoff via `PUT /me/player`), the new Settings > General Soloist controls visually, Spotify login with the real account.
-- Open step list (sequential, ask before each): (1) home screen check on the real display (OLED shift/dim/fade-in, widget slot, header alignment, small visual fixes) - an agent for this was started and stopped by the user, nothing from it was committed; (2) one music agent for Spotify + Soloist on the HTPC; (3) one UI agent for settings/popups/gamepad flow; (4) review `main` on GitHub (already pushed).
+- Follow-up work is planned in rounds under `agents/rounds/` (see Working rules above); the R01 gamepad end-to-end harness produces the bug list for R02.
 
 ## Iteration 8 (UI pass, committed)
 
@@ -31,8 +31,8 @@ Resume point for the next session. Everything below is verified against the repo
 
 - Single branch `main` (HEAD `7417a9e`), created from `iter5` on 18 October 2026. Every iteration branch (`iter4/*`, `fix/*`, `i5/*`, `i6/*`, `i7/*`, `i8/home`, `feat/iteration-4`, `iter5`) was merged and deleted; helper worktrees in `D:\Github Repos\Home-Media-Launcher-wt\` were removed. Pushed to GitHub (`origin` = `https://github.com/BrainAlaw/Home-Media-Launcher.git`, tracking set). The remote's previous unrelated 4-commit history was force-replaced; it is preserved locally as tag `backup/remote-main-2026-10-18` (delete with `git tag -d` once nothing is needed).
 - `.env` is git-ignored (`.env.example` is committed). Keys: `VP_API`, `VP_HOST`, `VP_IP`, `WEATHER_API`, `STEAMDB_API`, `SPOTIFY_CLIENT_ID`. Read by `backend/env.js`, scrubbed from `process.env` after `readSecrets()`, never sent to the renderer.
-- Checks: `npm run check` → 409 tests, 0 failures. Run Electron with `unset ELECTRON_RUN_AS_NODE`.
-- A read-only review of `c5e4e27..HEAD` ran after the final merge. Fixed: media-widget checkbox id clash (setting could never change), staged categories offered in the Websites selector, `data-osk` on the icon popup input, weather country-code fallback, duplicate Spotify callback, header wake on gamepad input, weather refetch flicker, weather placeholder. **Not fixed (low/medium):** Spotify polling continues while the widget is hidden (needs a `media.setActive` handler), the icon popup ignores a reopen within ~0.6 s of closing, widget Back goes to the tile row instead of the settings button, the High Wycombe default lives in shared code (`home-header.js`, `backend/weather.js`).
+- Checks: `npm run check` → 552 tests, 0 failures (18 October 2026). Run Electron with `unset ELECTRON_RUN_AS_NODE`.
+- Review of `c5e4e27..HEAD` (iteration 5): every finding is fixed (the four low/medium leftovers were fixed in iteration 6).
 
 ## What exists
 
@@ -72,9 +72,9 @@ Iteration 5 (14 requested items):
 2. (Fixed in i6/g1) Preset icons: swap bug in asset-url.js (relative src never matched), wide tile CSS, larger monogram, live art-updated; 12 of 16 presets have real icons.
 3. The user's real config has `header.showWeather: false`; weather only appears after enabling Settings → General → Weather (or editing the config). Defaults changed only in `config.example.json`.
 4. (Fixed) `homeHeader.oledProtection` now defaults to `true` everywhere (OLED TV).
-5. Dead CSS remains: `.icon-field`, `.catalog-icon-panel`, `.catalog-thumb` in `appearance.css`; unused `.preset-card/.preset-grid/.font-list` in `styles.css`/`theme.css`.
+5. (Fixed in iteration 6) dead CSS removed.
 6. Surfshark chip is grey on this machine ("cannot be scripted"); needs the Windows IKEv2 profile named "Surfshark" (see `backend/VPN.md`).
-7. Polling (VPN/network/input) continues while a launched app runs; `migratePresetIcons` is never called (legacy `file://` icon values still work via `asset-url.js`).
+7. (Fixed in iteration 6) background polling pauses during launched apps (`src/main/activity.js`); legacy preset icons are migrated to `preset:<id>` at config load.
 
 ## Unverified (never run for real)
 
@@ -85,11 +85,11 @@ Iteration 5 (14 requested items):
 
 ## Next steps
 
-1. Optionally fix the remaining review items listed above (Spotify polling while the widget is hidden is the one worth doing).
-2. Resolve known issues 1–4 (cover art for Gaming tiles, icon composition, weather default, OLED default).
-3. Ask the user to run `npm start`, set `SPOTIFY_CLIENT_ID`, and try the Spotify flow plus gamepad navigation end to end.
-4. ~~Configure the GitHub remote and push `main`~~ (done 18 October 2026; optionally delete the `backup/remote-main-2026-10-18` tag later).
-5. Test on the Linux HTPC target (Wayland/X11, evdev access, NetworkManager polkit rule from `backend/VPN.md`, MPRIS is not used).
+1. R01 (in progress): Linux HTPC kit, config round-trip tests, `npm run doctor`, dead-code removal, user guides in `docs/`, gamepad end-to-end harness. See `agents/rounds/R01/PLAN.md`.
+2. Fix the bugs from the R01 harness report in R02.
+3. User actions: enable weather in Settings (location `High Wycombe,GB`), sign in to Spotify once (new scopes), optionally widen the Vibepollo token to `GET /api/apps/*/cover`, create the Windows `Surfshark` VPN profile.
+4. Test on the Linux HTPC target (Wayland/X11, evdev access, NetworkManager polkit rule, Soloist).
+5. Optionally delete the `backup/remote-main-2026-10-18` tag.
 
 ## Useful commands
 
