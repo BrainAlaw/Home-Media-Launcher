@@ -6,3 +6,4 @@ dist/
 .env
 .env.*
 !.env.example
+scripts/e2e/out/
