@@ -6,7 +6,12 @@ Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator
 
 ## 1. When the user asks for the next actions
 
-0. **Triage first, before anything else.** Every time the user asks for the next actions, the first thing you do is audit the round, not start the next one:
+0. **Wait for the round to finish, then triage. Never triage a round that is still running.** Right after a round starts (worktrees and prompts are out, agents are working), arm the waiter and stop:
+   - run `scripts/wait-for-round.ps1` in the background (Monitor tool or a background shell) from the agent-kit repo: `-Repo "D:\Github Repos\Home-Media-Launcher" -Round RNN -Agents <list>`;
+   - it prints one line per status change and ends with `ROUND RNN FINAL` (every agent final: DONE, PARTIAL, BLOCKED or OUT_OF_BUDGET) or `TIMEOUT RNN`;
+   - tell the user once that you are waiting and which agents are still open; start the triage below only when the waiter has ended. A missing state file counts as open until the timeout.
+
+1. **Triage, once the round is final.** Every time the user asks for the next actions, the first thing you do is audit the round, not start the next one:
    - read the state file of **every** agent in the last round, from its branch (`git show r<NN>/<agent>:agents/state/CURRENT_STATE_<agent>.md`) and from its worktree if it is still there;
    - for each agent write one line: `Status`, ticked versus total items, last commit, and whether a state file exists at all (a missing or unticked file is a finding, not a formality);
    - read every "Requests for the coordinator" and "Resume notes" section and list the errors, regressions and open questions they raise;
@@ -14,13 +19,13 @@ Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator
    - only then decide what to merge, what to fix yourself (you are the lead of the whole stack), and what goes into the next round.
    Report the triage to the user before merging or planning.
 
-1. **Read the state.** `CURRENT_STATE.md`, every `agents/state/CURRENT_STATE_<agent>.md`, `git log --oneline main..r<NN>/<agent>` for each branch of the last round, and `git worktree list`. Treat a state file still saying `IN_PROGRESS` as "stopped at the last ticked item" (the agent probably ran out of budget) unless the user says otherwise.
-2. **Merge what is ready.** In the order from `agents/rounds/R<NN>/PLAN.md`: merge `--no-ff` into `main`, resolve conflicts keeping both sides' intent, run `npm run check`, run the app and verify on the real display. Fix integration breakage yourself. Never merge a branch whose state is `BLOCKED` without reading why.
-3. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues) and remove merged worktrees (`git worktree remove ../hml-<agent>`, then delete the branch).
-4. **Plan the next round** and present the plan to the user. After the user agrees, create the worktrees (`git worktree add ../hml-<agent> -b r<NN>/<agent> main`, plus a `node_modules` junction to the main checkout on Windows) and write:
+2. **Read the state.** `CURRENT_STATE.md`, every `agents/state/CURRENT_STATE_<agent>.md`, `git log --oneline main..r<NN>/<agent>` for each branch of the last round, and `git worktree list`. Treat a state file still saying `IN_PROGRESS` as "stopped at the last ticked item" (the agent probably ran out of budget) unless the user says otherwise.
+3. **Merge what is ready.** In the order from `agents/rounds/R<NN>/PLAN.md`: merge `--no-ff` into `main`, resolve conflicts keeping both sides' intent, run `npm run check`, run the app and verify on the real display. Fix integration breakage yourself. Never merge a branch whose state is `BLOCKED` without reading why.
+4. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues) and remove merged worktrees (`git worktree remove ../hml-<agent>`, then delete the branch).
+5. **Plan the next round** and present the plan to the user. After the user agrees, create the worktrees (`git worktree add ../hml-<agent> -b r<NN>/<agent> main`, plus a `node_modules` junction to the main checkout on Windows) and write:
    - `agents/rounds/R<NN>/PLAN.md`: goal, one line per agent, the **file ownership map**, shared files and how each may be touched, merge order, what the user must do;
    - one prompt file per agent, **including `claude.md` for yourself**.
-5. Tell the user, per tool, the exact folder to open and the one-line instruction to paste (for example: `Read AGENTS.md and agents/rounds/R03/codex.md, then follow the prompt.`).
+6. Tell the user, per tool, the exact folder to open and the one-line instruction to paste (for example: `Read AGENTS.md and agents/rounds/R03/codex.md, then follow the prompt.`).
 
 ## 2. Writing prompt files
 
@@ -36,6 +41,7 @@ Do your own prompt file (`agents/rounds/R<NN>/claude.md`) in your own worktree l
 
 ## 4. Lessons that must not be repeated
 
+- Triage starts only when the round is final (see section 1, step 0). Triaging a half-finished round produces half-read states and merges of unfinished branches.
 - Run the app after every merge: a duplicated global `const` between two renderer scripts once turned the whole home screen black while all tests passed.
 - On the Windows dev machine `in-process-gpu` renders a grey fullscreen window; the default is software compositing (`src/main/gpu-flags.js`). Verify with a real screen capture, not `capturePage`.
 - Subagents you spawn inside Claude Code count as your own budget: prefer delegating to the external tools through prompt files.

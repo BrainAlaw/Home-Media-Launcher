@@ -73,7 +73,7 @@ Worktrees live next to the repository: `../hml-<agent>` on branch `r<NN>/<agent>
 3. **Create your state file first**, before writing code: copy `agents/STATE_TEMPLATE.md` to `agents/state/CURRENT_STATE_<agent>.md`, set `Status: IN_PROGRESS`, list your tasks as unchecked items, commit it.
 4. Edit **only the files your prompt marks as owned**. Files listed as shared may only be changed in the way the prompt describes. If you need a change elsewhere, do not make it: write it under "Requests for the coordinator" in your state file.
 5. Work in small steps. **After every finished task item:** run `npm run check`, commit (message in English, ending with your tool's attribution line if it has one), tick the item in your state file and commit that too. Your branch must always be in a working state.
-6. Finish by setting `Status:` to `DONE`, `PARTIAL`, `BLOCKED` or `OUT_OF_BUDGET`, filling in every section of the state file, and committing it. Do not merge into `main`, do not push `main`, do not rebase other branches.
+6. Finish by setting `Status:` to `DONE`, `PARTIAL`, `BLOCKED` or `OUT_OF_BUDGET`, filling in every section of the state file, and committing it. The coordinator waits for this final status before it starts reviewing the round, so set it only when the work is truly finished or cleanly stopped. Do not merge into `main`, do not push `main`, do not rebase other branches.
 
 ### 3.4 Running out of tokens or quota
 
