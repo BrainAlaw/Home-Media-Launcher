@@ -86,6 +86,15 @@ async function press(contents, button, times = 1) {
 async function holdKey(contents, keyCode, holdMs) {
   contents.sendInputEvent({ type: 'keyDown', keyCode });
   await sleep(holdMs);
+  // A long hold closes the web window before the key is released; releasing into a destroyed window is expected.
+  if (!contents.isDestroyed()) contents.sendInputEvent({ type: 'keyUp', keyCode });
+  await sleep(SETTLE_MS);
+}
+
+/** Tap of a keyboard key on the page (the same key names the remote and keyboard use). */
+async function tapKey(contents, keyCode) {
+  contents.sendInputEvent({ type: 'keyDown', keyCode });
+  await sleep(120);
   contents.sendInputEvent({ type: 'keyUp', keyCode });
   await sleep(SETTLE_MS);
 }
@@ -130,8 +139,10 @@ const expectKeydowns = (delta, wanted) => {
 
 function writeReport() {
   const failed = results.filter((item) => item.failures.length);
-  const lines = [`# Web app check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}, console errors: ${consoleErrors.length}`, ''];
+  const blocked = results.filter((item) => item.blocked);
+  const lines = [`# Web app check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}, blocked: ${blocked.length}, console errors: ${consoleErrors.length}`, ''];
   for (const item of results) {
+    if (item.blocked) { lines.push(`- BLOCKED · ${item.label} · ${item.blocked}`); continue; }
     lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} · ${item.label} · page received \`${item.delta.join(' ') || '(nothing)'}\``);
     for (const failure of item.failures) lines.push(`  - ${failure}`);
   }
@@ -178,10 +189,13 @@ app.whenReady().then(async () => {
   await runIn(page.webContents, INSTALL_PAD);
   await sleep(300);
 
-  await step('pad-dpad-right-right-down', async () => { await press(page.webContents, BUTTON.RIGHT, 2); await press(page.webContents, BUTTON.DOWN); },
+  // Pad steps (D-pad, A, B) are NOT run here: the preload runs in an isolated world and cannot see the scripted
+  // navigator.getGamepads used by this harness. They need a real controller (see the report) or a test hook.
+  results.push({ label: 'pad-dpad-a-b', delta: [], failures: [], shot: null, blocked: 'needs a real controller; the scripted pad cannot reach the isolated preload' });
+  await step('key-arrow-right-right-down', async () => { await tapKey(page.webContents, 'Right'); await tapKey(page.webContents, 'Right'); await tapKey(page.webContents, 'Down'); },
     (delta) => expectKeydowns(delta, ['ArrowRight', 'ArrowRight', 'ArrowDown']));
-  await step('pad-a-is-enter', () => press(page.webContents, BUTTON.A), (delta) => expectKeydowns(delta, ['Enter']));
-  await step('pad-b-is-escape-tap', () => press(page.webContents, BUTTON.B), (delta) => expectKeydowns(delta, ['Escape']));
+  await step('key-enter-tap', () => tapKey(page.webContents, 'Enter'), (delta) => expectKeydowns(delta, ['Enter']));
+  await step('key-escape-tap', () => tapKey(page.webContents, 'Escape'), (delta) => expectKeydowns(delta, ['Escape']));
   await step('home-short-keeps-window', () => holdKey(page.webContents, 'Home', 150),
     (_delta, state) => state.windowOpen || 'short Home closed the web window');
   await step('home-long-returns-to-launcher', () => holdKey(page.webContents, 'Home', 900), (_delta, state) => {
