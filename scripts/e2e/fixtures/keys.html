@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>keys: idle</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0d12; color: #e8ecf3; font: 20px system-ui, sans-serif; overflow: hidden; }
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; height: 100%; padding: 48px; box-sizing: border-box; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 16px; }
+    button { border: 2px solid #2a3142; border-radius: 16px; background: #151a24; color: inherit; font: inherit; }
+    button.focused { border-color: #7aa2ff; background: #1f2a44; }
+    button.clicked { background: #2d5a3a; }
+    pre { margin: 0; font: 16px ui-monospace, monospace; white-space: pre-wrap; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Key log</h1>
+      <pre id="log">(no events yet)</pre>
+    </section>
+    <section>
+      <h1>Grid</h1>
+      <div class="grid" id="grid"></div>
+      <p id="last">last click: none</p>
+    </section>
+  </main>
+  <script>
+    // Every key event the page receives goes into window.__keyLog (read by the harness) and the visible log.
+    window.__keyLog = [];
+    const logEl = document.getElementById('log');
+    function record(event) {
+      const entry = { type: event.type, key: event.key, code: event.code, repeat: event.repeat, trusted: event.isTrusted, t: Math.round(performance.now()) };
+      window.__keyLog.push(entry);
+      if (window.__keyLog.length > 200) window.__keyLog.shift();
+      logEl.textContent = window.__keyLog.slice(-14).map((e) => `${e.type} ${e.key} (${e.code})${e.repeat ? ' repeat' : ''}${e.trusted ? '' : ' synthetic'}`).join('\n');
+      document.title = `keys: ${window.__keyLog.filter((e) => e.type === 'keydown').length} down`;
+    }
+    document.addEventListener('keydown', record, true);
+    document.addEventListener('keyup', record, true);
+
+    // 3x3 focusable grid: arrows move the highlight, Enter clicks the focused cell.
+    const grid = document.getElementById('grid');
+    const cells = [];
+    for (let i = 0; i < 9; i += 1) {
+      const button = document.createElement('button');
+      button.textContent = `cell ${i + 1}`;
+      button.dataset.index = String(i);
+      grid.append(button);
+      cells.push(button);
+    }
+    let focusIndex = 0;
+    function setFocus(index) {
+      focusIndex = (index + 9) % 9;
+      cells.forEach((cell, i) => cell.classList.toggle('focused', i === focusIndex));
+    }
+    document.addEventListener('keydown', (event) => {
+      const moves = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 3, ArrowUp: -3 };
+      if (event.key in moves) setFocus(focusIndex + moves[event.key]);
+      if (event.key === 'Enter') {
+        const cell = cells[focusIndex];
+        cell.classList.add('clicked');
+        document.getElementById('last').textContent = `last click: ${cell.textContent}`;
+        cell.click();
+      }
+    });
+    cells.forEach((cell, i) => cell.addEventListener('click', () => setFocus(i)));
+    setFocus(0);
+  </script>
+</body>
+</html>
