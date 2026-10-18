@@ -3,6 +3,19 @@ set -Eeuo pipefail
 trap 'printf "Bootstrap failed at line %s\n" "$LINENO" >&2' ERR
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+with_autostart=0
+with_permissions=0
+for argument in "$@"; do
+  case "$argument" in
+    --with-autostart) with_autostart=1 ;;
+    --with-permissions) with_permissions=1 ;;
+    -h|--help)
+      printf 'Usage: %s [--with-autostart] [--with-permissions]\n' "${0##*/}"
+      exit 0
+      ;;
+    *) printf 'Unknown option: %s\n' "$argument" >&2; exit 2 ;;
+  esac
+done
 
 as_root() {
   if [[ "$EUID" -eq 0 ]]; then "$@"; else sudo "$@"; fi
@@ -49,4 +62,10 @@ fi
 
 cd -- "$project_root"
 npm ci --no-audit --no-fund
+if [[ "$with_permissions" -eq 1 ]]; then
+  "$project_root/scripts/linux/setup-permissions.sh"
+fi
+if [[ "$with_autostart" -eq 1 ]]; then
+  "$project_root/scripts/linux/install-autostart.sh"
+fi
 printf 'Bootstrap complete. Run npm start. Pair Moonlight with your host before streaming.\n'
