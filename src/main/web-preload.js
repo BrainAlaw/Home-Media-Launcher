@@ -16,6 +16,51 @@ const SHOW_CONFIRM_AFTER_MS = 150;
 const COVER_FADE_MS = 380;
 const CORNER_ZONE_PX = 140;
 const BUTTON = { B: 1, SELECT: 8, START: 9, GUIDE: 16 };
+const DIRECTION_ACTIONS = new Set(['up', 'down', 'left', 'right']);
+const ACTION_KEYS = {
+  up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight',
+  confirm: 'Enter', back: 'Escape'
+};
+const SYNTHETIC_EVENT_FLAG = '__hmlSyntheticRemoteKey';
+
+function readRemoteKeymap() {
+  try {
+    const argument = process.argv.find((value) => value.startsWith('--hml-keymap='));
+    if (!argument) return null;
+    const encoded = argument.slice('--hml-keymap='.length);
+    if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return null;
+    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+    const map = JSON.parse(new TextDecoder().decode(bytes));
+    if (!map || typeof map !== 'object' || !map.buttons || typeof map.buttons !== 'object'
+      || !map.keys || typeof map.keys !== 'object' || !Array.isArray(map.exitButtons)
+      || !Number.isFinite(map.axisDeadzone) || map.axisDeadzone <= 0 || map.axisDeadzone > 1
+      || !Number.isInteger(map.longPressMs) || map.longPressMs < 100 || map.longPressMs > 5000) return null;
+    const actions = new Set(['up', 'down', 'left', 'right', 'confirm', 'back', 'exit']);
+    if (Object.entries(map.buttons).some(([index, action]) => !/^(0|[1-9]\d*)$/.test(index) || Number(index) > 31 || !actions.has(action))) return null;
+    if (Object.entries(map.keys).some(([key, action]) => !key.trim() || !actions.has(action))) return null;
+    if (map.exitButtons.some((index) => !Number.isInteger(index) || index < 0 || index > 31)) return null;
+    return map;
+  } catch {
+    return null;
+  }
+}
+
+const REMOTE_KEYMAP = readRemoteKeymap();
+
+function actionForKey(event, map) {
+  return map?.keys?.[event.key] || map?.keys?.[event.code] || null;
+}
+
+function dispatchAction(action) {
+  const key = ACTION_KEYS[action];
+  if (!key) return;
+  const target = document.activeElement || document.body;
+  for (const type of ['keydown', 'keyup']) {
+    const event = new KeyboardEvent(type, { key, code: key, bubbles: true, cancelable: true });
+    Object.defineProperty(event, SYNTHETIC_EVENT_FLAG, { value: true });
+    target.dispatchEvent(event);
+  }
+}
 
 function readAppName() {
   const argument = process.argv.find((value) => value.startsWith('--hml-app-name='));
@@ -122,20 +167,92 @@ function createOverlay() {
 
   // Hold sources: name -> timestamp (rAF clock) when the hold started. The longest running hold drives the ring.
   const holds = new Map();
+  const exitButtons = REMOTE_KEYMAP?.exitButtons || [BUTTON.GUIDE];
+  const pressedRemoteKeys = new Map();
+  const repeatingActions = new Map();
   let escapeHeld = false;
-  window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !event.repeat) escapeHeld = true; }, { capture: true, passive: true });
-  window.addEventListener('keyup', (event) => { if (event.key === 'Escape') escapeHeld = false; }, { capture: true, passive: true });
-  window.addEventListener('blur', () => { escapeHeld = false; });
+  let closing = false;
+  function triggerExit() {
+    if (closing) return;
+    closing = true;
+    requestClose();
+  }
+  window.addEventListener('keydown', (event) => {
+    if (event[SYNTHETIC_EVENT_FLAG]) return;
+    if (event.key === 'Escape' && !event.repeat) escapeHeld = true;
+    const action = actionForKey(event, REMOTE_KEYMAP);
+    if (!action || event.repeat) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (action === 'exit') {
+      const id = `${event.code}|${event.key}`;
+      if (pressedRemoteKeys.has(id)) return;
+      const timer = setTimeout(triggerExit, REMOTE_KEYMAP.longPressMs);
+      pressedRemoteKeys.set(id, timer);
+    } else {
+      dispatchAction(action);
+    }
+  }, { capture: true });
+  window.addEventListener('keyup', (event) => {
+    if (event[SYNTHETIC_EVENT_FLAG]) return;
+    if (event.key === 'Escape') escapeHeld = false;
+    const action = actionForKey(event, REMOTE_KEYMAP);
+    if (!action) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (action === 'exit') {
+      const id = `${event.code}|${event.key}`;
+      const timer = pressedRemoteKeys.get(id);
+      if (timer) clearTimeout(timer);
+      pressedRemoteKeys.delete(id);
+    }
+  }, { capture: true });
+  window.addEventListener('blur', () => {
+    escapeHeld = false;
+    for (const timer of pressedRemoteKeys.values()) clearTimeout(timer);
+    pressedRemoteKeys.clear();
+    repeatingActions.clear();
+  });
 
   let previous = {};
-  let closing = false;
   function pollInputs(time) {
     if (closing) return;
     const pads = Array.from(navigator.getGamepads?.() || []).filter(Boolean);
     const pressed = (index) => pads.some((pad) => pad.buttons[index]?.pressed);
-    if (pressed(BUTTON.SELECT) && pressed(BUTTON.START)) { closing = true; requestClose(); return; }
+    if (pressed(BUTTON.SELECT) && pressed(BUTTON.START)) { triggerExit(); return; }
 
-    const active = { guide: pressed(BUTTON.GUIDE), escape: escapeHeld, b: pressed(BUTTON.B) };
+    const active = { guide: exitButtons.some(pressed), escape: escapeHeld, b: pressed(BUTTON.B) };
+    if (REMOTE_KEYMAP) {
+      const actions = new Set();
+      for (const pad of pads) {
+        for (const [index, action] of Object.entries(REMOTE_KEYMAP.buttons)) {
+          if (action !== 'exit' && pad.buttons[Number(index)]?.pressed) actions.add(action);
+        }
+        const x = pad.axes?.[0] || 0;
+        const y = pad.axes?.[1] || 0;
+        if (Math.abs(x) >= Math.abs(y)) {
+          if (x < -REMOTE_KEYMAP.axisDeadzone) actions.add('left');
+          if (x > REMOTE_KEYMAP.axisDeadzone) actions.add('right');
+        } else {
+          if (y < -REMOTE_KEYMAP.axisDeadzone) actions.add('up');
+          if (y > REMOTE_KEYMAP.axisDeadzone) actions.add('down');
+        }
+      }
+      for (const action of [...repeatingActions.keys()]) {
+        if (!actions.has(action)) repeatingActions.delete(action);
+      }
+      for (const action of actions) {
+        const repeat = DIRECTION_ACTIONS.has(action);
+        const previousPress = repeatingActions.get(action);
+        if (!previousPress) {
+          dispatchAction(action);
+          repeatingActions.set(action, { next: time + 380 });
+        } else if (repeat && time >= previousPress.next) {
+          dispatchAction(action);
+          previousPress.next = time + 90;
+        }
+      }
+    }
     let progress = 0;
     for (const [source, isHeld] of Object.entries(active)) {
       if (!isHeld) { holds.delete(source); continue; }
@@ -150,7 +267,7 @@ function createOverlay() {
       host.removeAttribute('data-confirm');
       if (progress === 0) setProgress(0);
     }
-    if (progress >= 1) { closing = true; requestClose(); return; }
+    if (progress >= 1) { triggerExit(); return; }
 
     // Start/Select alone reveals the button (and its hint) without closing anything.
     const reveal = (index) => pressed(index) && !previous[index];

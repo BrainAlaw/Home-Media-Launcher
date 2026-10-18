@@ -1,30 +1,39 @@
-# CURRENT_STATE_codex (round R01)
+# CURRENT_STATE_codex (round R02)
 
-Status: DONE
-Agent: codex · Tool: Codex · Branch: r01/codex · Last update: 2026-10-18 12:00
+Status: PARTIAL
+Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:00
 
 ## Tasks
-- [x] 1. Add Linux autostart installer — `0e3f4d2`, refined in `ad92732`.
-- [x] 2. Add Linux permissions setup — `eeb75d9`.
-- [x] 3. Add Soloist diagnostic — `eeb75d9`, supports dry run.
-- [x] 4. Extend bootstrap with opt-in integration flags — `835976b`.
-- [x] 5. Add Linux script tests — `342bc34`, explicit bash-missing skip.
-- [x] 6. Document Linux fresh install and undo steps — `835976b`.
+- [x] 1. Add JSON mapping, main-process loader/validator/encoder, and tests — `npm test` passed (546/546).
+- [x] 2. Implement preload gamepad/remote input and long-press exit — `node --check src/main/web-preload.js` passed.
+- [x] 3. Pass keymap argument from openWebsite — `npm run check` passed (546/546).
+- [x] 4. Document remote controls and limitations; added the `Back` key alias — `npm run check` passed.
+- [x] 5. Final verification and state update — `npm run check` and `git diff --check` passed.
 
 ## Done
-- Implemented all six task items. Commits: `0e3f4d2`, `eeb75d9`, `835976b`, `342bc34`, `ad92732`.
+- Added and validated the JSON keymap, base64 encoder, argument decoder (null fallback), and unit tests.
+- Added preload gamepad/remote mapping, autostart argument injection, and UK English documentation.
+- Commits: `3dbaf28`, `a8b17c3`, `94a8180`, `bb83007`.
 
 ## Verified
-- `npm run check` passed: 552 passed, 0 failed, 1 skipped. The bash-dependent Linux script test skipped because bash is unavailable in this Windows environment.
+- `npm test` passed: 546 tests, 0 failed.
+- `npm run check` passed after the main-process argument change: 546 tests, 0 failed.
 
 ## Unverified / not done
-- Bash syntax and dry-run execution need validation on a Linux host with bash installed.
+- `npm run check` passed after the final changes: 546 tests, 0 failed.
+- `git diff --check` passed; worktree is clean.
 
 ## Files changed
-- agents/state/CURRENT_STATE_codex.md — task tracking.
+- `backend/remote-keymap.json` — shared button/key mapping and timing.
+- `src/main/remote-keymap.js` — mapping validation, load, encode, decode, and argument builder.
+- `test/remote-keymap.test.js` — validation, round trip, and fallback coverage.
+- `src/main/web-preload.js` — pad and remote dispatch plus Home hold exit.
+- `src/main/index.js` — keymap argument added to website preload arguments.
+- `backend/REMOTE-APPS.md` — supported controls, limits, mapping edits, and exit gestures.
+- `agents/state/CURRENT_STATE_codex.md` — task tracking and handoff.
 
 ## Requests for the coordinator
-- None.
+- `src/main/index.js` currently closes on BrowserBack in its existing `before-input-event` handler. That conflicts with mapping BrowserBack to Escape; only the specified openWebsite line was authorised, so coordinator should decide whether to adjust that handler.
 
 ## Resume notes
-No remaining implementation tasks.
+Coordinator: allow a targeted change to the existing BrowserBack `before-input-event` handler (or accept immediate close as a documented exception), then verify the behavior on the real display with a remote/gamepad. The requested BrowserBack-to-Escape behavior is not currently reachable because the main process closes the window before preload handling.

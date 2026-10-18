@@ -241,7 +241,7 @@ function openWebsite(tile) {
       sandbox: true,
       partition: `persist:web-${partitionId}`,
       // Read by web-preload.js for the "Close <name>?" overlay.
-      additionalArguments: [`--hml-app-name=${encodeURIComponent(String(tile.name || tile.title || 'this app').slice(0, 80))}`]
+      additionalArguments: [`--hml-app-name=${encodeURIComponent(String(tile.name || tile.title || 'this app').slice(0, 80))}`, require('./remote-keymap').remoteKeymapArgument()]
     }
   });
   webWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -249,8 +249,15 @@ function openWebsite(tile) {
   webWindow.webContents.on('will-navigate', allowHttp);
   webWindow.webContents.on('will-redirect', allowHttp);
   webWindow.webContents.on('before-input-event', (event, input) => {
-    // Escape is hold-to-close and handled by web-preload.js (the page keeps ordinary Escape taps); Back and Alt+F4 close at once.
-    if (input.type === 'keyDown' && (input.key === 'BrowserBack' || (input.alt && input.key === 'F4'))) { event.preventDefault(); webWindow?.close(); }
+    // Escape is hold-to-close and handled by web-preload.js (the page keeps ordinary Escape taps).
+    // Remote/keyboard Back steps back through the page's history and never closes the app; Alt+F4 closes at once.
+    if (input.type === 'keyDown' && input.key === 'BrowserBack') {
+      event.preventDefault();
+      if (webWindow && !webWindow.isDestroyed() && webWindow.webContents.canGoBack()) webWindow.webContents.goBack();
+    } else if (input.type === 'keyDown' && input.alt && input.key === 'F4') {
+      event.preventDefault();
+      webWindow?.close();
+    }
   });
   webWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   webWindow.webContents.session.setPermissionCheckHandler(() => false);

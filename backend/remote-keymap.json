@@ -1,0 +1,24 @@
+{
+  "buttons": {
+    "0": "confirm",
+    "1": "back",
+    "12": "up",
+    "13": "down",
+    "14": "left",
+    "15": "right"
+  },
+  "keys": {
+    "ArrowUp": "up",
+    "ArrowDown": "down",
+    "ArrowLeft": "left",
+    "ArrowRight": "right",
+    "Enter": "confirm",
+    "Home": "exit",
+    "BrowserHome": "exit"
+  },
+  "axisDeadzone": 0.6,
+  "longPressMs": 700,
+  "exitButtons": [
+    16
+  ]
+}
