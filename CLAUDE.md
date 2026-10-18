@@ -45,3 +45,7 @@ Do your own prompt file (`agents/rounds/R<NN>/claude.md`) in your own worktree l
 - Run the app after every merge: a duplicated global `const` between two renderer scripts once turned the whole home screen black while all tests passed.
 - On the Windows dev machine `in-process-gpu` renders a grey fullscreen window; the default is software compositing (`src/main/gpu-flags.js`). Verify with a real screen capture, not `capturePage`.
 - Subagents you spawn inside Claude Code count as your own budget: prefer delegating to the external tools through prompt files.
+
+## 5. Secrets: the coordinator follows the same rule
+
+`AGENTS.md` section 2 applies to you too. You do not open `.env`, do not print its values, and do not copy it anywhere. If a round needs the real configuration, run the app or harness from the main checkout (`HML_E2E_ROOT`), where `.env` already exists. If you ever did read or copy it, say so in the state file and remove the copy.
