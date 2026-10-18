@@ -40,6 +40,12 @@ for (const file of COPY_FILES) {
 }
 const configPath = path.join(profile, 'config.json');
 const baseConfig = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, 'utf8')) : { settings: {}, rows: [] };
+// Fixed loopback port: the config must name the fixture URL before the launcher module reads it.
+const FIXTURE_PORT = 48231;
+const websites = (baseConfig.websites || []).filter((site) => site.id !== WEBSITE_ID);
+fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, websites: [...websites, { id: WEBSITE_ID, name: 'E2E keys', url: `http://127.0.0.1:${FIXTURE_PORT}/keys.html`, icon: '' }] }, null, 2));
+process.env.HOME_MEDIA_LAUNCHER_CONFIG = configPath;
+process.argv.push(ROOT);
 const results = [];
 const consoleErrors = [];
 
@@ -133,7 +139,6 @@ function writeReport() {
   return { steps: results.length, failed: failed.length };
 }
 
-process.env.HOME_MEDIA_LAUNCHER_CONFIG = configPath;
 app.setPath('userData', profile);
 app.on('web-contents-created', (_event, contents) => {
   contents.on('console-message', (_e, level, message, line, source) => {
@@ -141,13 +146,10 @@ app.on('web-contents-created', (_event, contents) => {
   });
 });
 
+require(path.join(ROOT, 'src', 'main', 'index.js'));
+
 app.whenReady().then(async () => {
-  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
-  const port = server.address().port;
-  const websites = (baseConfig.websites || []).filter((site) => site.id !== WEBSITE_ID);
-  fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, websites: [...websites, { id: WEBSITE_ID, name: 'E2E keys', url: `http://127.0.0.1:${port}/keys.html`, icon: '' }] }, null, 2));
-  process.argv.push(ROOT);
-  require(path.join(ROOT, 'src', 'main', 'index.js'));
+  await new Promise((resolve, reject) => { server.once('error', reject); server.listen(FIXTURE_PORT, '127.0.0.1', resolve); });
   await sleep(BOOT_MS);
 
   const launcher = launcherWindow();
