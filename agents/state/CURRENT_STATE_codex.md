@@ -4,20 +4,20 @@ Status: IN_PROGRESS
 Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:00
 
 ## Tasks
-- [ ] 1. Add JSON mapping, main-process loader/validator/encoder, and tests.
+- [x] 1. Add JSON mapping, main-process loader/validator/encoder, and tests — `npm test` passed (546/546).
 - [ ] 2. Implement preload gamepad/remote input and long-press exit.
 - [ ] 3. Pass keymap argument from openWebsite.
 - [ ] 4. Document remote controls and limitations.
 - [ ] 5. Final verification and state update.
 
 ## Done
-- Created initial state from the template before implementation.
+- Added and validated the JSON keymap, base64 encoder, argument decoder (null fallback), and unit tests.
 
 ## Verified
-- Read all assigned files and the R02 plan/prompt.
+- `npm test` passed: 546 tests, 0 failed.
 
 ## Unverified / not done
-- Implementation pending.
+- Preload wiring, main-process argument, docs, and full check remain.
 
 ## Files changed
 - agents/state/CURRENT_STATE_codex.md — task tracking.
@@ -26,4 +26,4 @@ Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:0
 - None.
 
 ## Resume notes
-Begin task 1; implement map validation and tests.
+Continue with task 2 in `src/main/web-preload.js`.
