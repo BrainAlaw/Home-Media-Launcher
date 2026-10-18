@@ -1,4 +1,5 @@
 # Home Media Launcher
+Dokumentacja (EN): [Getting started](docs/GETTING_STARTED.md) · [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 Pełnoekranowy launcher dla Linux, sterowany klawiaturą lub kontrolerem. Projekt używa Electron tylko jako powłoki systemowej. Interfejs nie używa frameworka ani zewnętrznych usług.
 
