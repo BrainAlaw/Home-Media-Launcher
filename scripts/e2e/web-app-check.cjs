@@ -165,7 +165,11 @@ app.whenReady().then(async () => {
 
   for (let waited = 0; !pageWindow() && waited < 15000; waited += 250) await sleep(250);
   const page = pageWindow();
-  if (!page) throw new Error('website window did not open');
+  if (!page) {
+    const urls = BrowserWindow.getAllWindows().map((win) => win.webContents.getURL().slice(0, 100));
+    const toast = await runIn(launcher.webContents, 'document.querySelector("#toast")?.textContent || ""');
+    throw new Error(`website window did not open; windows: ${JSON.stringify(urls)}; launcher toast: ${JSON.stringify(toast)}`);
+  }
   // Move the page to the same secondary display as the launcher, so the primary screen (the user's work) stays untouched.
   page.setBounds({ x: target.bounds.x, y: target.bounds.y, width: target.bounds.width, height: target.bounds.height });
   await sleep(1500);
