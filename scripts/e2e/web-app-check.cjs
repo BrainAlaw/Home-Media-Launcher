@@ -158,7 +158,8 @@ app.whenReady().then(async () => {
   launcher.setAlwaysOnTop(true, 'screen-saver');
   launcher.focus();
   await sleep(800);
-  await runIn(launcher.webContents, `window.api.launchApp({ id: '${WEBSITE_ID}' })`);
+  // Not awaited: the launch promise resolves only when the website closes, and executeJavaScript would wait for that.
+  await runIn(launcher.webContents, `void window.api.launchApp({ id: '${WEBSITE_ID}' }), true`);
 
   for (let waited = 0; !pageWindow() && waited < 15000; waited += 250) await sleep(250);
   const page = pageWindow();
