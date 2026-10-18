@@ -6,6 +6,14 @@ Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator
 
 ## 1. When the user asks for the next actions
 
+0. **Triage first, before anything else.** Every time the user asks for the next actions, the first thing you do is audit the round, not start the next one:
+   - read the state file of **every** agent in the last round, from its branch (`git show r<NN>/<agent>:agents/state/CURRENT_STATE_<agent>.md`) and from its worktree if it is still there;
+   - for each agent write one line: `Status`, ticked versus total items, last commit, and whether a state file exists at all (a missing or unticked file is a finding, not a formality);
+   - read every "Requests for the coordinator" and "Resume notes" section and list the errors, regressions and open questions they raise;
+   - check whether an agent's commits respect its owned-files list (`git diff --name-only main...r<NN>/<agent>`); anything outside it is a finding;
+   - only then decide what to merge, what to fix yourself (you are the lead of the whole stack), and what goes into the next round.
+   Report the triage to the user before merging or planning.
+
 1. **Read the state.** `CURRENT_STATE.md`, every `agents/state/CURRENT_STATE_<agent>.md`, `git log --oneline main..r<NN>/<agent>` for each branch of the last round, and `git worktree list`. Treat a state file still saying `IN_PROGRESS` as "stopped at the last ticked item" (the agent probably ran out of budget) unless the user says otherwise.
 2. **Merge what is ready.** In the order from `agents/rounds/R<NN>/PLAN.md`: merge `--no-ff` into `main`, resolve conflicts keeping both sides' intent, run `npm run check`, run the app and verify on the real display. Fix integration breakage yourself. Never merge a branch whose state is `BLOCKED` without reading why.
 3. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues) and remove merged worktrees (`git worktree remove ../hml-<agent>`, then delete the branch).
