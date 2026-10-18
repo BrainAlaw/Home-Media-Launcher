@@ -8,8 +8,8 @@ Base: `main` (commit of this file). Linux HTPC is the target; the dev machine is
 
 | Agent | Tier | Worktree | Branch | Task |
 |---|---|---|---|---|
-| `codex` | M | `D:\Github Repos\hml-codex` | `r02/codex` | Pad and remote key mapping for web app windows, long-press Home to exit (see `codex.md`) |
-| `claude` | L | `D:\Github Repos\hml-claude` | `r02/claude` | Verification page and harness for web app windows (see `claude.md`); merge, real-display check |
+| `codex` | M | `D:\Github Repos\hml-r02-codex` | `r02/codex` | Pad and remote key mapping for web app windows, long-press Home to exit (see `codex.md`) |
+| `claude` | L | `D:\Github Repos\hml-r02-claude` | `r02/claude` | Verification page and harness for web app windows (see `claude.md`); merge, real-display check |
 
 ## File ownership
 
@@ -30,4 +30,4 @@ Shared (one-line change only, described in `codex.md`): `src/main/index.js`, whe
 
 | Tool | Folder | Paste |
 |---|---|---|
-| Codex | `D:\Github Repos\hml-codex` | `Read AGENTS.md and agents/rounds/R02/codex.md, then follow the prompt.` |
+| Codex | `D:\Github Repos\hml-r02-codex` | `Read AGENTS.md and agents/rounds/R02/codex.md, then follow the prompt.` |

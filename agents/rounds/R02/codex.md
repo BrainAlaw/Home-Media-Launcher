@@ -1,6 +1,6 @@
 # R02 · codex · Tier M
 
-- Worktree: `D:\Github Repos\hml-codex` (branch `r02/codex`). Work only here.
+- Worktree: `D:\Github Repos\hml-r02-codex` (branch `r02/codex`). Work only here.
 - Read first: `AGENTS.md`, `src/main/web-preload.js` (whole file), `src/main/index.js` function `openWebsite` (about line 224), `src/renderer/gamepad-input.js` (button map and deadzone), `src/renderer/remote-keymap.js` (remote key names and the 500 ms long press).
 - State file: `agents/state/CURRENT_STATE_codex.md`. Copy `agents/STATE_TEMPLATE.md` first, set `Status: IN_PROGRESS`, tick the items below, commit before writing code.
 - Owned files: listed in `agents/rounds/R02/PLAN.md`. Do not edit anything else. Only the one line in `openWebsite` described under "Main process" is allowed outside your files.

@@ -1,6 +1,6 @@
 # R02 · claude · Tier L
 
-- Worktree: `D:\Github Repos\hml-claude` (branch `r02/claude`).
+- Worktree: `D:\Github Repos\hml-r02-claude` (branch `r02/claude`).
 - State file: `agents/state/CURRENT_STATE_claude.md`.
 - Owned files: `scripts/e2e/web-app-check.cjs` (new), `scripts/e2e/fixtures/**` (new), your state file.
 
