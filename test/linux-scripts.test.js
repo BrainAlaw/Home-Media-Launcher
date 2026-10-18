@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
+const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -39,8 +40,7 @@ test('Linux scripts pass bash syntax and dry-run checks', (t) => {
         encoding: 'utf8',
         env: { ...process.env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') },
       });
-      if (result.status !== 0) t.fail(`${script} --dry-run failed: ${result.stderr || result.error}`);
-      else t.pass(`${script} --dry-run succeeded`);
+      assert.equal(result.status, 0, `${script} --dry-run failed: ${result.stderr || result.error}`);
     } finally {
       fs.rmSync(home, { recursive: true, force: true });
     }

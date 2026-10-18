@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+LOCAL_USER="${USER:-$(id -un 2>/dev/null || echo unknown)}"
 
 project_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 dry_run=0
@@ -22,15 +23,15 @@ run_privileged() {
   if [[ "$EUID" -eq 0 ]]; then "$@"; else sudo "$@"; fi
 }
 
-if ! id -nG "$USER" | tr ' ' '\n' | grep -Fxq input; then
-  printf 'Adding %s to the input group for /dev/input/event* access. A new login is required.\n' "$USER"
+if ! id -nG "$LOCAL_USER" | tr ' ' '\n' | grep -Fxq input; then
+  printf 'Adding %s to the input group for /dev/input/event* access. A new login is required.\n' "$LOCAL_USER"
   if [[ "$dry_run" -eq 0 ]]; then
-    if [[ "$EUID" -eq 0 ]]; then usermod -aG input "$USER"; else sudo usermod -aG input "$USER"; fi
+    if [[ "$EUID" -eq 0 ]]; then usermod -aG input "$LOCAL_USER"; else sudo usermod -aG input "$LOCAL_USER"; fi
   else
-    printf 'Would run: usermod -aG input %q\n' "$USER"
+    printf 'Would run: usermod -aG input %q\n' "$LOCAL_USER"
   fi
 else
-  printf '%s is already in the input group.\n' "$USER"
+  printf '%s is already in the input group.\n' "$LOCAL_USER"
 fi
 
 run_privileged install -D -m 0644 "$project_root/scripts/70-vibepollo-xone.rules" /etc/udev/rules.d/70-vibepollo-xone.rules
