@@ -7,7 +7,7 @@ Resume point for the next session. Everything below is verified against the repo
 - Work **sequentially**: one step at a time, at most **2-3 agents at once**, usually one. Merge small tasks into one agent; no agent for something describable in 2-3 lines of code.
 - After each step: merge, run `npm run check`, verify on the real display, then **ask the user before the next step**. Do not spawn parallel waves of 6-8 agents again (the user stopped one for token cost and merge conflicts).
 
-## Iteration 7 (Spotify Soloist, merged into `iter5`)
+## Iteration 7 (Spotify Soloist)
 
 - Soloist = headless Spotify Connect client (Linux only; x86_64/aarch64/armv7), local WebSocket API, API key from the Spotify for Developers dashboard (`SPOTIFY_SOLOIST_API` in `.env`), builds expire after 90 days (exit code 10), binary is not redistributable (user installs it; see `backend/SOLOIST.md`).
 - Code: `backend/soloist/process.js` (supervisor), `ws-client.js` + `protocol.js` + `state.js` (socket client, MediaState mapping), `manager.js` (glue, adapted to the real X1/X2 APIs), `src/main/ext/soloist.js` (ns `soloist`), preference of the Soloist device in `backend/spotify/service.js` (state from the socket instead of polling `/me/player` when connected), `settings.soloist = { enabled (default false), deviceName, binaryPath }`.
@@ -15,9 +15,9 @@ Resume point for the next session. Everything below is verified against the repo
 - **Regression fixed:** the merge of the Soloist UI made the home screen render black (only the header chips). Cause: `soloist-status.js` re-declared the global `SUBTITLE_MAX` that `status-widgets.js` already declares (classic scripts share one global scope), so the file failed to load and `app.js` threw on `window.SoloistStatus.init`. Fixed by renaming; guarded by `test/renderer-globals.test.js` (no duplicate top-level names across the scripts in `index.html`, every referenced file exists).
 - Verified on the real display after the fix: Home Theatre and Gaming rows, header, clock, Spotify "Connect Spotify" widget (client id is set in `.env`).
 - **Unverified:** the whole Soloist path on Linux (flags, `soloist --version` output, `ws.port`/`ws.addr` files, `timestamp_ms` clock base, device handoff via `PUT /me/player`), the new Settings > General Soloist controls visually, Spotify login with the real account.
-- Open step list (sequential, ask before each): (1) home screen check on the real display (OLED shift/dim/fade-in, widget slot, header alignment, small visual fixes) - an agent for this was started and stopped by the user, nothing from it is committed, worktree `../Home-Media-Launcher-wt/home8` (branch `i8/home`) can be deleted; (2) one music agent for Spotify + Soloist on the HTPC; (3) one UI agent for settings/popups/gamepad flow; (4) review, merge `iter5` into `main`, push, delete worktrees.
+- Open step list (sequential, ask before each): (1) home screen check on the real display (OLED shift/dim/fade-in, widget slot, header alignment, small visual fixes) - an agent for this was started and stopped by the user, nothing from it was committed; (2) one music agent for Spotify + Soloist on the HTPC; (3) one UI agent for settings/popups/gamepad flow; (4) review, push `main` to GitHub once a remote is configured.
 
-## Iteration 8 (UI pass, uncommitted on `iter5`)
+## Iteration 8 (UI pass, committed)
 
 - **Quick settings:** heading removed; header host/Tailscale/Surfshark/network indicators are display-only `div`s (no focus, no click); VPN rows now get the same spring/lens motion as static rows (`MenuController.register`); switch knob uses a plain ease (no overshoot) and a busy state breathes by opacity only.
 - **Network row** (first row of the sheet, `#network-card`): link detail + ping every 10 s (TCP connect to 8.8.8.8:443, `backend/net-probe.js`, ns `system` events `ping` / `speedtest`), dot colour by latency (green < 60 ms, amber < 150 ms, red otherwise/offline), same dot on the header network glyph. Press = 20 s download speed test (4 streams from `speed.cloudflare.com`, user-triggered only, nothing stored); press again cancels. Download only, no upload.
@@ -29,9 +29,7 @@ Resume point for the next session. Everything below is verified against the repo
 
 ## Git
 
-- Working branch: `iter5` (HEAD `09a3f62`), branched from `feat/iteration-4`. Nothing has been merged to `main` or pushed to GitHub (`master` holds only the baseline commit `7abda50`).
-- All iteration 5 branches (`i5/ap`, `sa`, `qa`, `h1`, `h2`, `m1`, `m2`, `m3`) are merged into `iter5`. Iteration 4 branches (`iter4/*`, `fix/*`) are merged into `feat/iteration-4`.
-- Helper worktrees live in `D:\Github Repos\Home-Media-Launcher-wt\` (22 entries incl. main). Safe to delete when nothing is pending: `git worktree remove --force ../Home-Media-Launcher-wt/<name>`, then `git branch -D` the iter4/fix/i5 branches if wanted. The `q1` and `m*`/`qa` worktrees contain `node_modules` junctions to the main checkout.
+- Single branch `main` (HEAD `16247b4`), created from `iter5` on 18 October 2026. Every iteration branch (`iter4/*`, `fix/*`, `i5/*`, `i6/*`, `i7/*`, `i8/home`, `feat/iteration-4`, `iter5`) was merged and deleted; helper worktrees in `D:\Github Repos\Home-Media-Launcher-wt\` were removed. No remote is configured yet (nothing pushed to GitHub).
 - `.env` is git-ignored (`.env.example` is committed). Keys: `VP_API`, `VP_HOST`, `VP_IP`, `WEATHER_API`, `STEAMDB_API`, `SPOTIFY_CLIENT_ID`. Read by `backend/env.js`, scrubbed from `process.env` after `readSecrets()`, never sent to the renderer.
 - Checks: `npm run check` → 409 tests, 0 failures. Run Electron with `unset ELECTRON_RUN_AS_NODE`.
 - A read-only review of `c5e4e27..HEAD` ran after the final merge. Fixed: media-widget checkbox id clash (setting could never change), staged categories offered in the Websites selector, `data-osk` on the icon popup input, weather country-code fallback, duplicate Spotify callback, header wake on gamepad input, weather refetch flicker, weather placeholder. **Not fixed (low/medium):** Spotify polling continues while the widget is hidden (needs a `media.setActive` handler), the icon popup ignores a reopen within ~0.6 s of closing, widget Back goes to the tile row instead of the settings button, the High Wycombe default lives in shared code (`home-header.js`, `backend/weather.js`).
@@ -90,7 +88,7 @@ Iteration 5 (14 requested items):
 1. Optionally fix the remaining review items listed above (Spotify polling while the widget is hidden is the one worth doing).
 2. Resolve known issues 1–4 (cover art for Gaming tiles, icon composition, weather default, OLED default).
 3. Ask the user to run `npm start`, set `SPOTIFY_CLIENT_ID`, and try the Spotify flow plus gamepad navigation end to end.
-4. Decide whether to merge `iter5` into `main`, push, and clean up the worktrees.
+4. Configure the GitHub remote and push `main` (history is local-only today).
 5. Test on the Linux HTPC target (Wayland/X11, evdev access, NetworkManager polkit rule from `backend/VPN.md`, MPRIS is not used).
 
 ## Useful commands
