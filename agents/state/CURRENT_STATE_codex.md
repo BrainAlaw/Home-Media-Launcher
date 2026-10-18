@@ -6,7 +6,7 @@ Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:0
 ## Tasks
 - [x] 1. Add JSON mapping, main-process loader/validator/encoder, and tests — `npm test` passed (546/546).
 - [x] 2. Implement preload gamepad/remote input and long-press exit — `node --check src/main/web-preload.js` passed.
-- [ ] 3. Pass keymap argument from openWebsite.
+- [x] 3. Pass keymap argument from openWebsite — `npm run check` passed (546/546).
 - [ ] 4. Document remote controls and limitations.
 - [ ] 5. Final verification and state update.
 
@@ -15,9 +15,11 @@ Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:0
 
 ## Verified
 - `npm test` passed: 546 tests, 0 failed.
+- `npm run check` passed after the main-process argument change: 546 tests, 0 failed.
 
 ## Unverified / not done
 - Preload parses the injected mapping, dispatches synthetic keyboard events, repeats pad directions, and routes Home/Guide/legacy gestures through one close handler.
+- `openWebsite` appends the encoded keymap argument while preserving the app-name argument.
 
 ## Files changed
 - agents/state/CURRENT_STATE_codex.md — task tracking.

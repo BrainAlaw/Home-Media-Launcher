@@ -241,7 +241,7 @@ function openWebsite(tile) {
       sandbox: true,
       partition: `persist:web-${partitionId}`,
       // Read by web-preload.js for the "Close <name>?" overlay.
-      additionalArguments: [`--hml-app-name=${encodeURIComponent(String(tile.name || tile.title || 'this app').slice(0, 80))}`]
+      additionalArguments: [`--hml-app-name=${encodeURIComponent(String(tile.name || tile.title || 'this app').slice(0, 80))}`, require('./remote-keymap').remoteKeymapArgument()]
     }
   });
   webWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
