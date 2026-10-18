@@ -16,7 +16,11 @@ const scripts = [
 ];
 const bashAvailable = spawnSync('bash', ['--version'], { encoding: 'utf8' }).status === 0;
 
-test('Linux scripts pass bash syntax and dry-run checks', { skip: !bashAvailable && 'bash is not installed' }, (t) => {
+test('Linux scripts pass bash syntax and dry-run checks', (t) => {
+  if (!bashAvailable) {
+    t.skip('bash is not installed');
+    return;
+  }
   for (const script of scripts) {
     const syntax = spawnSync('bash', ['-n', path.join(root, script)], { encoding: 'utf8' });
     if (syntax.status !== 0) {

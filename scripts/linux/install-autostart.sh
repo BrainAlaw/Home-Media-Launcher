@@ -42,8 +42,7 @@ Wants=graphical-session.target
 [Service]
 Type=simple
 WorkingDirectory=$project_root
-Environment=ELECTRON_RUN_AS_NODE=
-ExecStart=/usr/bin/env npm start
+ExecStart=/usr/bin/env -u ELECTRON_RUN_AS_NODE npm start
 Restart=on-failure
 RestartSec=5
 
@@ -69,7 +68,7 @@ else
 Type=Application
 Name=Home Media Launcher
 Comment=Start Home Media Launcher at login
-Exec=/usr/bin/env ELECTRON_RUN_AS_NODE= npm --prefix "$project_root" start
+Exec=/usr/bin/env -u ELECTRON_RUN_AS_NODE npm --prefix "$project_root" start
 Terminal=false
 X-GNOME-Autostart-enabled=true
 EOF
