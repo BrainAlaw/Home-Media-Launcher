@@ -9,6 +9,8 @@
  *   - a long Home press (900 ms) closes it and the launcher is visible again.
  * Output: scripts/e2e/out/web-<run>/report.md, report.json and one PNG per step (real display, never capturePage).
  *
+ * The temporary website is in the Gaming category on purpose: Home Theatre websites open through TvBrowserSession,
+ * which does not use the web-preload path (see Requests for the coordinator in R02).
  * The temporary website tile lives only in the temp profile copy; the user's config.json is never written.
  * openWebsite accepts HTTP and HTTPS only, so the fixture is served from 127.0.0.1.
  *
@@ -43,7 +45,7 @@ const baseConfig = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(config
 // Fixed loopback port: the config must name the fixture URL before the launcher module reads it.
 const FIXTURE_PORT = 48231;
 const websites = (baseConfig.websites || []).filter((site) => site.id !== WEBSITE_ID);
-fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, websites: [...websites, { id: WEBSITE_ID, name: 'E2E keys', url: `http://127.0.0.1:${FIXTURE_PORT}/keys.html`, icon: '' }] }, null, 2));
+fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, websites: [...websites, { id: WEBSITE_ID, name: 'E2E keys', url: `http://127.0.0.1:${FIXTURE_PORT}/keys.html`, icon: '', category: 'gaming' }] }, null, 2));
 process.env.HOME_MEDIA_LAUNCHER_CONFIG = configPath;
 process.argv.push(ROOT);
 const results = [];
@@ -84,6 +86,15 @@ async function press(contents, button, times = 1) {
 async function holdKey(contents, keyCode, holdMs) {
   contents.sendInputEvent({ type: 'keyDown', keyCode });
   await sleep(holdMs);
+  // A long hold closes the web window before the key is released; releasing into a destroyed window is expected.
+  if (!contents.isDestroyed()) contents.sendInputEvent({ type: 'keyUp', keyCode });
+  await sleep(SETTLE_MS);
+}
+
+/** Tap of a keyboard key on the page (the same key names the remote and keyboard use). */
+async function tapKey(contents, keyCode) {
+  contents.sendInputEvent({ type: 'keyDown', keyCode });
+  await sleep(120);
   contents.sendInputEvent({ type: 'keyUp', keyCode });
   await sleep(SETTLE_MS);
 }
@@ -120,16 +131,19 @@ async function step(label, action, check) {
   results.push({ label, delta, failures, shot });
 }
 
+/** Compares the key names of the keydown events, ignoring the ':synthetic' marker (injected keys are untrusted). */
 const expectKeydowns = (delta, wanted) => {
-  const down = delta.filter((item) => item.startsWith('keydown:'));
-  const ok = wanted.length === down.length && wanted.every((key, index) => down[index] === `keydown:${key}`);
+  const down = delta.filter((item) => item.startsWith('keydown:')).map((item) => item.split(':')[1]);
+  const ok = wanted.length === down.length && wanted.every((key, index) => down[index] === key);
   return ok || `expected keydown ${wanted.join(', ')}, got ${down.join(', ') || 'nothing'}`;
 };
 
 function writeReport() {
   const failed = results.filter((item) => item.failures.length);
-  const lines = [`# Web app check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}, console errors: ${consoleErrors.length}`, ''];
+  const blocked = results.filter((item) => item.blocked);
+  const lines = [`# Web app check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}, blocked: ${blocked.length}, console errors: ${consoleErrors.length}`, ''];
   for (const item of results) {
+    if (item.blocked) { lines.push(`- BLOCKED · ${item.label} · ${item.blocked}`); continue; }
     lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} · ${item.label} · page received \`${item.delta.join(' ') || '(nothing)'}\``);
     for (const failure of item.failures) lines.push(`  - ${failure}`);
   }
@@ -165,17 +179,24 @@ app.whenReady().then(async () => {
 
   for (let waited = 0; !pageWindow() && waited < 15000; waited += 250) await sleep(250);
   const page = pageWindow();
-  if (!page) throw new Error('website window did not open');
+  if (!page) {
+    const urls = BrowserWindow.getAllWindows().map((win) => win.webContents.getURL().slice(0, 100));
+    const toast = await runIn(launcher.webContents, 'document.querySelector("#toast")?.textContent || ""');
+    throw new Error(`website window did not open; windows: ${JSON.stringify(urls)}; launcher toast: ${JSON.stringify(toast)}`);
+  }
   // Move the page to the same secondary display as the launcher, so the primary screen (the user's work) stays untouched.
   page.setBounds({ x: target.bounds.x, y: target.bounds.y, width: target.bounds.width, height: target.bounds.height });
   await sleep(1500);
   await runIn(page.webContents, INSTALL_PAD);
   await sleep(300);
 
-  await step('pad-dpad-right-right-down', async () => { await press(page.webContents, BUTTON.RIGHT, 2); await press(page.webContents, BUTTON.DOWN); },
+  // Pad steps (D-pad, A, B) are NOT run here: the preload runs in an isolated world and cannot see the scripted
+  // navigator.getGamepads used by this harness. They need a real controller (see the report) or a test hook.
+  results.push({ label: 'pad-dpad-a-b', delta: [], failures: [], shot: null, blocked: 'needs a real controller; the scripted pad cannot reach the isolated preload' });
+  await step('key-arrow-right-right-down', async () => { await tapKey(page.webContents, 'Right'); await tapKey(page.webContents, 'Right'); await tapKey(page.webContents, 'Down'); },
     (delta) => expectKeydowns(delta, ['ArrowRight', 'ArrowRight', 'ArrowDown']));
-  await step('pad-a-is-enter', () => press(page.webContents, BUTTON.A), (delta) => expectKeydowns(delta, ['Enter']));
-  await step('pad-b-is-escape-tap', () => press(page.webContents, BUTTON.B), (delta) => expectKeydowns(delta, ['Escape']));
+  await step('key-enter-tap', () => tapKey(page.webContents, 'Enter'), (delta) => expectKeydowns(delta, ['Enter']));
+  await step('key-escape-tap', () => tapKey(page.webContents, 'Escape'), (delta) => expectKeydowns(delta, ['Escape']));
   await step('home-short-keeps-window', () => holdKey(page.webContents, 'Home', 150),
     (_delta, state) => state.windowOpen || 'short Home closed the web window');
   await step('home-long-returns-to-launcher', () => holdKey(page.webContents, 'Home', 900), (_delta, state) => {
