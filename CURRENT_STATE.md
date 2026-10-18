@@ -15,7 +15,7 @@ Resume point for the next session. Everything below is verified against the repo
 - **Regression fixed:** the merge of the Soloist UI made the home screen render black (only the header chips). Cause: `soloist-status.js` re-declared the global `SUBTITLE_MAX` that `status-widgets.js` already declares (classic scripts share one global scope), so the file failed to load and `app.js` threw on `window.SoloistStatus.init`. Fixed by renaming; guarded by `test/renderer-globals.test.js` (no duplicate top-level names across the scripts in `index.html`, every referenced file exists).
 - Verified on the real display after the fix: Home Theatre and Gaming rows, header, clock, Spotify "Connect Spotify" widget (client id is set in `.env`).
 - **Unverified:** the whole Soloist path on Linux (flags, `soloist --version` output, `ws.port`/`ws.addr` files, `timestamp_ms` clock base, device handoff via `PUT /me/player`), the new Settings > General Soloist controls visually, Spotify login with the real account.
-- Open step list (sequential, ask before each): (1) home screen check on the real display (OLED shift/dim/fade-in, widget slot, header alignment, small visual fixes) - an agent for this was started and stopped by the user, nothing from it was committed; (2) one music agent for Spotify + Soloist on the HTPC; (3) one UI agent for settings/popups/gamepad flow; (4) review, push `main` to GitHub once a remote is configured.
+- Open step list (sequential, ask before each): (1) home screen check on the real display (OLED shift/dim/fade-in, widget slot, header alignment, small visual fixes) - an agent for this was started and stopped by the user, nothing from it was committed; (2) one music agent for Spotify + Soloist on the HTPC; (3) one UI agent for settings/popups/gamepad flow; (4) review `main` on GitHub (already pushed).
 
 ## Iteration 8 (UI pass, committed)
 
@@ -29,7 +29,7 @@ Resume point for the next session. Everything below is verified against the repo
 
 ## Git
 
-- Single branch `main` (HEAD `16247b4`), created from `iter5` on 18 October 2026. Every iteration branch (`iter4/*`, `fix/*`, `i5/*`, `i6/*`, `i7/*`, `i8/home`, `feat/iteration-4`, `iter5`) was merged and deleted; helper worktrees in `D:\Github Repos\Home-Media-Launcher-wt\` were removed. No remote is configured yet (nothing pushed to GitHub).
+- Single branch `main` (HEAD `7417a9e`), created from `iter5` on 18 October 2026. Every iteration branch (`iter4/*`, `fix/*`, `i5/*`, `i6/*`, `i7/*`, `i8/home`, `feat/iteration-4`, `iter5`) was merged and deleted; helper worktrees in `D:\Github Repos\Home-Media-Launcher-wt\` were removed. Pushed to GitHub (`origin` = `https://github.com/BrainAlaw/Home-Media-Launcher.git`, tracking set). The remote's previous unrelated 4-commit history was force-replaced; it is preserved locally as tag `backup/remote-main-2026-10-18` (delete with `git tag -d` once nothing is needed).
 - `.env` is git-ignored (`.env.example` is committed). Keys: `VP_API`, `VP_HOST`, `VP_IP`, `WEATHER_API`, `STEAMDB_API`, `SPOTIFY_CLIENT_ID`. Read by `backend/env.js`, scrubbed from `process.env` after `readSecrets()`, never sent to the renderer.
 - Checks: `npm run check` → 409 tests, 0 failures. Run Electron with `unset ELECTRON_RUN_AS_NODE`.
 - A read-only review of `c5e4e27..HEAD` ran after the final merge. Fixed: media-widget checkbox id clash (setting could never change), staged categories offered in the Websites selector, `data-osk` on the icon popup input, weather country-code fallback, duplicate Spotify callback, header wake on gamepad input, weather refetch flicker, weather placeholder. **Not fixed (low/medium):** Spotify polling continues while the widget is hidden (needs a `media.setActive` handler), the icon popup ignores a reopen within ~0.6 s of closing, widget Back goes to the tile row instead of the settings button, the High Wycombe default lives in shared code (`home-header.js`, `backend/weather.js`).
@@ -88,7 +88,7 @@ Iteration 5 (14 requested items):
 1. Optionally fix the remaining review items listed above (Spotify polling while the widget is hidden is the one worth doing).
 2. Resolve known issues 1–4 (cover art for Gaming tiles, icon composition, weather default, OLED default).
 3. Ask the user to run `npm start`, set `SPOTIFY_CLIENT_ID`, and try the Spotify flow plus gamepad navigation end to end.
-4. Configure the GitHub remote and push `main` (history is local-only today).
+4. ~~Configure the GitHub remote and push `main`~~ (done 18 October 2026; optionally delete the `backup/remote-main-2026-10-18` tag later).
 5. Test on the Linux HTPC target (Wayland/X11, evdev access, NetworkManager polkit rule from `backend/VPN.md`, MPRIS is not used).
 
 ## Useful commands
