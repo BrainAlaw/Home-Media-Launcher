@@ -131,9 +131,10 @@ async function step(label, action, check) {
   results.push({ label, delta, failures, shot });
 }
 
+/** Compares the key names of the keydown events, ignoring the ':synthetic' marker (injected keys are untrusted). */
 const expectKeydowns = (delta, wanted) => {
-  const down = delta.filter((item) => item.startsWith('keydown:'));
-  const ok = wanted.length === down.length && wanted.every((key, index) => down[index] === `keydown:${key}`);
+  const down = delta.filter((item) => item.startsWith('keydown:')).map((item) => item.split(':')[1]);
+  const ok = wanted.length === down.length && wanted.every((key, index) => down[index] === key);
   return ok || `expected keydown ${wanted.join(', ')}, got ${down.join(', ') || 'nothing'}`;
 };
 
