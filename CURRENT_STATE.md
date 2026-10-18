@@ -2,10 +2,10 @@
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
 
-## Working rules from the user (apply to every future plan)
+## Working rules (since 18 October 2026)
 
-- Work **sequentially**: one step at a time, at most **2-3 agents at once**, usually one. Merge small tasks into one agent; no agent for something describable in 2-3 lines of code.
-- After each step: merge, run `npm run check`, verify on the real display, then **ask the user before the next step**. Do not spawn parallel waves of 6-8 agents again (the user stopped one for token cost and merge conflicts).
+- Multi-tool team: Claude Code (coordinator), Codex, GitHub Copilot, Freebuff, OpenCode, Cursor. Protocol in `AGENTS.md` section 3, coordinator duties in `CLAUDE.md`. Rounds live in `agents/rounds/R<NN>/`, agent reports in `agents/state/CURRENT_STATE_<agent>.md`.
+- Agents work in parallel only in separate worktrees (`../hml-<agent>`, branch `r<NN>/<agent>`) with disjoint file ownership; the coordinator merges when the user asks for the next actions and asks before starting a round. Claude Code's own subagents are not used for parallel waves (token cost, merge conflicts).
 
 ## Iteration 7 (Spotify Soloist)
 

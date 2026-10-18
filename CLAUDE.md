@@ -1,29 +1,33 @@
-# Project: Home Media Launcher
-Repository: https://github.com/BrainAlaw/Home-Media-Launcher
+@AGENTS.md
 
-## 1. The Grand Vision
-Home Media Launcher is the ultimate custom, local-first, ad-free HTPC and living room console dashboard. It is designed primarily for Linux, with Windows support. 
-The design philosophy merges the premium, fluid aesthetics of Apple's tvOS (Apple HIG, glassmorphism, spring-physics motion) with the tactile, game-centric utility of modern handhelds like the Steam Deck. It is built to replace corporate, ad-ridden alternatives by offering zero bloat, instant cold starts, and ultimate customization.
+# Claude Code: coordinator rules
 
-## 2. Core Pillars & Tech Stack
-- **Input Paradigm:** Strictly Gamepad-first (HTML5 Gamepad API) and keyboard. Mouse interaction is secondary and not required.
-- **Performance Engine:** Must maintain 60-120fps on low-power HTPC hardware. The UI relies on a custom 2D Spatial Virtualized Grid to handle 1000+ items without DOM lag.
-- **Ecosystem Integration:** Deep integration with the remote **Vibepollo backend** (Sunshine/Moonlight APIs synced via Playnite) for game streaming, alongside support for launching native binaries and fullscreen web apps.
-- **Offline Resilience:** Aggressive local caching of Vibepollo metadata and background assets (fanart, icons). The UI gracefully degrades with a subtle "Vibepollo Offline" indicator when the remote host server is unreachable.
-- **Visuals:** CSS Custom Properties-driven Theme Engine, dynamic background slideshows, and physics-based focus animations.
+Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator** of the multi-agent team described in `AGENTS.md` section 3. The other agents (Codex, GitHub Copilot, Freebuff, OpenCode, Cursor) cannot talk to you; they communicate only through their prompt files (written by you) and their state files (written by them).
 
-## 3. Universal AI Directives
-- **Zero Telemetry & Local First:** Never implement external tracking or unnecessary cloud dependencies.
-- **Non-Blocking Architecture:** Heavy backend tasks (polling, file I/O, process spawning) must never block the frontend rendering loop. Use asynchronous IPC bridges.
-- **Language & Standards:** 
-  - Keep code clean, strictly typed (TypeScript preferred), and highly modular.
-  - All code, variables, and inline comments MUST be strictly in English.
-  - Use UK spelling in user-facing documentation where applicable.
+## 1. When the user asks for the next actions
 
-## 4. Agent Orchestration & Anti-Token-Bleed Rules
-To prevent extreme API costs, context pollution, and Git merge conflicts, the following multi-agent execution constraints are **strictly mandatory**:
-- **Strict Sequential Queue (No Parallelization):** Running multiple execution agents concurrently is kategorycznie forbidden. Tasks must be executed in a strict linear queue (FIFO).
-- **Task Consolidation:** Never spawn micro-agents for single prompts or tiny adjustments (e.g., small CSS tweaks, individual button radiuses). Group related sub-tasks into a single, long-lived domain agent (e.g., one unified agent for all Spotify/Music tasks instead of separate sessions for auth, UI, and widgets).
-- **The Lifecycle Loop:** A sub-agent must complete its task, output its diff, and the coordinator must merge the branch *before* the next queued agent is allowed to spin up.
-- **Prompt Caching Optimization:** Ensure the repository state remains stable during a sub-agent's lifecycle to maximize Anthropic's Prompt Caching efficacy. Do not trigger global workspace unifications mid-task.
-- **Ignored Paths:** Always respect the `.claudecodeignore` file. Never scan, index, or pipe binary assets, heavy graphics, pre-built distribution folders (`dist/`, `build/`), or node modules into the LLM context.
+1. **Read the state.** `CURRENT_STATE.md`, every `agents/state/CURRENT_STATE_<agent>.md`, `git log --oneline main..r<NN>/<agent>` for each branch of the last round, and `git worktree list`. Treat a state file still saying `IN_PROGRESS` as "stopped at the last ticked item" (the agent probably ran out of budget) unless the user says otherwise.
+2. **Merge what is ready.** In the order from `agents/rounds/R<NN>/PLAN.md`: merge `--no-ff` into `main`, resolve conflicts keeping both sides' intent, run `npm run check`, run the app and verify on the real display. Fix integration breakage yourself. Never merge a branch whose state is `BLOCKED` without reading why.
+3. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues) and remove merged worktrees (`git worktree remove ../hml-<agent>`, then delete the branch).
+4. **Plan the next round** and present the plan to the user. After the user agrees, create the worktrees (`git worktree add ../hml-<agent> -b r<NN>/<agent> main`, plus a `node_modules` junction to the main checkout on Windows) and write:
+   - `agents/rounds/R<NN>/PLAN.md`: goal, one line per agent, the **file ownership map**, shared files and how each may be touched, merge order, what the user must do;
+   - one prompt file per agent, **including `claude.md` for yourself**.
+5. Tell the user, per tool, the exact folder to open and the one-line instruction to paste (for example: `Read AGENTS.md and agents/rounds/R03/codex.md, then follow the prompt.`).
+
+## 2. Writing prompt files
+
+- **Self-contained.** The other tools do not see this conversation. Give the worktree path, the goal, the exact files to read, the owned files, the forbidden files, the interfaces they must keep, acceptance criteria, the commands to run and the state-file name.
+- **Sized to the budget** (`AGENTS.md` 3.1). Free tools get small, fully specified tasks in new or isolated files with clear tests; Codex gets one medium task; keep integration, cross-cutting refactors, visual verification and anything ambiguous for yourself.
+- **Disjoint ownership.** No file may be owned by two agents in the same round. Shared hot files (`src/renderer/index.html`, `src/renderer/app.js`, `src/main/index.js`, `src/main/preload.js`, `src/main/config.js`, `backend/contracts.d.ts`) are owned by at most one agent per round, or touched only through additive blocks the plan describes.
+- **Checkpoints.** Break every task into 2-6 items so a cut-off agent still leaves finished, committed items behind.
+- **Prompt caching.** Keep `main` stable while a round runs: do not reformat or mass-rename files mid-round.
+
+## 3. Your own work in a round
+
+Do your own prompt file (`agents/rounds/R<NN>/claude.md`) in your own worktree like any other agent, and write `agents/state/CURRENT_STATE_claude.md`. Merging and verification of the other branches happen when the user asks for the next actions, not while the others are still working.
+
+## 4. Lessons that must not be repeated
+
+- Run the app after every merge: a duplicated global `const` between two renderer scripts once turned the whole home screen black while all tests passed.
+- On the Windows dev machine `in-process-gpu` renders a grey fullscreen window; the default is software compositing (`src/main/gpu-flags.js`). Verify with a real screen capture, not `capturePage`.
+- Subagents you spawn inside Claude Code count as your own budget: prefer delegating to the external tools through prompt files.

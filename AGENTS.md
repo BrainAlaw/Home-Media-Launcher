@@ -1,29 +1,87 @@
-# Project: Home Media Launcher
+# Home Media Launcher: rules for every AI agent
+
 Repository: https://github.com/BrainAlaw/Home-Media-Launcher
 
-## 1. The Grand Vision
-Home Media Launcher is the ultimate custom, local-first, ad-free HTPC and living room console dashboard. It is designed primarily for Linux, with Windows support. 
-The design philosophy merges the premium, fluid aesthetics of Apple's tvOS (Apple HIG, glassmorphism, spring-physics motion) with the tactile, game-centric utility of modern handhelds like the Steam Deck. It is built to replace corporate, ad-ridden alternatives by offering zero bloat, instant cold starts, and ultimate customization.
+This file is read by every coding agent working on this repository (Claude Code, Codex, GitHub Copilot, Freebuff, OpenCode, Cursor). Read it completely before you touch anything, then read the prompt file you were given.
 
-## 2. Core Pillars & Tech Stack
-- **Input Paradigm:** Strictly Gamepad-first (HTML5 Gamepad API) and keyboard. Mouse interaction is secondary and not required.
-- **Performance Engine:** Must maintain 60-120fps on low-power HTPC hardware. The UI relies on a custom 2D Spatial Virtualized Grid to handle 1000+ items without DOM lag.
-- **Ecosystem Integration:** Deep integration with the remote **Vibepollo backend** (Sunshine/Moonlight APIs synced via Playnite) for game streaming, alongside support for launching native binaries and fullscreen web apps.
-- **Offline Resilience:** Aggressive local caching of Vibepollo metadata and background assets (fanart, icons). The UI gracefully degrades with a subtle "Vibepollo Offline" indicator when the remote host server is unreachable.
-- **Visuals:** CSS Custom Properties-driven Theme Engine, dynamic background slideshows, and physics-based focus animations.
+## 1. The project
 
-## 3. Universal AI Directives
-- **Zero Telemetry & Local First:** Never implement external tracking or unnecessary cloud dependencies.
-- **Non-Blocking Architecture:** Heavy backend tasks (polling, file I/O, process spawning) must never block the frontend rendering loop. Use asynchronous IPC bridges.
-- **Language & Standards:** 
-  - Keep code clean, strictly typed (TypeScript preferred), and highly modular.
-  - All code, variables, and inline comments MUST be strictly in English.
-  - Use UK spelling in user-facing documentation where applicable.
+Home Media Launcher is a custom, local-first, ad-free HTPC and living-room console dashboard. Linux is the primary target, Windows is supported. The look follows Apple's tvOS (Apple HIG, glassmorphism, spring-physics motion) with the game-centric utility of handhelds like the Steam Deck: zero bloat, instant cold starts, deep customisation.
 
-## 4. Agent Orchestration & Anti-Token-Bleed Rules
-To prevent extreme API costs, context pollution, and Git merge conflicts, the following multi-agent execution constraints are **strictly mandatory**:
-- **Strict Sequential Queue (No Parallelization):** Running multiple execution agents concurrently is kategorycznie forbidden. Tasks must be executed in a strict linear queue (FIFO).
-- **Task Consolidation:** Never spawn micro-agents for single prompts or tiny adjustments (e.g., small CSS tweaks, individual button radiuses). Group related sub-tasks into a single, long-lived domain agent (e.g., one unified agent for all Spotify/Music tasks instead of separate sessions for auth, UI, and widgets).
-- **The Lifecycle Loop:** A sub-agent must complete its task, output its diff, and the coordinator must merge the branch *before* the next queued agent is allowed to spin up.
-- **Prompt Caching Optimization:** Ensure the repository state remains stable during a sub-agent's lifecycle to maximize Anthropic's Prompt Caching efficacy. Do not trigger global workspace unifications mid-task.
-- **Ignored Paths:** Always respect the `.claudecodeignore` file. Never scan, index, or pipe binary assets, heavy graphics, pre-built distribution folders (`dist/`, `build/`), or node modules into the LLM context.
+- **Input:** gamepad first (HTML5 Gamepad API) and keyboard/TV remote. Mouse is secondary and never required.
+- **Performance:** 60-120 fps on low-power HTPC hardware. Animate only `transform` and `opacity`.
+- **Integration:** the remote Vibepollo host (Sunshine/Moonlight APIs, Playnite) for game streaming, native binaries, fullscreen web apps, Spotify (Web API + Soloist).
+- **Offline resilience:** aggressive local caching; a subtle offline indicator when the host is unreachable.
+- **Stack:** Electron, vanilla JavaScript (CommonJS in main, classic `<script>` files in the renderer), CSS custom properties, `node:test`. No build step.
+
+Orientation documents: `CURRENT_STATE.md` (overall state, owned by the coordinator), `backend/DESIGN.md` (design tokens), `backend/*.md` (one per subsystem: SPOTIFY, SOLOIST, VPN, ICONS, REMOTES, SESSION, THEMING, MENU-PERFORMANCE).
+
+## 2. Universal coding rules
+
+- **Zero telemetry, local first.** No tracking, no analytics, no new cloud services.
+- **Non-blocking.** Polling, file I/O and process spawning never block the renderer; use the async IPC bridge (`window.launcher.ext.invoke(namespace, method, ...)`, modules in `src/main/ext/`).
+- **English only** in code, identifiers, comments and commit messages. **UK spelling** in user-facing documentation.
+- **No stubs, no placeholders, no `// TODO: implement`.** Deliver working code with `node:test` tests for pure logic.
+- **No new npm dependencies** unless your prompt file explicitly allows it.
+- **Classic renderer scripts share one global scope.** Never declare a top-level `const`/`let`/`function`/`class` name that another renderer script already declares (wrap new files in an IIFE or UMD block). `test/renderer-globals.test.js` enforces this.
+- **Secrets.** Never read, print, copy or commit `.env`, `remote-token.json`, `spotify-tokens.json` or any token. Keys are read only by `backend/env.js` in the main process and must never reach the renderer, logs or error messages.
+- **Ignored paths.** Respect `.claudecodeignore`: never scan or paste `node_modules/`, `dist/`, `build/`, `.git/`, media assets, images or videos into your context.
+- **Before you commit:** `npm run check` must pass (syntax checks plus every test). On Windows run Electron with `ELECTRON_RUN_AS_NODE` unset.
+- **Visual changes** must be verified on the real display (fullscreen window plus a real screen capture), never with `webContents.capturePage` alone. If you cannot run the app, say so in your state file; do not claim it works.
+
+## 3. How multi-agent work is organised
+
+Several agents work **at the same time**, each in its **own git worktree and branch**, on a **disjoint set of files**. Claude Code is the coordinator.
+
+### 3.1 Roster
+
+| Agent id | Tool | Budget | Typical work |
+|---|---|---|---|
+| `claude` | Claude Code | large | coordinator: plans rounds, writes prompt files, merges, verifies on the real display; takes the hardest cross-cutting task |
+| `codex` | OpenAI Codex (paid, limited plan) | medium | one well-scoped medium task (backend module, script, integration) |
+| `copilot` | GitHub Copilot (free) | small | small, fully specified tasks: tests, small modules |
+| `freebuff` | Freebuff (free) | small | small, fully specified tasks in new files |
+| `opencode` | OpenCode (free models) | small | small, fully specified tasks: refactors, dead-code removal |
+| `cursor` | Cursor (free) | small | small, fully specified tasks: documentation, CSS polish |
+
+### 3.2 Files and folders
+
+```
+agents/
+  rounds/R<NN>/PLAN.md          round overview: goals, task per agent, file ownership map, merge order
+  rounds/R<NN>/<agent>.md       the prompt for one agent (self-contained)
+  state/CURRENT_STATE_<agent>.md  the agent's own report, rewritten by that agent during the round
+  STATE_TEMPLATE.md             template for the state file
+```
+
+Worktrees live next to the repository: `../hml-<agent>` on branch `r<NN>/<agent>` (for example `../hml-codex` on `r03/codex`). The coordinator creates them when a round starts; the path is stated at the top of every prompt file.
+
+### 3.3 What every agent must do
+
+1. Open **your own worktree** (path in your prompt). Never edit the main checkout or another agent's worktree.
+2. Read this file, your prompt file `agents/rounds/R<NN>/<agent>.md` and anything it tells you to read. Nothing else is required context.
+3. **Create your state file first**, before writing code: copy `agents/STATE_TEMPLATE.md` to `agents/state/CURRENT_STATE_<agent>.md`, set `Status: IN_PROGRESS`, list your tasks as unchecked items, commit it.
+4. Edit **only the files your prompt marks as owned**. Files listed as shared may only be changed in the way the prompt describes. If you need a change elsewhere, do not make it: write it under "Requests for the coordinator" in your state file.
+5. Work in small steps. **After every finished task item:** run `npm run check`, commit (message in English, ending with your tool's attribution line if it has one), tick the item in your state file and commit that too. Your branch must always be in a working state.
+6. Finish by setting `Status:` to `DONE`, `PARTIAL`, `BLOCKED` or `OUT_OF_BUDGET`, filling in every section of the state file, and committing it. Do not merge into `main`, do not push `main`, do not rebase other branches.
+
+### 3.4 Running out of tokens or quota
+
+Agents cannot always see their limits, so the protocol assumes you may be cut off at any moment:
+
+- Because you commit after every item, finished work is never lost and the coordinator can read exactly where you stopped (`git log r<NN>/<agent>`).
+- If your tool warns that the quota, context or usage limit is close, **stop at the next clean point**: commit, set `Status: OUT_OF_BUDGET`, and write under "Resume notes" exactly what the next agent must do to continue (file, function, remaining steps).
+- If you were cut off without writing that, the coordinator treats a state file still saying `IN_PROGRESS` as "stopped at the last ticked item".
+- The user can also tell the coordinator in plain words that a tool ran out; that has the same meaning.
+
+### 3.5 State file format
+
+Use `agents/STATE_TEMPLATE.md`. Keep it short and factual: what is done (with commit hashes), what is not, what was verified and how, what is unverified, files changed, requests for the coordinator, resume notes. Never paste secrets, long logs or whole files into it.
+
+## 4. Coordinator duties (Claude Code)
+
+Claude Code follows the extra rules in `CLAUDE.md`. In short, when the user asks for the next actions the coordinator:
+
+1. reads `CURRENT_STATE.md`, every `agents/state/CURRENT_STATE_*.md` and the agents' branch logs;
+2. merges finished branches into `main` in the order given by the round plan, runs `npm run check`, verifies on the real display, updates `CURRENT_STATE.md`, removes merged worktrees;
+3. plans the next round, creates the worktrees and writes `agents/rounds/R<NN>/PLAN.md` plus one prompt file per agent, including one for itself.
