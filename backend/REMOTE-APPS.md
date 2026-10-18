@@ -25,3 +25,10 @@ The existing exit overlay appears while a hold gesture is in progress. The launc
 Edit [`remote-keymap.json`](remote-keymap.json). It is the source of truth for gamepad button indexes, remote key names, the left-stick deadzone, long-press duration, and exit buttons. Restart the launcher after editing; each website receives the mapping when its window opens. Actions are `up`, `down`, `left`, `right`, `confirm`, `back`, and `exit`. The gamepad exit button list defaults to `[16]` (Guide).
 
 If the argument is missing or invalid, website input mapping is disabled and the built-in Guide, Escape, B, and Select + Start exit gestures remain available.
+
+## Known limits (stage A, as of R02)
+
+- **Home Theatre websites are not covered yet.** Websites in the Home Theatre category (Netflix, YouTube, Twitch, and so on, the default for new websites) open through `openTvWebsite` / `TvBrowserSession`, not `openWebsite`. The remote keymap and the long-press Home exit apply to websites in other categories only. Planned next: the same keymap argument for the TV browser's preload.
+- Pages receive the remote's arrows and Enter as keys the OS delivers. Keys injected by the launcher (for example in tests) arrive with `isTrusted: false`; some pages ignore untrusted events.
+- Remote Back (`BrowserBack`) steps back through the page history and does nothing when there is no history. It never closes the app.
+- The gamepad path is verified only on a real controller; the scripted test pad cannot reach the sandboxed preload.

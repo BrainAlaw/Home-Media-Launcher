@@ -5,7 +5,8 @@ Resume point for the next session. Everything below is verified against the repo
 ## Round status (18 October 2026)
 
 - **R01 merged into `main`:** Linux HTPC kit (`scripts/linux/*`, `backend/LINUX.md`), config round-trip tests, `npm run doctor`, dead code removed (hero binding, motion scheduler), user guides in `docs/`, gamepad end-to-end harness (`scripts/e2e/gamepad-e2e.cjs`, runs on the second monitor by default, `HML_E2E_DISPLAY=primary` to use the primary one). Fixes during merge: `t.pass/t.fail` in `test/linux-scripts.test.js` (not valid in `node:test`), and an unbound `USER` under `set -u` in `setup-permissions.sh`.
-- **R02 in progress (stage A, remote-friendly websites and webapps):** prompts in `agents/rounds/R02/`. Codex works in `D:\Github Repos\hml-r02-codex` (branch `r02/codex`), Claude's verification work in `D:\Github Repos\hml-r02-claude` (branch `r02/claude`). Not merged yet.
+- **R02 merged (stage A, remote-friendly websites in the Gaming category):** keymap JSON and preload handling from Codex, Back = history back (coordinator decision), harness `scripts/e2e/web-app-check.cjs` (5 of 5 non-pad steps pass on the real display). **Open:** Home Theatre websites do not get the keymap (they use `TvBrowserSession`), and the pad path needs a real controller. Details in `backend/REMOTE-APPS.md` and `agents/state/CURRENT_STATE_claude.md`.
+- **R02 history (before the merge):** prompts in `agents/rounds/R02/`. Codex works in `D:\Github Repos\hml-r02-codex` (branch `r02/codex`), Claude's verification work in `D:\Github Repos\hml-r02-claude` (branch `r02/claude`). Not merged yet.
 - **Stage B (native apps, Linux `uinput`)** is planned after A is merged and checked on screen.
 
 ### Open issues found by the R01 harness (second monitor, real display)
