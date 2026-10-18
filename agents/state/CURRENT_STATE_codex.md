@@ -7,7 +7,7 @@ Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:0
 - [x] 1. Add JSON mapping, main-process loader/validator/encoder, and tests — `npm test` passed (546/546).
 - [x] 2. Implement preload gamepad/remote input and long-press exit — `node --check src/main/web-preload.js` passed.
 - [x] 3. Pass keymap argument from openWebsite — `npm run check` passed (546/546).
-- [ ] 4. Document remote controls and limitations.
+- [x] 4. Document remote controls and limitations; added the `Back` key alias — pending final full check.
 - [ ] 5. Final verification and state update.
 
 ## Done
@@ -25,7 +25,7 @@ Agent: codex · Tool: Codex · Branch: r02/codex · Last update: 2026-10-18 12:0
 - agents/state/CURRENT_STATE_codex.md — task tracking.
 
 ## Requests for the coordinator
-- None.
+- `src/main/index.js` currently closes on BrowserBack in its existing `before-input-event` handler. That conflicts with mapping BrowserBack to Escape; only the specified openWebsite line was authorised, so coordinator should decide whether to adjust that handler.
 
 ## Resume notes
 Continue with task 3: add the single `additionalArguments` option in openWebsite.

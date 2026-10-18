@@ -13,6 +13,7 @@
     "ArrowLeft": "left",
     "ArrowRight": "right",
     "Enter": "confirm",
+    "Back": "back",
     "BrowserBack": "back",
     "GoBack": "back",
     "Home": "exit",
