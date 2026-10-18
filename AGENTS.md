@@ -24,7 +24,7 @@ Orientation documents: `CURRENT_STATE.md` (overall state, owned by the coordinat
 - **No stubs, no placeholders, no `// TODO: implement`.** Deliver working code with `node:test` tests for pure logic.
 - **No new npm dependencies** unless your prompt file explicitly allows it.
 - **Classic renderer scripts share one global scope.** Never declare a top-level `const`/`let`/`function`/`class` name that another renderer script already declares (wrap new files in an IIFE or UMD block). `test/renderer-globals.test.js` enforces this.
-- **Secrets.** Never read, print, copy or commit `.env`, `remote-token.json`, `spotify-tokens.json` or any token. Keys are read only by `backend/env.js` in the main process and must never reach the renderer, logs or error messages.
+- **Secrets (worker agents).** Worker agents never read, print, copy or commit `.env`, `remote-token.json`, `spotify-tokens.json` or any token, and never copy secrets into a worktree or branch. The coordinator (Claude Code) has access to `.env` and may read it. Keys are read only by `backend/env.js` in the main process and must never reach the renderer, logs or error messages.
 - **Ignored paths.** Respect `.claudecodeignore`: never scan or paste `node_modules/`, `dist/`, `build/`, `.git/`, media assets, images or videos into your context.
 - **Before you commit:** `npm run check` must pass (syntax checks plus every test). On Windows run Electron with `ELECTRON_RUN_AS_NODE` unset.
 - **Visual changes** must be verified on the real display (fullscreen window plus a real screen capture), never with `webContents.capturePage` alone. If you cannot run the app, say so in your state file; do not claim it works.
