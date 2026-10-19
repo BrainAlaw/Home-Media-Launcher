@@ -39,7 +39,7 @@ Several agents work **at the same time**, each in its **own git worktree and bra
 | Agent id | Tool | Budget | Typical work |
 |---|---|---|---|
 | `claude` | Claude Code | large | coordinator; as a worker it runs as a subagent of the coordinator chat, never `claude -p`; takes the hardest cross-cutting task and real-display verification |
-| `codex` | OpenAI Codex (paid, limited plan) | medium | one well-scoped medium task (backend module, script, integration) |
+| `codex` | OpenAI Codex (paid, limited plan) | medium, larger | the main worker for medium and larger tasks (backend modules, integration, editors, tests); several independent medium tasks per round, one per branch |
 | `copilot` | GitHub Copilot (free) | small | small, fully specified tasks: tests, small modules |
 | `opencode` | OpenCode (free models) | small | small, fully specified tasks: refactors, dead-code removal |
 | `cursor` | Cursor (free) | small | small, fully specified tasks: documentation, CSS polish |
@@ -50,7 +50,7 @@ Free tools run weaker models with small context windows and strict usage limits.
 | Tier | Agents | Size limits | What the prompt must contain |
 |---|---|---|---|
 | **S** (small) | `copilot`, `opencode`, `cursor` | at most 2-3 files, about 150 changed lines, one module, 2-4 checklist items; no running Electron; no edits to shared hot files except an exact line the prompt quotes | every fact needed inline (function names, data shapes, example code), the exact files to read (at most 3), step-by-step items, the exact test command and the expected result |
-| **M** (medium) | `codex` | one subsystem, up to about 6 files and 500 lines, 3-6 items | goal, interfaces to keep, files to read, acceptance criteria |
+| **M** (medium) | `codex` (several per round, each independent) | one subsystem per task, up to about 6 files and 500 lines, 3-6 items | goal, interfaces to keep, files to read, acceptance criteria |
 | **L** (large) | `claude` | cross-cutting work, integration, merging, real-display verification, anything ambiguous | as needed |
 
 If a Tier S agent finds the task bigger than described, it must not improvise: it stops, sets `Status: BLOCKED` and explains under "Requests for the coordinator".
