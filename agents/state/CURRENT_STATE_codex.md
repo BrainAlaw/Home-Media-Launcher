@@ -1,36 +1,28 @@
-# CURRENT_STATE_codex (round R07)
+# CURRENT_STATE_codex (round R08)
 
-Status: DONE
-Agent: codex  ·  Tool: Codex  ·  Branch: r07/codex  ·  Last update: 2026-10-19 10:45
+Status: IN_PROGRESS
+Agent: codex  ·  Tool: Codex  ·  Branch: r08/codex  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Create `backend/confirmation.js` with the specified injected clock and random source.
-- [x] 2. Add `node:test` coverage in `test/admin-confirmation.test.js` for the specified cases.
-- [x] 3. Run the focused test and `npm test`; commit task updates.
-- [x] 4. Set final status and report the export name.
+- [ ] 1. Create `src/renderer/quick-settings-model.js` with the specified interface.
+- [ ] 2. Add `node:test` coverage in `test/quick-settings-model.test.js`.
+- [ ] 3. Run `npm run check` and commit task updates.
+- [ ] 4. Set final status and report the export names.
 
 ## Done
-- Confirmation module implemented — commit `ac217e0`.
-- Confirmation tests added — commit `33059bd`.
-- Required validation passed — commit `d2ce5e5`.
+- None yet.
 
 ## Verified
-- `node --test test/admin-confirmation.test.js`: 8 passed.
-- `npm test`: 653 passed, 0 failed.
-- `npm run check`: passed, including all 653 tests.
-- Read `AGENTS.md`, `agents/rounds/R07/PLAN.md`, `backend/ADMIN.md`, and the `dispatch` shape in `src/main/admin/routes.js`.
-- Read the supplied confirmation implementation and test draft for reference.
+- Read `AGENTS.md`, `agents/rounds/R08/PLAN.md`, and the requested renderer references.
 
 ## Unverified / not done
-- One intermediate full-suite run failed in unrelated timing-sensitive tests under load; subsequent `npm test` and `npm run check` runs passed.
+- Implementation and validation not done.
 
 ## Files changed
-- `backend/confirmation.js` — single-use confirmation token API.
-- `test/admin-confirmation.test.js` — deterministic unit coverage.
-- `agents/state/CURRENT_STATE_codex.md` — round status and task checklist.
+- `agents/state/CURRENT_STATE_codex.md` — round status and checklist.
 
 ## Requests for the coordinator
-- Import `createConfirmations` from `backend/confirmation.js`.
+- None.
 
 ## Resume notes
-None.
+Continue with task 1.
