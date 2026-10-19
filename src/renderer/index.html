@@ -71,10 +71,10 @@
       </div>
     </section>
     <div class="menu-items">
-      <div id="network-card" class="qs-info network-action" data-tone="idle">
+      <div id="network-card" class="qs-info" data-tone="idle" data-speed="idle">
         <span class="menu-symbol" aria-hidden="true"></span>
         <span class="menu-copy"><strong>Network</strong><small>Checking…</small></span>
-        <span class="net-action" aria-hidden="true">Speed test</span>
+        <button id="speed-button" type="button" class="qs-speed-button">Speed test</button>
         <span class="net-progress" aria-hidden="true"><i></i></span>
       </div>
       <button id="settings-button" class="menu-action qs-row primary">
@@ -299,6 +299,7 @@
   <script src="status-format.js"></script>
   <script src="weather-icons.js"></script>
   <script src="menu-switch.js"></script>
+  <script src="speed-card-model.js"></script>
   <script src="status-widgets.js"></script>
   <script src="soloist-status.js"></script>
   <script src="launch-transition.js"></script>

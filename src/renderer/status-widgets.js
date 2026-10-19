@@ -109,13 +109,23 @@ function networkLine({ detail, ping, speed }) {
   return [detail, pingText].filter(Boolean).join(' · ');
 }
 
+/**
+ * Result line of a finished speed test: "↓ x Mbps · ↑ y Mbps" (download and upload averages).
+ * @param {{ downMbps?: number, upMbps?: number }} speed
+ */
+function resultLine(speed) {
+  return `↓ ${formatMbps(speed?.downMbps)} Mbps · ↑ ${formatMbps(speed?.upMbps)} Mbps`;
+}
+
 if (typeof module === 'object' && module.exports) {
-  module.exports = { shortenMiddle, shortenError, vpnSubtitle, vpnChipView, hostChipView, pingTone, formatMbps, networkLine };
+  module.exports = { shortenMiddle, shortenError, vpnSubtitle, vpnChipView, hostChipView, pingTone, formatMbps, networkLine, resultLine };
 } else (function () {
   'use strict';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const WEATHER_REFRESH_MS = 30 * 60 * 1000;
+  /** Repaint cadence while the result line fades out (the fade itself is only opacity). */
+  const FADE_TICK_MS = 50;
   const { signalLevel, networkLabel, networkDetail, wmoToIcon, wmoCondition, vpnSummary } = window.StatusFormat;
 
   const $ = (selector) => document.querySelector(selector);
@@ -125,6 +135,7 @@ if (typeof module === 'object' && module.exports) {
   let lastNetwork = null;
   let lastPing = null;
   let speed = null;
+  let cardTimer = null;
   let vpnList = [];
   const vpnRows = new Map();
   let weatherTimer = null;
@@ -184,6 +195,33 @@ if (typeof module === 'object' && module.exports) {
     return dot;
   }
 
+  /**
+   * Text and opacity of the network card for the current time. `SpeedCardModel` (speed-card-model.js) decides the view:
+   * 'ip' (IP and ping), 'result' (result line, held) or 'fading' (result line at `fadeOpacity`, then back to 'ip').
+   */
+  function networkCardContent(status, now) {
+    const detail = networkDetail(status);
+    if (speed?.state === 'running' || speed?.state === 'error') {
+      return { text: networkLine({ detail, ping: lastPing, speed }), opacity: 1 };
+    }
+    const model = window.SpeedCardModel;
+    const view = model.cardView(speed, now);
+    if (view === 'ip') return { text: networkLine({ detail, ping: lastPing }), opacity: 1 };
+    return { text: resultLine(speed), opacity: view === 'fading' ? model.fadeOpacity(speed, now) : 1 };
+  }
+
+  /** Schedules the next repaint at the hold and fade boundaries of a finished test; no timer otherwise. */
+  function scheduleCardTick(now) {
+    clearTimeout(cardTimer);
+    cardTimer = null;
+    if (speed?.state !== 'done' || !Number.isFinite(speed.doneAt)) return;
+    const { RESULT_HOLD_MS, FADE_MS } = window.SpeedCardModel;
+    const age = now - speed.doneAt;
+    if (age >= RESULT_HOLD_MS + FADE_MS) return;
+    const wait = age < RESULT_HOLD_MS ? RESULT_HOLD_MS - age : FADE_TICK_MS;
+    cardTimer = setTimeout(() => whenPanelIdle('network', paintNetwork), wait);
+  }
+
   function paintNetwork() {
     const status = lastNetwork;
     const tone = status?.connected ? pingTone(lastPing) : 'off';
@@ -199,15 +237,20 @@ if (typeof module === 'object' && module.exports) {
     }
     const card = $('#network-card');
     if (!card) return;
+    const now = Date.now();
+    const content = networkCardContent(status, now);
     card.dataset.tone = tone;
     card.dataset.speed = speed?.state || 'idle';
     card.querySelector('.menu-symbol').replaceChildren(networkGlyph(status), statusDot());
     card.querySelector('strong').textContent = networkLabel(status);
-    card.querySelector('small').textContent = networkLine({ detail: networkDetail(status), ping: lastPing, speed });
-    card.querySelector('.net-action').textContent = speed?.state === 'running' ? 'Cancel' : 'Speed test';
+    const line = card.querySelector('small');
+    line.textContent = content.text;
+    line.style.opacity = String(content.opacity);
+    card.querySelector('.qs-speed-button').textContent = speed?.state === 'running' ? 'Cancel' : 'Speed test';
     const fill = card.querySelector('.net-progress i');
     const fraction = speed?.state === 'running' ? Math.min(1, (speed.elapsedMs || 0) / (speed.durationMs || 1)) : 0;
     fill.style.transform = `scaleX(${fraction})`;
+    scheduleCardTick(now);
   }
 
   async function onSpeedToggle() {
@@ -445,7 +488,7 @@ if (typeof module === 'object' && module.exports) {
     bridge.invoke('system', 'getPing').then((ping) => { if (ping?.at) applyPing(ping); }).catch(() => {});
     bridge.on('system', 'speedtest', applySpeed);
     bridge.invoke('system', 'getSpeedTest').then(applySpeed).catch(() => {});
-    $('#network-card')?.addEventListener('click', onSpeedToggle);
+    $('#speed-button')?.addEventListener('click', onSpeedToggle);
     bridge.on('vpn', 'status', applyVpnList);
     bridge.invoke('vpn', 'list').then(applyVpnList).catch(() => {});
     bridge.on('session', 'phase', applySessionPhase);
