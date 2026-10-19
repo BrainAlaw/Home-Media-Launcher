@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 Agent: codex · Tool: Codex · Branch: r11/codex · Last update: 2026-10-19
 
 ## Tasks
-- [ ] 1. Add the mouse mode model and its unit tests.
+- [x] 1. Add the mouse mode model and its unit tests.
 - [ ] 2. Activate the focused media action on card click and mark clickable media buttons.
 - [ ] 3. Run `npm run check` and finish this state report.
 
@@ -25,3 +25,4 @@ Agent: codex · Tool: Codex · Branch: r11/codex · Last update: 2026-10-19
 
 ## Resume notes
 - Continue with task 1, then task 2, run `npm run check`, and complete this report.
+
