@@ -1,19 +1,19 @@
 # CURRENT_STATE_copilot (round R11)
 
 Status: IN_PROGRESS
-Agent: copilot · Tool: GitHub Copilot CLI · Branch: r11/copilot · Last update: 2026-10-19 12:02
+Agent: copilot · Tool: GitHub Copilot CLI · Branch: r11/copilot · Last update: 2026-10-19 12:06
 
 ## Tasks
-- [ ] 1. Add pointer targets and mouse click activation for pairing wizard and controller rows.
+- [x] 1. Add pointer targets and mouse click activation for pairing wizard and controller rows.
 - [ ] 2. Keep display-only pairing and controller status surfaces non-clickable where no keyboard action exists.
 - [ ] 3. Add static regression tests for pointer targets and keydown handler counts.
 - [ ] 4. Run `npm run check` and finalise this state file.
 
 ## Done
-- None yet.
+- Added pointer targets to pairing wizard buttons/chips, controller page action buttons and the existing native controller row buttons — commit `eb4f6dc`.
 
 ## Verified
-- None yet.
+- `npm run check` passed after task 1.
 
 ## Unverified / not done
 - No implementation or tests run yet.
