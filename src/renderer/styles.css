@@ -160,8 +160,9 @@ dialog button:focus { transform: scale(1.02); background: var(--hig-fill); }
 .menu-copy strong { overflow: hidden; font-size: 16px; font-weight: 650; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
 .menu-copy small { overflow: hidden; color: var(--text-dim); font-size: 12px; font-weight: 450; text-overflow: ellipsis; white-space: nowrap; }
 .menu-chevron { color: var(--text-faint); font-size: 24px; transition: transform var(--motion-slow) var(--ease-focus), color var(--motion-fast) var(--ease); }
-/* The one focus and hover rule for Quick settings rows (.qs-row); .qs-info rows have none.
-   The #system-panel prefix makes this win over the old background, border and glow declarations, which were never applied. */
+/* The focus and hover rule for Quick settings rows (.qs-row); .qs-info rows have none.
+   Row transform (focus and hover scale) is owned by the JS motion in navigation-menu.js for every row, static and VPN alike,
+   so this rule sets no transform: an inline transform would win over it and make the rows hover differently. */
 #system-panel .qs-row:is(:focus, :focus-visible),
 #system-panel .qs-row:focus-within,
 #system-panel .qs-row:hover {
@@ -169,12 +170,11 @@ dialog button:focus { transform: scale(1.02); background: var(--hig-fill); }
   background: var(--color-transparent);
   border-color: var(--color-transparent);
   box-shadow: none;
-  transform: perspective(700px) translate3d(7px, -1px, 0) rotateY(-2deg) scale(1.025);
   will-change: auto;
 }
 .qs-row:is(:focus, :focus-visible) .menu-symbol,
 .qs-row:focus-within .menu-symbol,
-.qs-row:hover .menu-symbol { transform: translate3d(0, -1px, 0) scale(1.08); background: color-mix(in srgb, var(--accent) 28%, var(--color-transparent)); }
+.qs-row:hover .menu-symbol { background: color-mix(in srgb, var(--accent) 28%, var(--color-transparent)); }
 .qs-row:is(:focus, :focus-visible) .menu-chevron,
 .qs-row:hover .menu-chevron { color: var(--text); transform: translate3d(3px, 0, 0); }
 .panel .menu-action.danger { color: var(--danger); }
