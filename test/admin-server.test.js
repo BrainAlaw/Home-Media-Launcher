@@ -165,3 +165,40 @@ test('pair failures remain unauthorized and routes return 404 and 405', async (t
   assert.equal(wrongMethod.status, 405);
   assert.equal(wrongMethod.headers.get('allow'), 'GET, PUT');
 });
+
+
+test('pair endpoint returns 429 and Retry-After after ten successful requests per minute', async (t) => {
+  const { server, state } = await makeServer();
+  t.after(() => server.stop());
+  const url = await server.start();
+  for (let request = 0; request < 10; request += 1) {
+    await server.pair();
+    const response = await fetch(`${url}/api/pair`, {
+      method: 'POST', headers: mutationHeaders(url), body: JSON.stringify({ code: state.pairing.code })
+    });
+    assert.equal(response.status, 200);
+  }
+  const limited = await fetch(`${url}/api/pair`, {
+    method: 'POST', headers: mutationHeaders(url), body: JSON.stringify({ code: '000000' })
+  });
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get('retry-after'), '60');
+  secureHeaders(limited);
+});
+
+test('malformed HTTP parser responses retain the security headers', async (t) => {
+  const { server, port } = await makeServer();
+  t.after(() => server.stop());
+  await server.start();
+  const responseText = await new Promise((resolve, reject) => {
+    const socket = net.connect(port, '127.0.0.1');
+    let raw = '';
+    socket.setEncoding('utf8');
+    socket.on('connect', () => socket.write('NOT-HTTP\r\n\r\n'));
+    socket.on('data', (chunk) => { raw += chunk; });
+    socket.on('end', () => resolve(raw));
+    socket.on('error', reject);
+  });
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.match(responseText, new RegExp(`${name}: ${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
+  assert.match(responseText, /400 Bad Request/i);
+});

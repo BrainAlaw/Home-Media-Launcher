@@ -22,10 +22,15 @@ class HttpError extends Error {
 }
 
 function defaultBindAddress() {
-  const interfaces = process.report?.getReport?.().header?.networkInterfaces || [];
-  const candidate = interfaces.find((entry) => entry.internal === false && entry.family === 'IPv4' && net.isIPv4(entry.address));
-  return candidate?.address || '127.0.0.1';
+  try {
+    const interfaces = process.report?.getReport?.().header?.networkInterfaces || [];
+    const candidate = interfaces.find((entry) => entry.internal === false && entry.family === 'IPv4' && net.isIPv4(entry.address));
+    return candidate?.address || '127.0.0.1';
+  } catch {
+    return '127.0.0.1';
+  }
 }
+
 
 function getSessionToken(request) {
   const cookie = request.headers.cookie;
@@ -149,6 +154,21 @@ function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () =>
     enabled = true;
     bindAddress = address;
     server = http.createServer((request, response) => { void handleRequest(request, response); });
+    server.on('error', (error) => logSafely({ event: 'admin-server-error', code: error.code || 'UNKNOWN' }));
+    server.on('clientError', (_error, socket) => {
+      if (!socket.writable) return;
+      const body = Buffer.from(JSON.stringify({ error: 'Malformed HTTP request' }));
+      const headers = [
+        'HTTP/1.1 400 Bad Request',
+        ...Object.entries(SECURITY_HEADERS).map(([name, value]) => `${name}: ${value}`),
+        'Content-Type: application/json; charset=utf-8',
+        `Content-Length: ${body.length}`,
+        'Connection: close',
+        '',
+        body.toString('utf8')
+      ];
+      socket.end(headers.join('\r\n'));
+    });
     try {
       await new Promise((resolve, reject) => {
         const onError = (error) => { server?.off('listening', onListening); reject(error); };
@@ -161,7 +181,7 @@ function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () =>
       if (!socketAddress || typeof socketAddress === 'string') throw new Error('Admin server did not bind to a TCP address');
       boundPort = socketAddress.port;
       boundUrl = `http://${bindAddress}:${boundPort}`;
-      log({ event: 'admin-listening', address: bindAddress, port: boundPort });
+      logSafely({ event: 'admin-listening', address: bindAddress, port: boundPort });
       return boundUrl;
     } catch (error) {
       server?.close();
@@ -204,6 +224,11 @@ function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () =>
   function status() {
     return { enabled, running: Boolean(server?.listening), bindAddress, port: boundPort, url: boundUrl };
   }
+
+  function logSafely(entry) {
+    try { log(entry); } catch { /* Logging must not affect the admin endpoint. */ }
+  }
+
 
   return { start, stop, status, pair };
 }
