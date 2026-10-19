@@ -98,7 +98,7 @@
     const glowA = el('div', 'mw-glow');
     const glowB = el('div', 'mw-glow');
     glows.append(glowA, glowB);
-    const card = el('div', 'mw-card');
+    const card = el('div', 'mw-card pointer-target');
     const art = el('div', 'mw-art');
     art.innerHTML = svg('note');
     const cover = el('img', 'mw-cover', { alt: '', decoding: 'async', draggable: 'false' });
@@ -149,7 +149,7 @@
     /* -------------------------------------------------------------- rendering */
 
     function makeButton(id) {
-      const button = el('button', `mw-btn mw-${id}`, { type: 'button', tabindex: '-1', 'data-action': id });
+      const button = el('button', `mw-btn mw-${id} pointer-target`, { type: 'button', tabindex: '-1', 'data-action': id });
       if (id === 'spotify') button.innerHTML = `${svg('fullscreen')}<span class="mw-btn-label">Fullscreen</span>`;
       else if (id === 'login' || id === 'retry') button.innerHTML = '<span class="mw-btn-label"></span>';
       else if (id === 'repeat') button.innerHTML = `${svg('repeat')}<b class="mw-badge" aria-hidden="true">1</b>`;
@@ -453,7 +453,11 @@
       paintActive();
     });
     root.addEventListener('blur', () => { inside = false; });
-    card.addEventListener('click', () => { if (view.interactive) requestFocus(root); });
+    card.addEventListener('click', () => {
+      if (!view.interactive) return;
+      requestFocus(root);
+      handleAction('activate');
+    });
 
     // Global media keys (Fire TV / Google TV remotes, keyboards with media keys) work without focusing the widget.
     document.addEventListener('launcher:remote-action', (event) => {
@@ -555,3 +559,5 @@
     }
   };
 })();
+
+
