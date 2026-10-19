@@ -10,7 +10,7 @@ Resume point for the next session. Everything below is verified against the repo
 - **R06 closed with open items** (status, diagnostics, actions, object editors; plan `agents/rounds/R06/PLAN.md`). `npm run check` on `main`: 645 tests, 0 fail.
   - **Merged:** `codex` (log ring, redaction, status and diagnostics builders, tests), `copilot` (object field model `object-fields.js`), `opencode` (panel security test), `cursor` (panel CSS polish), `claude` (partial: `backend/actions.js` registry, action list tests).
   - **Not merged, still open (carry to R07):**
-    - `freebuff`: `IN_PROGRESS`, nothing ticked. `backend/confirmation.js` and its test exist but are **uncommitted** in `D:\Github Repos\hml-r06-freebuff` (8 of 8 tests pass there). The coordinator did not commit them for the agent.
+    - `freebuff`: removed from the project (no CLI for unattended runs). Its uncommitted draft of `backend/confirmation.js` was deleted; the codex version on `main` replaces it.
     - `claude` (`PARTIAL`, worktree `D:\Github Repos\hml-r06-claude` kept): tasks 2 to 8 not started. Still to do: confirmation route, status / log / diagnostics / action routes, `index.js` wiring, status / log / actions / object-editor panel pages, real-machine checks, and the focus-frame side task (not measured yet).
   - **Requests to resolve:** `copilot` mirrors `DEVICE_NAME_MAX` and `BINARY_PATH_MAX` from `backend/soloist/settings.js` (export them and import). `codex` asks `index.js` to wire the log ring, `buildStatus` and `buildDiagnostics`.
   - **Old worktrees** `hml-r06-codex/copilot/opencode/cursor` removed, their branches deleted after merge.
@@ -40,7 +40,7 @@ Resume point for the next session. Everything below is verified against the repo
 
 ## Working rules (since 18 October 2026)
 
-- Multi-tool team: Claude Code (coordinator), Codex, GitHub Copilot, Freebuff, OpenCode, Cursor. Protocol in `AGENTS.md` section 3, coordinator duties in `CLAUDE.md`. Rounds live in `agents/rounds/R<NN>/`, agent reports in `agents/state/CURRENT_STATE_<agent>.md`.
+- Multi-tool team: Claude Code (coordinator), Codex, GitHub Copilot, OpenCode, Cursor. Protocol in `AGENTS.md` section 3, coordinator duties in `CLAUDE.md`. Rounds live in `agents/rounds/R<NN>/`, agent reports in `agents/state/CURRENT_STATE_<agent>.md`.
 - Agents work in parallel only in separate worktrees (`../hml-<agent>`, branch `r<NN>/<agent>`) with disjoint file ownership; the coordinator merges when the user asks for the next actions and asks before starting a round. Claude Code's own subagents are not used for parallel waves (token cost, merge conflicts).
 
 ## Iteration 7 (Spotify Soloist)

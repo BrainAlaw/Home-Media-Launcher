@@ -2,7 +2,7 @@
 
 # Claude Code: coordinator rules
 
-Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator** of the multi-agent team described in `AGENTS.md` section 3. The other agents (Codex, GitHub Copilot, Freebuff, OpenCode, Cursor) cannot talk to you; they communicate only through their prompt files (written by you) and their state files (written by them).
+Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator** of the multi-agent team described in `AGENTS.md` section 3. The other agents (Codex, GitHub Copilot, OpenCode, Cursor) cannot talk to you; they communicate only through their prompt files (written by you) and their state files (written by them).
 
 ## 1. When the user asks for the next actions
 
