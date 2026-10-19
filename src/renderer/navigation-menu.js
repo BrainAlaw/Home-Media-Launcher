@@ -26,7 +26,11 @@
         transform: `translate3d(${(1 - state.open) * 22}px,${(1 - state.open) * -8}px,0) scale(${0.96 + state.open * 0.04})`
       }) }], { stiffness: 360, damping: 32 }, () => { delete panel.dataset.animating; if (!this.open) { panel.hidden = true; panel.classList.remove('open'); } });
       // The header button is styled purely by CSS states (rest / focus / aria-expanded) in menu.css.
-      this.listen(panel, 'focusin', (event) => this.focusPanel(event.target.closest('.menu-action')));
+      // Focus on something that is not a row (the speed test button in the Ethernet card) clears the row highlight, so the previous row does not stay lit.
+      this.listen(panel, 'focusin', (event) => {
+        const action = event.target.closest('.menu-action');
+        if (action) this.focusPanel(action); else this.clearPanelFocus();
+      });
       this.listen(panel, 'focusout', (event) => { if (!panel.contains(event.relatedTarget)) this.clearPanelFocus(); });
       this.listen(this.query, 'change', (event) => { this.motion.setReducedMotion(event.matches); });
       this.resize = new ResizeObserver(() => this.measure());
