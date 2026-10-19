@@ -4,13 +4,13 @@ Status: IN_PROGRESS
 Agent: copilot · Tool: GitHub Copilot · Branch: r09/copilot · Last update: 2026-10-19 11:43
 
 ## Tasks
-- [ ] 1. Create `src/renderer/speed-card-model.js` as an IIFE with the interface above and keep it under 80 lines.
+- [x] 1. Create `src/renderer/speed-card-model.js` as an IIFE with the interface above and keep it under 80 lines.
 - [ ] 2. Create `test/speed-card-model.test.js` covering each branch and timing boundary with `node:test`.
 - [ ] 3. Run `npm run check` and confirm the suite passes.
 - [ ] 4. Set `Status: DONE`, fill every section, and commit.
 
 ## Done
-- Initial state file created for R09.
+- Initial state file created for R09.\n- Added `src/renderer/speed-card-model.js` and kept the view logic limited to the pure model API.
 
 ## Verified
 - Not yet checked.
@@ -26,3 +26,4 @@ Agent: copilot · Tool: GitHub Copilot · Branch: r09/copilot · Last update: 20
 
 ## Resume notes
 Stopped after the state-file creation. Next steps: add the pure view model, write the node:test file, then run `npm run check` before marking the round done.
+
