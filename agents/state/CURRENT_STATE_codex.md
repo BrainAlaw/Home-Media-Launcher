@@ -1,41 +1,29 @@
-# CURRENT_STATE_codex (round R05)
+# CURRENT_STATE_codex (round R06)
 
-Status: DONE
-Agent: codex · Tool: OpenAI Codex · Branch: r05/codex · Last update: 2026-10-19
+Status: IN_PROGRESS
+Agent: codex · Tool: OpenAI Codex · Branch: r06/codex · Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Build pure settings form model and unit tests.
-- [x] 2. Build descriptor-driven panel UI with session, pairing, load and save flows.
-- [x] 3. Report required coordinator routes and descriptor gaps.
-- [x] 4. Run npm test, commit changes, and finish state report.
+- [ ] 1. Implement safe text redaction with tests.
+- [ ] 2. Implement the redacting log ring with tests.
+- [ ] 3. Implement timeout-bounded status builder with tests.
+- [ ] 4. Implement diagnostics builder with tests.
+- [ ] 5. Run npm test, commit changes, and finish the state report.
 
 ## Done
-- State file created before code changes — commit `3744d1e`.
-- Model and tests — commit `71635c8`.
-- Descriptor-driven panel UI — commit `5483a4f`.
-- Final state — commit `93ef32d`.
+- State file created before code changes.
 
 ## Verified
-- `npm test` — 608 tests, 607 passed, 1 skipped, 0 failed.
-- `npm run check` — passed (608 tests, 607 passed, 1 skipped, 0 failed).
-- `node --check` passed for `panel.js` and `form-model.js`.
+- Read repository rules, R06 scope and ownership, admin routes/docs, and requested status source modules.
 
 ## Unverified / not done
-- Panel display and real-network interaction were not verified; no real display/network run was available.
+- No code changes or tests yet.
 
 ## Files changed
-- `src/main/admin/panel/form-model.js` — pure descriptor-backed form helpers.
-- `src/main/admin/panel/index.html` — local panel document and descriptor fallback block.
-- `src/main/admin/panel/panel.js` — generated forms, pairing, session, config load/save.
-- `src/main/admin/panel/panel.css` — responsive accessible panel layout.
-- `test/admin-panel-model.test.js` — model helper tests.
-- `agents/state/CURRENT_STATE_codex.md` — task progress and coordinator requests.
+- agents/state/CURRENT_STATE_codex.md — R06 progress report.
 
 ## Requests for the coordinator
-- Add `GET /api/settings-description` returning `GROUPS`, `SETTINGS`, and `INTERNAL_PATHS` without secrets; the panel falls back to its inline JSON descriptor.
-- Current `PUT /api/config` validates and saves the request body as a full config, while this panel sends the required `{ settings: ... }` payload. Merge posted settings into the current full config before validation/save.
-- `GET /api/config` redacts secret-like values; preserve their current values server-side when accepting an update so redacted `<set>` markers are never persisted.
-- The `admin` group has no `SETTINGS` entry; its page explains that bootstrap settings are configured in `config.json`.
+- None yet.
 
 ## Resume notes
-No further Codex-owned work remains.
+Implement task 1 in the owned redaction module and test.
