@@ -6,21 +6,23 @@ Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 20
 ## Tasks
 - [x] 1. Create field specs for the six structured settings and validate their keys against source validators.
 - [x] 2. Implement `validateFieldValue` and add focused tests for field specs and all validation rules.
-- [ ] 3. Run focused and full tests; finish the state file.
+- [x] 3. Run focused and full tests; finish the state file.
 
 ## Done
 - Added `OBJECT_FIELDS` metadata for all six validated settings — commit `85f7eaf`.
 - Added `validateFieldValue` for the declared field types — commit `62a00ac`.
+- Added focused tests for metadata shape and validation rules — pending commit.
 
 ## Verified
-- Confirmed the R06 worktree is clean on branch `r06/copilot`.
+- Confirmed the R06 worktree is on branch `r06/copilot`.
 - Read `AGENTS.md`, the R06 Copilot prompt, and the named validator source files.
 - `npm run check` passed on retry; an earlier run hit a transient system-sampling timeout in `backend/test/menu-performance.test.js`.
 - `node --test test/admin-object-fields.test.js` passed (4 tests).
-- Latest `npm run check` passed.
+- `npm run check` passed.
+- `npm test` passed: 625 tests, 624 passed, 0 failed, 1 skipped.
 
 ## Unverified / not done
-- Test file and final state update are not yet committed.
+- Final state update and test commit reference are pending.
 
 ## Files changed
 - `src/main/admin/object-fields.js` — field metadata and value validation.
@@ -32,4 +34,4 @@ Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 20
 - No validated fields were omitted. The module exports `OBJECT_FIELDS` and `validateFieldValue`.
 
 ## Resume notes
-Run the required focused and full tests, then commit the test file and final state.
+Commit the test file and then record its commit hash in this state file.
