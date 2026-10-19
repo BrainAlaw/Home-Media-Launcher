@@ -1,13 +1,13 @@
 # CURRENT_STATE_codex (round R04)
 
-Status: IN_PROGRESS
+Status: DONE
 Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:00
 
 ## Tasks
 - [x] 1. Implement pairing codes, lockout, and sessions — 5 focused tests and `npm run check` passed (577 passed, 1 skipped).
 - [x] 2. Implement API route table and config redaction — 5 focused tests and `npm run check` passed (582 passed, 1 skipped).
 - [x] 3. Implement HTTP server, security controls, and endpoint tests — `npm run check` passed (590 passed, 1 skipped), including endpoint rate-limit and malformed HTTP header tests.
-- [ ] 4. Run full checks and complete handoff state.
+- [x] 4. Run full checks and complete handoff state — final `npm run check` passed (590 passed, 1 skipped).
 
 ## Done
 - Created pairing codes with expiry, per-address lockout/rate limiting, and in-memory hashed sliding sessions.
@@ -15,9 +15,9 @@ Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:0
 - Added secure HTTP server lifecycle, LAN IPv4 binding, Origin/CSRF validation, body/type checks, response security headers, and end-to-end API tests.
 
 ## Verified
-- `npm run check` passed after task 1: 577 passed, 0 failed, 1 skipped.
-- `npm run check` passed after task 2: 582 passed, 0 failed, 1 skipped.
-- `npm run check` passed after task 3: 590 passed, 0 failed, 1 skipped.
+- `npm run check`: 590 passed, 0 failed, 1 skipped (bash-dependent test unavailable in the Windows environment).
+- `git diff --check` passed; worktree clean after this state commit.
+- Focused admin tests: 19 passed across auth, routes, and server.
 
 ## Unverified / not done
 - Main-process integration, LAN checks from a second device, and manual pairing UI verification are coordinator-owned and remain outside this worktree.
@@ -35,4 +35,4 @@ Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:0
 - None.
 
 ## Resume notes
-No remaining changes in this worktree. Coordinator should wire `createAdminServer` into `src/main/index.js`, display pairing codes, and run the planned LAN/device verification.
+No remaining implementation in this worktree. Coordinator should wire `createAdminServer` into `src/main/index.js`, display pairing codes, and run the planned LAN/device verification.
