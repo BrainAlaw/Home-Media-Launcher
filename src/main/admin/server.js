@@ -106,10 +106,10 @@ function sendJson(response, status, body, headers = {}) {
 
 function createAdminServer({
   getConfig, saveConfig, validate, onPairCode = () => {}, onPaired = () => {}, log = () => {},
-  getStatus = null, getLogTail = null, getSecretNames = null
+  getStatus = null, getLogTail = null, getSecretNames = null, actions = {}
 }) {
   const auth = createAdminAuth();
-  const routes = createAdminRoutes({ getConfig, saveConfig, validate, auth, onPaired, getStatus, getLogTail, getSecretNames });
+  const routes = createAdminRoutes({ getConfig, saveConfig, validate, auth, onPaired, getStatus, getLogTail, getSecretNames, actions });
   let server = null;
   let enabled = false;
   let bindAddress = null;

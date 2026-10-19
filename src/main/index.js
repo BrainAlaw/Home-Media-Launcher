@@ -180,6 +180,39 @@ function adminSecretNames() {
   };
 }
 
+/**
+ * Handlers for the admin panel actions (backend/actions.js). Each returns a short result text for the panel.
+ * Destructive actions are called only after the server consumed a confirmation token.
+ */
+const adminActions = {
+  'reload-config': async () => {
+    await buildModel();
+    return 'Configuration reloaded.';
+  },
+  'restart-soloist': async () => {
+    await ensureSoloistManager({ userData: app.getPath('userData') }).restart();
+    return 'Soloist restarted.';
+  },
+  'clear-cache': async () => {
+    const fsp = require('node:fs/promises');
+    const userData = app.getPath('userData');
+    // Icon and weather caches only. The config, .env and token files are never touched here.
+    await fsp.rm(path.join(userData, 'icon-cache'), { recursive: true, force: true });
+    await fsp.rm(path.join(userData, 'weather-cache.json'), { force: true });
+    return 'Icon and weather caches cleared. The next start refills them.';
+  },
+  'pair-tv': async () => {
+    if (!adminServer?.status().running) throw new Error('The admin panel is not running.');
+    await adminServer.pair();
+    return 'Pairing code shown on the TV.';
+  },
+  'restart-launcher': async () => {
+    // Give the response time to leave before the process exits.
+    setTimeout(() => { app.relaunch(); app.exit(0); }, 500);
+    return 'Restarting the launcher.';
+  }
+};
+
 async function applyAdminServer() {
   const admin = adminSettings();
   const key = JSON.stringify([admin.enabled === true, admin.port ?? null, admin.bindAddress ?? null]);
@@ -196,7 +229,8 @@ async function applyAdminServer() {
     log: (entry) => console.warn('Admin panel:', entry?.event || 'event', entry?.code || ''),
     getStatus: () => buildStatus(statusSources()),
     getLogTail: (count) => logRing.tail(count),
-    getSecretNames: adminSecretNames
+    getSecretNames: adminSecretNames,
+    actions: adminActions
   });
   try {
     await adminServer.start();
