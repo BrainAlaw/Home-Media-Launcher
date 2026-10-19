@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 Agent: codex · Tool: OpenAI Codex · Branch: r05/codex · Last update: 2026-10-19
 
 ## Tasks
-- [ ] 1. Build pure settings form model and unit tests.
+- [x] 1. Build pure settings form model and unit tests.
 - [ ] 2. Build descriptor-driven panel UI with session, pairing, load and save flows.
 - [ ] 3. Report required coordinator routes and descriptor gaps.
 - [ ] 4. Run npm test, commit changes, and finish state report.
@@ -26,3 +26,4 @@ Agent: codex · Tool: OpenAI Codex · Branch: r05/codex · Last update: 2026-10-
 
 ## Resume notes
 Continue with form-model and tests.
+
