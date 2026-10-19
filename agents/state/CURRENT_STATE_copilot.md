@@ -1,27 +1,29 @@
 # CURRENT_STATE_copilot (round R08)
 
 Status: IN_PROGRESS
-Agent: copilot · Tool: GitHub Copilot CLI · Branch: r08/copilot · Last update: 2026-10-19 11:31
+Agent: copilot · Tool: GitHub Copilot CLI · Branch: r08/copilot · Last update: 2026-10-19 11:35
 
 ## Tasks
-- [ ] 1. Create the static quick-settings focus contract test.
-- [ ] 2. Run `npm test`, commit the test, and record its result.
+- [x] 1. Create the static quick-settings focus contract test.
+- [x] 2. Run `npm test`, commit the test, and record its result.
 - [ ] 3. Set final status and complete this report.
 
 ## Done
-- Initial state recorded before implementation.
+- Added the static focus contract test — commits `15c9073`, `a5d8db6`.
 
 ## Verified
-- Read `AGENTS.md`, `agents/rounds/R08/copilot.md`, `agents/rounds/R08/PLAN.md`, and the focus rules in `src/renderer/menu.css`.
+- `npm test`: 668 passed, 1 failed; the sole failure is the expected missing `.qs-row` focus rule before `r08/claude` is merged.
+- `node --test test/quick-settings-focus.test.js`: same expected pre-merge failure.
 
 ## Unverified / not done
-- Test not yet implemented or run.
+- The contract test passes only after `r08/claude` is merged.
 
 ## Files changed
-- `agents/state/CURRENT_STATE_copilot.md` — initial R08 task state.
+- `test/quick-settings-focus.test.js` — checks shared row focus declarations and prohibits informational/VPN focus selectors.
+- `agents/state/CURRENT_STATE_copilot.md` — records R08 progress and verification.
 
 ## Requests for the coordinator
 - None.
 
 ## Resume notes
-Continue with task 1 in `test/quick-settings-focus.test.js`.
+Set `Status: DONE` and commit the completed report.
