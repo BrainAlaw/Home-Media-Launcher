@@ -3,7 +3,8 @@
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { app, BrowserWindow, dialog, ipcMain, safeStorage, shell, protocol, screen } = require('electron');
-const { loadConfig, saveConfig } = require('./config');
+const { loadConfig, saveConfig, validateConfig } = require('./config');
+const { createAdminServer } = require('./admin/server');
 const activity = require('./activity');
 const { migrateConfigPresetIcons } = require('./preset-migration');
 const { scanDesktopEntries } = require('./desktop-entry');
@@ -103,6 +104,42 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // GPU raster/zero-copy/VAAPI, set before ready. HML_GPU_SAFE=1 opts out. Timer throttling is deliberately left on so a hidden launcher idles.
 require('./gpu-flags').applyGpuSwitches(app);
 
+// Admin panel (LAN, settings.admin). Started or restarted whenever its settings change; never listens when disabled.
+let adminServer = null;
+let adminKey = '';
+
+function adminSettings() {
+  const admin = config?.settings?.admin;
+  return admin && typeof admin === 'object' ? admin : {};
+}
+
+function adminUrl() {
+  const status = adminServer?.status();
+  return status?.running ? `http://${status.bindAddress}:${status.port}` : '';
+}
+
+async function applyAdminServer() {
+  const admin = adminSettings();
+  const key = JSON.stringify([admin.enabled === true, admin.port ?? null, admin.bindAddress ?? null]);
+  if (key === adminKey) return;
+  adminKey = key;
+  if (adminServer) { await adminServer.stop(); adminServer = null; }
+  if (admin.enabled !== true) return;
+  adminServer = createAdminServer({
+    getConfig: () => config,
+    saveConfig: async (next) => { validateConfig(next); await saveConfig(configPath, next); config = next; await buildModel(); return config; },
+    validate: validateConfig,
+    onPairCode: (info) => sendToWindow('launcher:admin-pair-code', { ...info, url: adminUrl() }),
+    onPaired: () => sendToWindow('launcher:admin-paired', {}),
+    log: (entry) => console.warn('Admin panel:', entry?.event || 'event', entry?.code || '')
+  });
+  try {
+    await adminServer.start();
+  } catch (error) {
+    console.warn('Admin panel did not start:', error.code || error.message);
+  }
+}
+
 async function buildModel() {
   if (building) return building;
   building = assembleModel().finally(() => { building = null; });
@@ -179,6 +216,7 @@ async function assembleModel() {
   };
   menuIndicators.updateMoonlight(model.remoteStatus);
   if (window && !window.isDestroyed()) window.webContents.send('launcher:menu-configuration', menuDefinition);
+  await applyAdminServer();
   return model;
 }
 
@@ -545,6 +583,7 @@ app.whenReady().then(async () => {
 let controllerCleanupFinished = false;
 let controllerCleanupStarted = false;
 app.on('before-quit', (event) => {
+  void adminServer?.stop();
   if (!controllerCleanupFinished) {
     event.preventDefault();
     if (!controllerCleanupStarted) {
@@ -607,6 +646,11 @@ handle('launcher:set-icon-override', async (_event, tileId, source) => {
 });
 handle('launcher:reload-config', async () => buildModel());
 handle('launcher:refresh-remote', async () => buildModel());
+handle('launcher:admin-pair', async () => {
+  if (!adminServer?.status().running) throw new Error('The admin panel is not running. Enable it in settings.admin.');
+  const pairing = await adminServer.pair();
+  return { expiresAt: pairing.expiresAt };
+});
 handle('launcher:open-config', () => shell.openPath(configPath));
 /** The settings page only submits checked apps; derive which remote apps the user switched off. */
 function withHiddenApps(next) {
