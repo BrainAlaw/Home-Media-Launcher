@@ -117,7 +117,7 @@ window.PairingWizardUI = (function () {
     }
 
     button(label, action, { primary = false } = {}) {
-      const button = node('button', primary ? 'primary' : '', label);
+      const button = node('button', primary ? 'primary pointer-target' : 'pointer-target', label);
       button.type = 'button';
       button.dataset.action = action;
       if (primary) button.dataset.primary = '';
@@ -139,7 +139,7 @@ window.PairingWizardUI = (function () {
       chips.setAttribute('role', 'group');
       chips.setAttribute('aria-label', 'Connection type');
       for (const transport of ['bluetooth', 'dongle', 'usb']) {
-        const chip = node('button', 'chip', TRANSPORT_LABELS[transport]);
+        const chip = node('button', 'chip pointer-target', TRANSPORT_LABELS[transport]);
         chip.type = 'button';
         chip.dataset.transport = transport;
         chip.addEventListener('click', () => this.flow.setTransport(transport));

@@ -1,33 +1,35 @@
-# CURRENT_STATE_copilot (round R09)
+# CURRENT_STATE_copilot (round R11)
 
 Status: DONE
-Agent: copilot · Tool: GitHub Copilot · Branch: r09/copilot · Last update: 2026-10-19 11:50
+Agent: copilot · Tool: GitHub Copilot CLI · Branch: r11/copilot · Last update: 2026-10-19 12:18
 
 ## Tasks
-- [x] 1. Create `src/renderer/speed-card-model.js` as an IIFE with the interface above and keep it under 80 lines.
-- [x] 2. Create `test/speed-card-model.test.js` covering each branch and timing boundary with `node:test`.
-- [x] 3. Run `npm run check` and confirm the suite passes.
-- [x] 4. Set `Status: DONE`, fill every section, and commit.
+- [x] 1. Add pointer targets and mouse click activation for pairing wizard and controller rows.
+- [x] 2. Keep the display-only pairing body non-clickable; preserve keyboard-backed controller row behaviour.
+- [x] 3. Add static regression tests for pointer targets and keydown handler counts.
+- [x] 4. Run `npm run check` and finalise this state file.
 
 ## Done
-- Added `src/renderer/speed-card-model.js` — commit `b6fc9aa`.
-- Added `test/speed-card-model.test.js` — commit `2df7cc6`.
-- Captured the passing project validation for the round.
+- Added pointer targets to pairing wizard buttons/chips, controller page action buttons and the existing native controller row buttons — commit `eb4f6dc`.
+- Kept the wizard body display-only; controller rows remain native buttons with their existing Enter/click press animation and no new controller action.
+- Added static checks for pointer targets and unchanged keydown handler counts — commit `b9491f3`.
 
 ## Verified
-- `npm run check` passed in the R09 Copilot worktree.
+- `node --test test/controllers-mouse.test.js` passed (3 tests).
+- Final `npm run check` passed (686 tests). Two unrelated time-sensitive tests failed once during an earlier full run, then both passed in isolation and the full check passed on retry.
 
 ## Unverified / not done
-- No real-display or Electron validation was run, per the round contract.
+- No real-display validation (prohibited by the round contract).
 
 ## Files changed
-- `src/renderer/speed-card-model.js` — pure IIFE view model for card state and fade opacity.
-- `test/speed-card-model.test.js` — checks each `cardView` branch, fade boundaries, constants, and opacity values.
-- `agents/state/CURRENT_STATE_copilot.md` — records the final R09 Copilot status and verification.
+- `src/renderer/pairing-wizard-ui.js` — adds pointer targets to wizard buttons and transport choices.
+- `src/renderer/controllers-page.js` — adds pointer targets to Pair and Refresh actions.
+- `src/renderer/controller-list.js` — adds a pointer target to existing native controller rows.
+- `test/controllers-mouse.test.js` — verifies declared pointer targets and unchanged keydown handler counts.
+- `agents/state/CURRENT_STATE_copilot.md` — records R11 completion and verification.
 
 ## Requests for the coordinator
 - None.
 
 ## Resume notes
-The speed-card model is complete and validated by the repo check suite. No further work remains in this branch.
-
+No further work remains.

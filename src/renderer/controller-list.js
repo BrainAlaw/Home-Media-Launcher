@@ -87,7 +87,7 @@ window.ControllerList = (function () {
     add(controller, index) {
       const element = document.createElement('button');
       element.type = 'button';
-      element.className = 'device-row';
+      element.className = 'device-row pointer-target';
       element.dataset.controllerId = controller.id;
       const motion = this.scheduler.create({ scale: 0.96, y: 18, o: 0 }, (v) => {
         element.style.transform = `translate3d(0, ${v.y.toFixed(2)}px, 0) scale(${v.scale.toFixed(4)})`;

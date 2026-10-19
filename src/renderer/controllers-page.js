@@ -74,7 +74,9 @@ window.ControllersPage = (function () {
       context.setView('pairing');
       wizard.open();
     });
+    $('#pair-new-controller').classList.add('pointer-target');
     $('#refresh-controllers').addEventListener('click', () => refresh());
+    $('#refresh-controllers').classList.add('pointer-target');
     service.on('controllersChanged', () => { if (active) refresh({ quiet: true }); });
     list.showLoading();
   }
