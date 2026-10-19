@@ -1,32 +1,28 @@
-# CURRENT_STATE_codex (round R08)
+# CURRENT_STATE_codex (round R09)
 
-Status: DONE
-Agent: codex  ·  Tool: Codex  ·  Branch: r08/codex  ·  Last update: 2026-10-19
+Status: IN_PROGRESS
+Agent: codex  ·  Tool: Codex  ·  Branch: r09/codex  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Create `src/renderer/quick-settings-model.js` with the specified interface.
-- [x] 2. Add `node:test` coverage in `test/quick-settings-model.test.js`.
-- [x] 3. Run `npm run check` and commit task updates.
-- [x] 4. Set final status and report the export names.
+- [ ] 1. Change download duration, add upload measurement, export API.
+- [ ] 2. Add upload tests.
+- [ ] 3. Run `npm run check` and tick task items.
+- [ ] 4. Set final status and complete report.
 
 ## Done
-- Row model and tests implemented — commit `610b9fe`.
-- Final round status recorded — pending commit.
+- Initial state created before implementation.
 
 ## Verified
-- `npm run check`: passed; 673 tests, 0 failures.
-- Exports: `rowKind`, `rowClass` via CommonJS and `window.QuickSettingsModel`.
+- Read the R09 plan and assigned backend module.
 
 ## Unverified / not done
-- Real display verification is outside this pure model task and is assigned to the coordinator.
+- Implementation and checks not yet complete.
 
 ## Files changed
-- `src/renderer/quick-settings-model.js` — pure row kind and class mapping.
-- `test/quick-settings-model.test.js` — logic and VM browser-global coverage.
-- `agents/state/CURRENT_STATE_codex.md` — round status and results.
+- `agents/state/CURRENT_STATE_codex.md` — round task status.
 
 ## Requests for the coordinator
-- Exports are `rowKind` and `rowClass`.
+- None.
 
 ## Resume notes
-None.
+- Implement upload measurement in `backend/net-probe.js`, add its focused test, run `npm run check`, then finish this state report.

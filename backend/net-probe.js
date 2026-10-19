@@ -1,6 +1,7 @@
 'use strict';
 
 const net = require('node:net');
+const { randomBytes } = require('node:crypto');
 
 /** Public resolvers that accept TCP on 443; the first one that answers decides the latency. */
 const PING_TARGETS = Object.freeze([{ host: '8.8.8.8', port: 443 }, { host: '8.8.4.4', port: 443 }]);
@@ -9,7 +10,10 @@ const PING_TIMEOUT_MS = 2000;
 const SPEED_URL = 'https://speed.cloudflare.com/__down';
 const SPEED_CHUNK_BYTES = 50_000_000;
 const SPEED_STREAMS = 4;
-const SPEED_DURATION_MS = 20_000;
+const SPEED_DURATION_MS = 10_000;
+const UPLOAD_URL = 'https://speed.cloudflare.com/__up';
+const UPLOAD_DURATION_MS = 10_000;
+const UPLOAD_CHUNK_BYTES = 1_000_000;
 const SPEED_TICK_MS = 250;
 /** Window for the live (instantaneous) figure shown while the test runs. */
 const LIVE_WINDOW_MS = 1500;
@@ -111,4 +115,46 @@ async function runSpeedTest({ durationMs = SPEED_DURATION_MS, signal, onProgress
   return { state: 'done', elapsedMs: ended - started, durationMs, mbps: snap.averageMbps, averageMbps: snap.averageMbps };
 }
 
-module.exports = { tcpPing, measurePing, createSpeedMeter, runSpeedTest, toMbps, PING_TARGETS, SPEED_DURATION_MS };
+/** Uploads bounded random-looking chunks on parallel streams for `durationMs` and reports progress. */
+async function runUploadTest({ durationMs = UPLOAD_DURATION_MS, signal, onProgress = () => {}, fetch: fetchImpl = globalThis.fetch, now = () => performance.now() } = {}) {
+  const started = now();
+  const meter = createSpeedMeter(started);
+  const stop = new AbortController();
+  const abortAll = () => stop.abort();
+  signal?.addEventListener('abort', abortAll, { once: true });
+  if (signal?.aborted) abortAll();
+  const deadline = setTimeout(abortAll, durationMs);
+  const tick = setInterval(() => {
+    const at = now();
+    const snap = meter.snapshot(at);
+    onProgress({ state: 'running', elapsedMs: Math.min(durationMs, at - started), durationMs, mbps: snap.liveMbps, averageMbps: snap.averageMbps });
+  }, SPEED_TICK_MS);
+  let failure = null;
+
+  async function stream() {
+    while (!stop.signal.aborted) {
+      const body = randomBytes(UPLOAD_CHUNK_BYTES);
+      const response = await fetchImpl(UPLOAD_URL, { method: 'POST', body, signal: stop.signal, cache: 'no-store' });
+      if (!response.ok) throw new Error(`Speed test server answered HTTP ${response.status}`);
+      meter.add(body.byteLength, now());
+      if (response.body) await response.body.cancel().catch(() => {});
+    }
+  }
+
+  try {
+    await Promise.all(Array.from({ length: SPEED_STREAMS }, () => stream().catch((error) => {
+      if (!stop.signal.aborted) { failure = error; abortAll(); }
+    })));
+  } finally {
+    clearTimeout(deadline);
+    clearInterval(tick);
+    signal?.removeEventListener('abort', abortAll);
+  }
+  const ended = now();
+  const snap = meter.snapshot(ended);
+  if (signal?.aborted) return { state: 'cancelled', elapsedMs: ended - started, durationMs, mbps: 0, averageMbps: snap.averageMbps };
+  if (failure && snap.bytes === 0) return { state: 'error', elapsedMs: ended - started, durationMs, mbps: 0, averageMbps: 0, error: String(failure.message || failure) };
+  return { state: 'done', elapsedMs: ended - started, durationMs, mbps: snap.averageMbps, averageMbps: snap.averageMbps };
+}
+
+module.exports = { tcpPing, measurePing, createSpeedMeter, runSpeedTest, runUploadTest, toMbps, PING_TARGETS, SPEED_DURATION_MS, UPLOAD_DURATION_MS };
