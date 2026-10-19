@@ -42,7 +42,7 @@ window.SettingsDialog = (function () {
   }
 
   function removeButton(card) {
-    const button = el('button', { type: 'button', className: 'remove', textContent: 'Remove' });
+    const button = el('button', { type: 'button', className: 'remove pointer-target', textContent: 'Remove' });
     button.addEventListener('click', () => card.remove());
     return button;
   }
@@ -74,7 +74,7 @@ window.SettingsDialog = (function () {
     group.setAttribute('role', 'group');
     group.setAttribute('aria-label', 'Home category');
     const buttons = options.map((option) => {
-      const button = el('button', { type: 'button', textContent: option.label });
+      const button = el('button', { type: 'button', className: 'pointer-target', textContent: option.label });
       button.dataset.category = option.id;
       button.addEventListener('click', () => { card.dataset.category = option.id; sync(); });
       return button;
@@ -166,7 +166,7 @@ window.SettingsDialog = (function () {
   function createSelect({ container, label, groups, onPick }) {
     container.replaceChildren();
     const wrap = el('div', { className: 'select-wrap' });
-    const trigger = el('button', { type: 'button', className: 'select-trigger' });
+    const trigger = el('button', { type: 'button', className: 'select-trigger pointer-target' });
     trigger.setAttribute('aria-haspopup', 'listbox');
     trigger.setAttribute('aria-expanded', 'false');
     trigger.setAttribute('aria-label', label);
@@ -190,7 +190,7 @@ window.SettingsDialog = (function () {
       if (group.title) list.append(el('h5', { className: 'select-group', textContent: group.title }));
       for (const option of group.options) {
         byValue.set(option.value, option);
-        const item = el('button', { type: 'button', className: 'select-option' });
+        const item = el('button', { type: 'button', className: 'select-option pointer-target' });
         item.setAttribute('role', 'option');
         item.setAttribute('aria-selected', 'false');
         item.dataset.value = option.value;
@@ -255,12 +255,12 @@ window.SettingsDialog = (function () {
 
     const accents = $('#accent-picker');
     accents.replaceChildren();
-    const presetDefault = el('button', { type: 'button', textContent: 'Preset accent' });
+    const presetDefault = el('button', { type: 'button', className: 'pointer-target', textContent: 'Preset accent' });
     presetDefault.dataset.accent = '';
     presetDefault.addEventListener('click', () => updateDraft({ accent: '' }));
     accents.append(presetDefault);
     for (const color of window.ThemeEngine.ACCENT_SWATCHES) {
-      const swatch = el('button', { type: 'button', className: 'swatch' });
+      const swatch = el('button', { type: 'button', className: 'swatch pointer-target' });
       swatch.dataset.accent = color;
       swatch.style.setProperty('--swatch', color);
       swatch.setAttribute('aria-label', `Accent ${color}`);
@@ -339,7 +339,7 @@ window.SettingsDialog = (function () {
     const grid = $('#wallpaper-gallery');
     grid.replaceChildren();
     for (const entry of gallery.entries) {
-      const thumb = el('button', { type: 'button', className: 'wallpaper-thumb', title: entry.name });
+      const thumb = el('button', { type: 'button', className: 'wallpaper-thumb pointer-target', title: entry.name });
       thumb.dataset.id = entry.id;
       thumb.setAttribute('aria-label', entry.name);
       const image = el('img', { alt: '', loading: 'lazy', decoding: 'async', src: gallery.urlFor(entry, document.baseURI, 'thumb') });
@@ -350,7 +350,7 @@ window.SettingsDialog = (function () {
     const intervals = $('#slideshow-interval');
     intervals.replaceChildren();
     for (const option of window.Wallpapers.INTERVALS) {
-      const button = el('button', { type: 'button', textContent: option.label });
+      const button = el('button', { type: 'button', className: 'pointer-target', textContent: option.label });
       button.dataset.seconds = String(option.seconds);
       button.addEventListener('click', () => updateWallpaper({ mode: 'slideshow', intervalSec: option.seconds }));
       intervals.append(button);
@@ -406,20 +406,20 @@ window.SettingsDialog = (function () {
     text.append(el('strong', { textContent: source.label }), el('small', { textContent: where, title: where }), stats);
 
     const actions = el('div', { className: 'source-actions' });
-    const toggle = el('button', { type: 'button', className: 'source-toggle', textContent: source.enabled ? 'On' : 'Off' });
+    const toggle = el('button', { type: 'button', className: 'source-toggle pointer-target', textContent: source.enabled ? 'On' : 'Off' });
     toggle.dataset.focusKey = `${source.id}:toggle`;
     toggle.setAttribute('aria-pressed', String(source.enabled));
     toggle.setAttribute('aria-label', `${source.label}: ${source.enabled ? 'enabled' : 'disabled'}`);
     toggle.addEventListener('click', () => commitSources(sourcesDraft.map((candidate) => (candidate.id === source.id ? { ...candidate, enabled: !candidate.enabled } : candidate))));
     actions.append(toggle);
     if (source.kind === 'folder' && source.enabled) {
-      const use = el('button', { type: 'button', textContent: 'Use as slideshow' });
+      const use = el('button', { type: 'button', className: 'pointer-target', textContent: 'Use as slideshow' });
       use.dataset.focusKey = `${source.id}:use`;
       use.setAttribute('aria-pressed', String(resolved.mode === 'slideshow' && resolved.source === 'folder' && resolved.folderPath === source.location));
       use.addEventListener('click', () => updateWallpaper({ mode: 'slideshow', source: 'folder', folderPath: source.location }));
       actions.append(use);
     }
-    const remove = el('button', { type: 'button', className: 'remove', textContent: 'Remove' });
+    const remove = el('button', { type: 'button', className: 'remove pointer-target', textContent: 'Remove' });
     remove.dataset.focusKey = `${source.id}:remove`;
     remove.setAttribute('aria-label', `Remove ${source.label}`);
     remove.addEventListener('click', () => commitSources(sourcesDraft.filter((candidate) => candidate.id !== source.id)));
@@ -446,7 +446,7 @@ window.SettingsDialog = (function () {
     container.replaceChildren();
     for (const provider of Sources.BUILTIN_PROVIDERS) {
       if (sourcesDraft.some((source) => source.kind === 'online' && source.location === provider.location)) continue;
-      const button = el('button', { type: 'button', textContent: `+ ${provider.label}`, title: provider.description });
+      const button = el('button', { type: 'button', className: 'pointer-target', textContent: `+ ${provider.label}`, title: provider.description });
       button.dataset.focusKey = `provider:${provider.id}`;
       button.addEventListener('click', () => { void addOnlineSource(provider.location); });
       container.append(button);
@@ -740,6 +740,12 @@ window.SettingsDialog = (function () {
 
   function init(context) {
     ctx = context;
+    // Mouse-mode affordance: every static button that already reacts to a click gets the shared hover target class.
+    document.querySelectorAll(
+      '.settings-layout nav button, #performance-mode button, #wallpaper-modes button, #slideshow-source button,' +
+      ' #add-wallpaper-folder, #add-online-source, #clear-online-wallpapers, #settings-close, #settings-cancel,' +
+      ' #browse-wallpaper, #browse-moonlight, #refresh-remote, #add-local, #add-command, #add-moonlight, #add-website'
+    ).forEach((node) => node.classList.add('pointer-target'));
     window.AppearanceSettings.init();
     $('#dynamic-art').addEventListener('change', (event) => updateDraft({ dynamicArt: event.target.checked }));
     $('#live-video').addEventListener('change', (event) => updateDraft({ liveVideo: event.target.checked }));

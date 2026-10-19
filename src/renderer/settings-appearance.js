@@ -29,7 +29,7 @@ window.AppearanceSettings = (function () {
   function actionButton(className, text, label, disabled, handler) {
     const node = document.createElement('button');
     node.type = 'button';
-    node.className = className;
+    node.className = `${className} pointer-target`;
     node.textContent = text;
     node.setAttribute('aria-label', label);
     node.disabled = disabled;
@@ -156,8 +156,10 @@ window.AppearanceSettings = (function () {
   }
 
   function init() {
+    $('#category-add').classList.add('pointer-target');
     $('#category-add').addEventListener('click', addCategory);
     $('#category-name').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); addCategory(); } });
+    document.querySelectorAll('#header-layout button').forEach((node) => node.classList.add('pointer-target'));
     document.querySelectorAll('#header-layout button').forEach((node) => node.addEventListener('click', () => { headerLayout = node.dataset.layout; syncLayout(); }));
   }
 

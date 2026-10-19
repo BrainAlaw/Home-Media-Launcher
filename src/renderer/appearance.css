@@ -51,7 +51,7 @@ body.app-running .wallpaper-credit { display: none; }
 /* Compact select: trigger button with an inline listbox that opens below it. */
 .select-field { margin-bottom: 18px; }
 .select-wrap { display: grid; gap: 6px; }
-.select-trigger, .select-list .select-option { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin: 0; text-align: left; }
+.select-trigger, .select-list .select-option { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; margin: 0; text-align: left; cursor: pointer; }
 .select-text { display: grid; min-width: 0; flex: 1; gap: 2px; }
 .select-name { overflow: hidden; font-family: var(--option-font, inherit); font-size: 17px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .select-detail { overflow: hidden; color: var(--text-dim); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
@@ -67,9 +67,9 @@ body.app-running .wallpaper-credit { display: none; }
 .select-list .select-option[aria-selected="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, var(--glass-bg)); }
 .select-list .select-option[aria-selected="true"] .select-name::after { content: ' \2713'; color: var(--accent); }
 .swatch-row { gap: 10px; }
-.swatch-row .swatch { width: 32px; height: 32px; border-width: 2px !important; }
-.swatch-row > button:not(.swatch) { min-height: 34px; padding: 4px 14px; }
-.swatch-row input[type="color"] { width: 44px; height: 32px; }
+.swatch-row .swatch { width: 32px; height: 32px; border-width: 2px !important; cursor: pointer; }
+.swatch-row > button:not(.swatch) { min-height: 34px; padding: 4px 14px; cursor: pointer; }
+.swatch-row input[type="color"] { width: 44px; height: 32px; cursor: pointer; }
 
 /* ---------------------------------------------------------------- wallpaper sources */
 .source-list { display: grid; gap: 10px; margin-bottom: 16px; }
@@ -81,8 +81,9 @@ body.app-running .wallpaper-credit { display: none; }
 .source-text small { overflow: hidden; color: var(--text-dim); text-overflow: ellipsis; white-space: nowrap; }
 .source-text .source-stats.problem { color: var(--warn); }
 .source-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.source-actions button { cursor: pointer; }
 .source-actions .remove { color: var(--danger); }
-.source-toggle { min-width: 56px; }
+.source-toggle { min-width: 56px; cursor: pointer; }
 #known-providers:empty { display: none; }
 #online-source-url:disabled { opacity: .5; }
 
@@ -92,7 +93,7 @@ body.app-running .wallpaper-credit { display: none; }
 .icon-hint { color: var(--text-faint); }
 .artwork-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .artwork-results[hidden] { display: none; }
-dialog .artwork-candidate { position: relative; aspect-ratio: 16 / 9; padding: 0; overflow: hidden; background: var(--bg); }
+dialog .artwork-candidate { position: relative; aspect-ratio: 16 / 9; padding: 0; overflow: hidden; background: var(--bg); cursor: pointer; }
 .artwork-candidate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 
 /* Discovered application row: [thumbnail] [name + source] [toggle]; the icon picker expands below inside the same card. */
@@ -107,13 +108,14 @@ dialog .artwork-candidate { position: relative; aspect-ratio: 16 / 9; padding: 0
 .catalog-toggle input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: var(--radius-circle); background: var(--text-dim); }
 .catalog-toggle input:checked { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 55%, var(--color-transparent)); }
 .catalog-toggle input:checked::before { left: 23px; background: var(--accent-contrast); }
-.catalog-toggle input:focus { outline: none; border-color: var(--focus-ring); box-shadow: var(--focus-glow); }
+/* The glow replaces the focus outline for every focus, keyboard and mouse alike, so `outline: none` is paired with :focus-visible here. */
+.catalog-toggle input:is(:focus, :focus-visible) { outline: none; border-color: var(--focus-ring); box-shadow: var(--focus-glow); }
 
 /* Custom application and website cards: header (name + Remove), then labelled fields on a two-column grid. */
 .application-card { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px 16px; padding: 16px 18px; margin-bottom: 14px; }
 .application-card > * { min-width: 0; }
 .card-head { grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 14px; }
-.card-head .remove { flex: none; min-height: 48px; }
+.card-head .remove { flex: none; min-height: 48px; cursor: pointer; }
 .settings-page .card-field { gap: 6px; margin: 0; }
 .card-field.grow { flex: 1; min-width: 0; }
 .card-field.wide { grid-column: 1 / -1; }
