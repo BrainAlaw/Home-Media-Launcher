@@ -36,6 +36,17 @@
       this.resize = new ResizeObserver(() => this.measure());
       this.resize.observe(panel);
       for (const action of panel.querySelectorAll('.menu-action')) this.register(action);
+      // Rows added later (VPN providers) are registered as they appear, so every row shares the same inline motion.
+      this.rowObserver = new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (node.nodeType !== 1) continue;
+            if (node.matches('.menu-action')) this.register(node);
+            for (const action of node.querySelectorAll('.menu-action')) this.register(action);
+          }
+        }
+      });
+      this.rowObserver.observe(panel, { childList: true, subtree: true });
     }
 
     /** Gives a row the shared spring motion and hover focus. Idempotent, so rows created later (VPN providers) behave like the static ones. */
@@ -96,7 +107,7 @@
       this.panelMotion.to({ open: open ? 1 : 0 });
     }
 
-    dispose() { this.abort.abort(); this.resize.disconnect(); this.motion.dispose(); }
+    dispose() { this.abort.abort(); this.resize.disconnect(); this.rowObserver.disconnect(); this.motion.dispose(); }
   }
 
   return { MenuController };
