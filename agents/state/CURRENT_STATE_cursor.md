@@ -1,32 +1,30 @@
-# CURRENT_STATE_cursor (round R01)
+# CURRENT_STATE_cursor (round R06)
 
 Status: DONE
-Agent: cursor  ·  Tool: cursor  ·  Branch: r01/cursor  ·  Last update: 2026-10-18 22:58
+Agent: cursor  ·  Tool: cursor  ·  Branch: r06/cursor  ·  Last update: 2026-10-19 10:03
 
 ## Tasks
-- [x] 1. Write `docs/GETTING_STARTED.md`
-- [x] 2. Write `docs/TROUBLESHOOTING.md`
-- [x] 3. Add EN docs link line to `README.md`; finish with Status: DONE
+- [x] 1. Long read-only values: `.object-value` wraps, no page scroll
+- [x] 2. Phone layout under 640px (16px gutter, one column, box-sizing, max-width)
+- [x] 3. `:focus-visible` outline 2px / offset 2px on interactive elements
+- [x] 4. `prefers-reduced-motion`: transition/animation none, scroll-behavior auto
 
 ## Done
-- State file created — commit `2a924ae`
-- `docs/GETTING_STARTED.md` — commit `23b1e55`
-- `docs/TROUBLESHOOTING.md` — commit `85ca4dd`
-- README EN docs link + Status DONE — (this commit)
+- State file created — commit `be8b42f`
+- Item 1 `.object-value` wrap — commit `8c101f6`
+- Item 2 phone layout — commit `8dc7633`
+- Items 3–4 focus-visible + reduced-motion — commit `616bc74` (same commit)
 
 ## Verified
-- Worktree `D:\Github Repos\hml-cursor` on branch `r01/cursor`
-- Guides use only facts from the brief; UK spelling
-- README has exactly one new line under the first heading
+- `npm test`: 620 pass, 0 fail (after items 1–3; item 3 re-run after one unrelated dongle-pairing flake)
+- CSS read-back: `.object-value` has wrap/hidden/box-sizing; `@media (max-width: 640px)` gutter/column; interactive `:focus-visible` 2px/2px kept existing 3px rule; reduced-motion sets transition/animation to none
 
 ## Unverified / not done
-- App not run (per brief)
+- not checked on a real display
 
 ## Files changed
-- `agents/state/CURRENT_STATE_cursor.md` — R01 state (DONE)
-- `docs/GETTING_STARTED.md` — new user getting-started guide
-- `docs/TROUBLESHOOTING.md` — new troubleshooting guide
-- `README.md` — one EN docs link line under the heading
+- `agents/state/CURRENT_STATE_cursor.md` — R06 state (DONE)
+- `src/main/admin/panel/panel.css` — object-value wrap, phone layout, focus-visible, reduced-motion
 
 ## Requests for the coordinator
 - none
