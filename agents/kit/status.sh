@@ -15,7 +15,17 @@ round="$1"; shift
 round_id="R$round"
 round_lower="r$round"
 
-printf '%-9s %-12s %-8s %-7s %-7s %s\n' AGENT STATUS TICKED AHEAD DIRTY "LAST LOG LINE"
+printf '%-9s %-12s %-8s %-7s %-7s %-9s %s\n' AGENT STATUS TICKED AHEAD DIRTY IDLE "LAST LOG LINE"
+
+# Seconds since the newest file in the worktree changed. Works for any agent that writes to its worktree,
+# including one that runs inside a chat session and never prints to a log. Skips dependencies and git internals.
+idle_seconds() {
+  local dir="$1" newest now
+  newest="$(find "$dir" \( -name node_modules -o -name .git \) -prune -o -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n 1)"
+  [ -n "$newest" ] || { echo "-"; return; }
+  now="$(date +%s)"
+  echo "$(( now - ${newest%.*} ))s"
+}
 
 for agent in "$@"; do
   dir="$WT/$round_lower-$agent"
@@ -42,5 +52,6 @@ for agent in "$@"; do
   dirty="$(git -C "$dir" status --short | wc -l | tr -d ' ')"
   last="$(tr -d '\r' < "$LOGS/$round_lower-$agent.log" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -n 1 | cut -c1-70 || true)"
 
-  printf '%-9s %-12s %-8s %-7s %-7s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$last"
+  idle="$(idle_seconds "$dir")"
+  printf '%-9s %-12s %-8s %-7s %-7s %-9s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$idle" "$last"
 done
