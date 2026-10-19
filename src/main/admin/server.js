@@ -2,6 +2,7 @@
 
 const http = require('node:http');
 const net = require('node:net');
+const os = require('node:os');
 const { createAdminAuth } = require('./auth');
 const { createAdminRoutes } = require('./routes');
 
@@ -21,10 +22,18 @@ class HttpError extends Error {
   }
 }
 
+/** Private IPv4 ranges only (RFC 1918). Tailscale and other CGNAT (100.64/10) addresses are not the home LAN. */
+function isPrivateLanAddress(address) {
+  const parts = String(address).split('.').map(Number);
+  if (parts.length !== 4 || parts.some((part) => !Number.isInteger(part) || part < 0 || part > 255)) return false;
+  const [a, b] = parts;
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
+
 function defaultBindAddress() {
   try {
-    const interfaces = process.report?.getReport?.().header?.networkInterfaces || [];
-    const candidate = interfaces.find((entry) => entry.internal === false && entry.family === 'IPv4' && net.isIPv4(entry.address));
+    const interfaces = Object.values(os.networkInterfaces()).flat();
+    const candidate = interfaces.find((entry) => entry.internal === false && entry.family === 'IPv4' && isPrivateLanAddress(entry.address));
     return candidate?.address || '127.0.0.1';
   } catch {
     return '127.0.0.1';

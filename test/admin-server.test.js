@@ -202,3 +202,9 @@ test('malformed HTTP parser responses retain the security headers', async (t) =>
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) assert.match(responseText, new RegExp(`${name}: ${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i'));
   assert.match(responseText, /400 Bad Request/i);
 });
+
+test('default bind prefers a private LAN address and ignores Tailscale (100.64/10)', () => {
+  const { defaultBindAddress } = require('../src/main/admin/server');
+  const address = defaultBindAddress();
+  assert.match(address, /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.0\.0\.1$)/, `unexpected bind address ${address}`);
+});
