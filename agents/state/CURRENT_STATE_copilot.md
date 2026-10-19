@@ -1,7 +1,7 @@
 # CURRENT_STATE_copilot (round R06)
 
 Status: IN_PROGRESS
-Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 2026-10-19 09:49
+Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 2026-10-19 09:57
 
 ## Tasks
 - [x] 1. Create field specs for the six structured settings and validate their keys against source validators.
@@ -10,7 +10,7 @@ Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 20
 
 ## Done
 - Added `OBJECT_FIELDS` metadata for all six validated settings — commit `85f7eaf`.
-- Added `validateFieldValue` for the declared field types — pending commit.
+- Added `validateFieldValue` for the declared field types — commit `62a00ac`.
 
 ## Verified
 - Confirmed the R06 worktree is clean on branch `r06/copilot`.
@@ -23,6 +23,8 @@ Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 20
 - Test file and final state update are not yet committed.
 
 ## Files changed
+- `src/main/admin/object-fields.js` — field metadata and value validation.
+- `test/admin-object-fields.test.js` — focused metadata and validation tests.
 - `agents/state/CURRENT_STATE_copilot.md` — R06 task tracking.
 
 ## Requests for the coordinator
@@ -30,4 +32,4 @@ Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 20
 - No validated fields were omitted. The module exports `OBJECT_FIELDS` and `validateFieldValue`.
 
 ## Resume notes
-Commit the field tests and final state after focused and full tests pass.
+Run the required focused and full tests, then commit the test file and final state.
