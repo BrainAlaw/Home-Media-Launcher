@@ -15,6 +15,7 @@ const { scanWindowsApplications } = require('./windows-apps');
 const { buildAppCatalog, computeHiddenAppIds } = require('./app-catalog');
 const { launchIdFrom } = require('./launch-request');
 const { BackgroundApps, backgroundLimit, DEFAULT_MAX } = require('./background-apps');
+const { loadRemoteKeymap } = require('./remote-keymap');
 const { hasToken, loadCredential, saveToken, saveCredential } = require('./secret-store');
 const { LibraryService } = require('../../backend/library-service');
 const { LocalState } = require('../../backend/local-state');
@@ -228,6 +229,12 @@ function handle(channel, callback) {
   });
 }
 
+/** Long-press length for Back (from the shared remote keymap, so the page and the main process agree). */
+let backDownAt = 0;
+function longBackMs() {
+  try { return loadRemoteKeymap().longPressMs; } catch { return 700; }
+}
+
 /** Adapter for an Electron website window: what the background registry needs. */
 function webAdapter(win) {
   return {
@@ -310,10 +317,17 @@ function openWebsite(tile) {
   webWindow.webContents.on('will-redirect', allowHttp);
   webWindow.webContents.on('before-input-event', (event, input) => {
     // Escape is hold-to-close and handled by web-preload.js (the page keeps ordinary Escape taps).
-    // Remote/keyboard Back steps back through the page's history and never closes the app; Alt+F4 closes at once.
-    if (input.type === 'keyDown' && input.key === 'BrowserBack') {
+    // Back is handled here, not in the page, because the main process sees it first: a short press steps back through
+    // the page's history (never closes), a press held for longPressMs closes the app. Alt+F4 closes at once.
+    if (input.key === 'BrowserBack' || input.key === 'GoBack') {
       event.preventDefault();
-      if (webWindow && !webWindow.isDestroyed() && webWindow.webContents.canGoBack()) webWindow.webContents.goBack();
+      if (input.type === 'keyDown' && !input.isAutoRepeat && backDownAt === 0) backDownAt = Date.now();
+      if (input.type === 'keyUp') {
+        const heldFor = backDownAt ? Date.now() - backDownAt : 0;
+        backDownAt = 0;
+        if (heldFor >= longBackMs()) webWindow?.close();
+        else if (webWindow && !webWindow.isDestroyed() && webWindow.webContents.canGoBack()) webWindow.webContents.goBack();
+      }
     } else if (input.type === 'keyDown' && input.alt && input.key === 'F4') {
       event.preventDefault();
       webWindow?.close();
