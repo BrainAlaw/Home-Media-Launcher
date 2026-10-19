@@ -1,7 +1,7 @@
 # CURRENT_STATE_opencode (round R11)
 
-Status: DONE            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
-Agent: opencode  ·  Tool: OpenCode CLI  ·  Branch: r11/opencode  ·  Last update: 2026-10-19 00:00
+Status: IN_PROGRESS            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
+Agent: opencode  ·  Tool: OpenCode CLI  ·  Branch: r11/opencode  ·  Last update: 2026-10-19 12:28
 
 ## Tasks
 - [x] 1. settings-appearance.js: add `.pointer-target` to generated choice buttons.
@@ -39,5 +39,19 @@ Agent: opencode  ·  Tool: OpenCode CLI  ·  Branch: r11/opencode  ·  Last upda
 
 ## Requests for the coordinator
 - None.
+
+## Task: cursor styles (taken over)
+
+Round R11 cursor prompt (`agents/rounds/R11/cursor.md`) taken over by opencode on `r11/opencode`.
+Cursor's worktree `.worktrees/r11-cursor` holds one state commit plus uncommitted edits in the three CSS files; they were read
+for reference and every line was re-checked against the current `main`-based content of this branch before reuse.
+
+### Tasks
+- [ ] 1. In `src/renderer/settings-apps.css`, `src/renderer/appearance.css`, `src/renderer/controllers.css`: add `cursor: pointer`
+       to the clickable elements (buttons, choice buttons, clickable rows). No new hover colour — the shared
+       `.pointer-target:hover` rule in `pointer-target.css` (claude's file) owns hover. Commit.
+- [ ] 2. Make sure focus outlines are not removed in the three files (no `outline: none` without a `:focus-visible` replacement); fix any found. Commit.
+- [ ] 3. Run `npm test` (must pass; CSS is not covered by tests). Commit.
+- [ ] 4. Status DONE; "Unverified" contains "not checked on a real display".
 
 ## Resume notes
