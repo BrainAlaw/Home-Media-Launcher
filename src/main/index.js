@@ -303,6 +303,7 @@ function openWebsite(tile) {
   // The launcher keeps covering the screen (black) until the web window is visibly up; only then is it hidden.
   webWindow.once('ready-to-show', () => {
     webWindow?.show();
+    sendToWindow('launcher:app-ready', { tileId: tile.id });
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
   });
   // Raise the (already black) launcher before the web window disappears so the desktop never flashes through.
@@ -629,6 +630,7 @@ async function launchTile(tileId) {
     adapter.show();
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
     sendToWindow('launcher:app-launched', { tileId: tile.id, type: tile.type, resumed: true });
+    sendToWindow('launcher:app-ready', { tileId: tile.id, resumed: true });
     return true;
   }
   if (currentApp || tvBrowser) backgroundCurrent();
@@ -642,6 +644,7 @@ async function launchTile(tileId) {
       return opened;
     }
     const result = await processManager.launchChecked(tile);
+    sendToWindow('launcher:app-ready', { tileId: tile.id });
     // Not awaited: the launcher stays up (black) until the application took the focus, then hides itself.
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); }, window, waitForBlur: true });
     return result;
