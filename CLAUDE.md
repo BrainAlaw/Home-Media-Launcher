@@ -41,6 +41,7 @@ Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator
 Do your own prompt file (`agents/rounds/R<NN>/claude.md`) in your own worktree like any other agent, and write `agents/state/CURRENT_STATE_claude.md`. Merging and verification of the other branches happen when the user asks for the next actions, not while the others are still working.
 
 ## 4. Lessons that must not be repeated
+- **No promised follow-ups.** The coordinator cannot watch background work between turns, so it never promises to report or triage later. It states the status as of now and what the user can check (the watcher, the state files), and it checks again only when the user asks or within the same turn while it is still working.
 
 - Triage starts only when the round is final (see section 1, step 0). Triaging a half-finished round produces half-read states and merges of unfinished branches.
 - Run the app after every merge: a duplicated global `const` between two renderer scripts once turned the whole home screen black while all tests passed.
