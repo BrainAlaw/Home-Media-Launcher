@@ -46,12 +46,15 @@ discover_rounds() {
 
 # Builds the whole frame as text. Pure output, so the caller can compare two frames.
 frame() {
-  local rounds round agents status_out first_status shown=0 line
+  local rounds round agents status_out first_status shown=0 line manual=""
   rounds="$(discover_rounds)"
   while read -r round agents; do
     [ -n "$round" ] || continue
     # shellcheck disable=SC2086
     status_out="$(bash "$DIR/status.sh" "$round" $agents 2>/dev/null || true)"
+    # MANUAL lines (agents that hit a usage limit) are collected for the block at the bottom, not shown in the table.
+    manual+="$(grep '^MANUAL ' <<< "$status_out" || true)"$'\n'
+    status_out="$(grep -v '^MANUAL ' <<< "$status_out" || true)"
     # Keep the round only if some agent is not final yet (the STATUS column is the second field).
     local active=0
     while read -r line; do
@@ -64,6 +67,13 @@ frame() {
   done <<< "$rounds"
   if [ "$shown" -eq 0 ]; then
     printf 'no active round. Finished rounds are hidden; new worktrees appear here on their own.\n'
+  fi
+  # Copy-ready manual prompts, last resort only: one line per agent at the bottom of the view.
+  if grep -q '^MANUAL ' <<< "$manual"; then
+    printf '\nmanual fallback (paste by hand into a Freebuff window opened on the worktree):\n'
+    grep '^MANUAL ' <<< "$manual" | while IFS= read -r line; do
+      printf '%s\n' "$line"
+    done
   fi
 }
 

@@ -23,7 +23,8 @@ printf '%-9s %-12s %-8s %-7s %-7s %-6s %s\n' AGENT STATUS TICKED AHEAD DIRTY LIM
 # including a chat subagent. Skips dependencies and git internals.
 idle_label() {
   local dir="$1" newest now age
-  newest="$(find "$dir" \( -name node_modules -o -name .git \) -prune -o -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n 1)"
+  # Only the folders agents write to. The large asset folders (wallpapers, icons, fonts) never change during a round.
+  newest="$(find "$dir/src" "$dir/backend" "$dir/test" "$dir/agents" "$dir/docs" -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n 1)"
   [ -n "$newest" ] || { echo "-"; return; }
   now="$(date +%s)"
   age=$(( now - ${newest%.*} ))
@@ -70,7 +71,8 @@ for agent in "$@"; do
 done
 
 # For every agent that hit a limit: the manual fallback, pasted by hand into a CLI window (last resort only).
+# One line per agent, starting with MANUAL, so watch-round.sh can collect them below the table.
 for agent in ${limited[@]+"${limited[@]}"}; do
-  printf '\nmanual fallback for %s: open %s/%s-%s in a Freebuff window and paste:\n  Read AGENTS.md and agents/rounds/%s/%s.md, then follow the prompt.\n' \
+  printf 'MANUAL %s %s/%s-%s :: Read AGENTS.md and agents/rounds/%s/%s.md, then follow the prompt.\n' \
     "$agent" "$WT" "$round_lower" "$agent" "$round_id" "$agent"
 done
