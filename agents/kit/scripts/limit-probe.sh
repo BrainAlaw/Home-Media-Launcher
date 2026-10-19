@@ -40,7 +40,7 @@ for file in "${files[@]}"; do
     codex)    text="$(codex exec --skip-git-repo-check "$PROMPT" 2>&1)"; rc=$? ;;
     copilot)  text="$(copilot -p "$PROMPT" -s 2>&1)"; rc=$? ;;
     opencode) text="$(opencode run -m opencode/big-pickle "$PROMPT" 2>&1)"; rc=$? ;;
-    cursor)   text="$(powershell.exe -NoProfile -Command '& "$env:LOCALAPPDATA\cursor-agent\agent.ps1" -p "Reply with exactly the word PONG and nothing else." --trust --output-format text' 2>&1)"; rc=$? ;;
+    cursor)   text="$(powershell.exe -NoProfile -WindowStyle Hidden -Command '& "$env:LOCALAPPDATA\cursor-agent\agent.ps1" -p "Reply with exactly the word PONG and nothing else." --trust --output-format text' 2>&1)"; rc=$? ;;
     *)        echo "$base: no probe for this CLI"; continue ;;
   esac
 
