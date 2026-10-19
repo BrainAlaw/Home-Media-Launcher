@@ -38,7 +38,7 @@ Several agents work **at the same time**, each in its **own git worktree and bra
 
 | Agent id | Tool | Budget | Typical work |
 |---|---|---|---|
-| `claude` | Claude Code | large | coordinator: plans rounds, writes prompt files, merges, verifies on the real display; takes the hardest cross-cutting task |
+| `claude` | Claude Code | large | coordinator; as a worker it runs as a subagent of the coordinator chat, never `claude -p`; takes the hardest cross-cutting task and real-display verification |
 | `codex` | OpenAI Codex (paid, limited plan) | medium | one well-scoped medium task (backend module, script, integration) |
 | `copilot` | GitHub Copilot (free) | small | small, fully specified tasks: tests, small modules |
 | `opencode` | OpenCode (free models) | small | small, fully specified tasks: refactors, dead-code removal |

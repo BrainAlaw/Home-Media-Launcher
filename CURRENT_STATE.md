@@ -41,7 +41,7 @@ Resume point for the next session. Everything below is verified against the repo
 ## Working rules (since 18 October 2026)
 
 - Multi-tool team: Claude Code (coordinator), Codex, GitHub Copilot, OpenCode, Cursor. Protocol in `AGENTS.md` section 3, coordinator duties in `CLAUDE.md`. Rounds live in `agents/rounds/R<NN>/`, agent reports in `agents/state/CURRENT_STATE_<agent>.md`.
-- Agents work in parallel only in separate worktrees (`../hml-<agent>`, branch `r<NN>/<agent>`) with disjoint file ownership; the coordinator merges when the user asks for the next actions and asks before starting a round. Claude Code's own subagents are not used for parallel waves (token cost, merge conflicts).
+- Agents work in parallel only in separate worktrees (`.worktrees/r<NN>-<agent>`, branch `r<NN>/<agent>`) with disjoint file ownership; the coordinator merges when the user asks for the next actions and asks before starting a round. Claude Code's own subagents are not used for parallel waves (token cost, merge conflicts).
 
 ## Iteration 7 (Spotify Soloist)
 
