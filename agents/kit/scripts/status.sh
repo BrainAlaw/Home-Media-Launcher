@@ -14,7 +14,10 @@ round="$1"; shift
 round_id="R$round"
 round_lower="r$round"
 
-printf '%-9s %-12s %-8s %-7s %-7s %s\n' AGENT STATUS TICKED AHEAD DIRTY IDLE
+FINAL_STATUSES=" DONE PARTIAL BLOCKED OUT_OF_BUDGET "
+limited=()
+
+printf '%-9s %-12s %-8s %-7s %-7s %-6s %s\n' AGENT STATUS TICKED AHEAD DIRTY LIMIT IDLE
 
 # Coarse age of the newest file in the worktree: now, 5m, 2h, 3d. Works for any agent that writes to its worktree,
 # including a chat subagent. Skips dependencies and git internals.
@@ -53,5 +56,21 @@ for agent in "$@"; do
 
   ahead="$(git -C "$dir" rev-list --count "main..HEAD" 2>/dev/null || echo '?')"
   dirty="$(git -C "$dir" status --short | wc -l | tr -d ' ')"
-  printf '%-9s %-12s %-8s %-7s %-7s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$(idle_label "$dir")"
+  # A usage limit is read from the CLI's own output (the run log that the launcher wrote), not from the agent's files.
+  # It matters only while the agent is not final. Reading this file costs no agent tokens.
+  limit="-"
+  runlog="$WT/logs/$round_lower-$agent.log"
+  case "$FINAL_STATUSES" in *" $status "*) ;; *)
+    if [ -f "$runlog" ] && tail -n 300 "$runlog" | grep -q -i -E "usage limit|rate limit|quota exceeded|ActionRequiredError"; then
+      limit="LIMIT"
+      limited+=("$agent")
+    fi ;;
+  esac
+  printf '%-9s %-12s %-8s %-7s %-7s %-6s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$limit" "$(idle_label "$dir")"
+done
+
+# For every agent that hit a limit: the manual fallback, pasted by hand into a CLI window (last resort only).
+for agent in ${limited[@]+"${limited[@]}"}; do
+  printf '\nmanual fallback for %s: open %s/%s-%s in a Freebuff window and paste:\n  Read AGENTS.md and agents/rounds/%s/%s.md, then follow the prompt.\n' \
+    "$agent" "$WT" "$round_lower" "$agent" "$round_id" "$agent"
 done

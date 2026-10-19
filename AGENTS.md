@@ -43,6 +43,7 @@ Several agents work **at the same time**, each in its **own git worktree and bra
 | `copilot` | GitHub Copilot (free) | small | small, fully specified tasks: tests, small modules |
 | `opencode` | OpenCode (free models) | small | small, fully specified tasks: refactors, dead-code removal |
 | `cursor` | Cursor (free) | small | small, fully specified tasks: documentation, CSS polish |
+| `freebuff` | Freebuff (free, last resort) | small | only when no other tool can take the task. It has no prompt argument: the coordinator gives the one-line prompt and the user pastes it by hand into the Freebuff window opened on the agent's worktree. `scripts/status.sh` prints the exact line when an agent hits a usage limit. |
 
 Free tools run weaker models with small context windows and strict usage limits. Tasks are therefore sized in three tiers, and the coordinator never gives an agent a task above its tier:
 
