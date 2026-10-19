@@ -52,6 +52,14 @@ h2 { font-size: 1.45rem; letter-spacing: -.02em; }
 .stack { display: grid; gap: 12px; }
 .empty-group { grid-column: 1 / -1; padding: 18px; color: var(--muted); }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 @media (max-width: 640px) {
   *, *::before, *::after { box-sizing: border-box; max-width: 100%; }
   .topbar { padding-inline: 16px; }
@@ -63,5 +71,9 @@ h2 { font-size: 1.45rem; letter-spacing: -.02em; }
   .field-wide { grid-column: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }
