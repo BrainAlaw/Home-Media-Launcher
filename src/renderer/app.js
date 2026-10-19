@@ -836,6 +836,23 @@ homeElement.addEventListener('click', (event) => {
   handleAction('confirm');
 });
 
+/** Vertical wheel scrolls a horizontal tile track (same mapping as MouseModeModel.wheelToHorizontal). */
+function homeWheelToHorizontal({ deltaX, deltaY }) {
+  return deltaX || deltaY;
+}
+
+// Over a tile track the wheel scrolls it sideways; at either end the page keeps its native vertical scroll.
+homeElement.addEventListener('wheel', (event) => {
+  const track = event.target.closest?.('.track');
+  if (!track || event.ctrlKey) return;
+  const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? track.clientWidth : 1;
+  const delta = homeWheelToHorizontal(event) * scale;
+  const next = Math.max(0, Math.min(track.scrollWidth - track.clientWidth, track.scrollLeft + delta));
+  if (next === track.scrollLeft) return;
+  event.preventDefault();
+  track.scrollLeft = next;
+}, { passive: false });
+
 // Only real pointer movement moves focus: scrolling content under a parked cursor must not steal it.
 document.addEventListener('pointermove', (event) => {
   if (state.view !== 'home' || event.pointerType !== 'mouse' || !(event.movementX || event.movementY)) return;
