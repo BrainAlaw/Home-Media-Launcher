@@ -2,7 +2,7 @@
 .launch-loading {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 9050; /* above the black launch cover (9000), below toasts (9100) */
   display: grid;
   place-content: center;
   justify-items: center;
