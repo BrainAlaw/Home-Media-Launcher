@@ -8,7 +8,7 @@ Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:0
 - [x] 2. Implement Gaming web Home, Back history, and long Back close — `node --check src/main/web-preload.js` passed.
 - [x] 3. Build configurable TV control script and tests — targeted test and `npm run check` passed (559 passed, 1 skipped).
 - [x] 4. Add TV browser home/close bindings and hide/show methods with tests — `npm run check` passed (562 passed, 1 skipped).
-- [ ] 5. Update remote app documentation.
+- [x] 5. Update remote app documentation — Gaming/Home Theatre controls, limitations, and Linux hide/show verification caveat included.
 - [ ] 6. Run full checks and complete handoff state.
 
 ## Done
@@ -16,6 +16,7 @@ Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:0
 - Gaming preload sends Home IPC, navigates history on short Back, and closes through shared `triggerExit` on long Back.
 - Added `buildTvControlScript(keymap)` and retained `TV_CONTROL_SCRIPT` as the default generated script; it inlines mappings and the configured hold duration.
 - TvBrowserSession installs hmlHome/hmlClose bindings, emits corresponding events, and supports hide/show through browser window bounds; fake-connection tests cover payloads and missing-browser errors.
+- Updated remote app documentation for Home and Back behaviour and the unverified Linux window-state commands.
 
 ## Verified
 - Read repository instructions, R03 plan contract, and assigned source/tests.
