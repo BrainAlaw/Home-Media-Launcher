@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:00
 
 ## Tasks
-- [ ] 1. Update remote keymap actions and validation tests.
+- [x] 1. Update remote keymap actions and validation tests — `npm test` passed (558 passed, 1 skipped).
 - [ ] 2. Implement Gaming web Home, Back history, and long Back close.
 - [ ] 3. Build configurable TV control script and tests.
 - [ ] 4. Add TV browser home/close bindings and hide/show methods with tests.
@@ -12,7 +12,7 @@ Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:0
 - [ ] 6. Run full checks and complete handoff state.
 
 ## Done
-- Created initial state from template before implementation.
+- Updated map schema to `close`/`home`, added `longKeys`, and rejected the removed `exit` action.
 
 ## Verified
 - Read repository instructions, R03 plan contract, and assigned source/tests.

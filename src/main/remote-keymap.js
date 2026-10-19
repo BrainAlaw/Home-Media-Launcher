@@ -4,12 +4,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const MAP_PATH = path.join(__dirname, '..', '..', 'backend', 'remote-keymap.json');
-const ACTIONS = new Set(['up', 'down', 'left', 'right', 'confirm', 'back', 'exit']);
+const ACTIONS = new Set(['up', 'down', 'left', 'right', 'confirm', 'back', 'close', 'home']);
 const MAX_BUTTON_INDEX = 31;
 
 function validateRemoteKeymap(map) {
   if (!map || typeof map !== 'object' || Array.isArray(map)) throw new TypeError('Remote keymap must be an object');
-  for (const key of ['buttons', 'keys', 'axisDeadzone', 'longPressMs', 'exitButtons']) {
+  for (const key of ['buttons', 'keys', 'longKeys', 'axisDeadzone', 'longPressMs', 'exitButtons']) {
     if (!Object.hasOwn(map, key)) throw new TypeError(`Remote keymap is missing ${key}`);
   }
   for (const [index, action] of Object.entries(map.buttons)) {
@@ -20,11 +20,16 @@ function validateRemoteKeymap(map) {
     if (!key.trim()) throw new TypeError('Remote key names must not be empty');
     if (!ACTIONS.has(action)) throw new TypeError(`Invalid remote key action: ${action}`);
   }
+  for (const [key, action] of Object.entries(map.longKeys)) {
+    if (!key.trim()) throw new TypeError('Long-press key names must not be empty');
+    if (!ACTIONS.has(action)) throw new TypeError(`Invalid long-press key action: ${action}`);
+  }
   if (!Number.isFinite(map.axisDeadzone) || map.axisDeadzone <= 0 || map.axisDeadzone > 1) throw new TypeError('axisDeadzone must be greater than 0 and at most 1');
   if (!Number.isInteger(map.longPressMs) || map.longPressMs < 100 || map.longPressMs > 5000) throw new TypeError('longPressMs must be an integer from 100 to 5000');
   if (!Array.isArray(map.exitButtons) || map.exitButtons.some((index) => !Number.isInteger(index) || index < 0 || index > MAX_BUTTON_INDEX)) {
     throw new TypeError(`exitButtons must contain button indexes from 0 to ${MAX_BUTTON_INDEX}`);
   }
+  if (map.exitButtons.some((index) => map.buttons[String(index)] !== 'close')) throw new TypeError('Each exit button must map to close');
   return map;
 }
 
