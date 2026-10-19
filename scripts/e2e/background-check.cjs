@@ -98,6 +98,7 @@ function writeReport() {
   const failed = results.filter((item) => item.failures.length);
   const lines = [`# Background apps check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}`, ''];
   for (const item of results) {
+    if (item.blocked) { lines.push(`- BLOCKED · ${item.label} · ${item.blocked}`); continue; }
     lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} · ${item.label} · launcher ${item.state.launcherVisible ? 'visible' : 'hidden'} · sites ${JSON.stringify(item.state.sites)}`);
     for (const failure of item.failures) lines.push(`  - ${failure}`);
   }
