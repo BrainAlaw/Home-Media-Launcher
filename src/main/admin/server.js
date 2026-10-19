@@ -92,9 +92,9 @@ function sendJson(response, status, body, headers = {}) {
   response.end(encoded);
 }
 
-function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () => {}, log = () => {} }) {
+function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () => {}, onPaired = () => {}, log = () => {} }) {
   const auth = createAdminAuth();
-  const routes = createAdminRoutes({ getConfig, saveConfig, validate, auth });
+  const routes = createAdminRoutes({ getConfig, saveConfig, validate, auth, onPaired });
   let server = null;
   let enabled = false;
   let bindAddress = null;

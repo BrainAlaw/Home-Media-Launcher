@@ -26,7 +26,7 @@ function sessionCookie(token, maxAge = SESSION_MAX_AGE_SECONDS) {
   return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
 }
 
-function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion = version }) {
+function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion = version, onPaired = () => {} }) {
   if (typeof getConfig !== 'function' || typeof saveConfig !== 'function' || typeof validate !== 'function' || !auth) {
     throw new TypeError('Admin routes require config functions, validation, and authentication');
   }
@@ -47,6 +47,7 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
           result.retryAfter > 0 ? { 'Retry-After': String(result.retryAfter) } : {});
       }
       const session = auth.createSession();
+      try { onPaired(); } catch { /* The TV card is informational; pairing must succeed regardless. */ }
       return json(200, { ok: true }, {
         'Set-Cookie': sessionCookie(session.token)
       });
