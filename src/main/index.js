@@ -14,6 +14,7 @@ const { listRemoteApps } = require('./remote-apps');
 const { scanWindowsApplications } = require('./windows-apps');
 const { buildAppCatalog, computeHiddenAppIds } = require('./app-catalog');
 const { launchIdFrom } = require('./launch-request');
+const { BackgroundApps, backgroundLimit, DEFAULT_MAX } = require('./background-apps');
 const { hasToken, loadCredential, saveToken, saveCredential } = require('./secret-store');
 const { LibraryService } = require('../../backend/library-service');
 const { LocalState } = require('../../backend/local-state');
@@ -55,6 +56,11 @@ if (testProfile) app.setPath('userData', path.join(app.getPath('appData'), 'Vibe
 let window;
 let webWindow;
 let tvBrowser = null;
+// Apps that are alive but not on screen: id -> adapter ({ hide, show, close, win }). The registry keeps the order and limit.
+const backgroundEntries = new Map();
+const backgroundApps = new BackgroundApps({ max: DEFAULT_MAX });
+// The app currently on screen (null when the launcher is showing): { id, adapter }.
+let currentApp = null;
 let config;
 let model;
 let configPath;
@@ -122,6 +128,7 @@ async function assembleModel() {
   await seedPresetWebsitesOnce();
   config = await migrateConfigPresetIcons(config, (next) => saveConfig(configPath, next));
   menuDefinition = resolveMenu(config.menu);
+  for (const evictedId of backgroundApps.setMax(backgroundLimit(config.settings))) closeBackground(evictedId);
   wallpaperSources?.apply(config.settings);
   await slideshow.configure(menuDefinition.slideshow);
   const customTiles = config.rows.flatMap((row) => row.tiles.map((tile, index) => ({ ...tile, id: tile.id || `custom:${row.id || 'row'}:${index}` })));
@@ -221,13 +228,42 @@ function handle(channel, callback) {
   });
 }
 
+/** Adapter for an Electron website window: what the background registry needs. */
+function webAdapter(win) {
+  return {
+    win,
+    hide: () => { if (!win.isDestroyed()) win.hide(); },
+    show: () => { if (!win.isDestroyed()) { win.show(); win.focus(); } },
+    close: () => { if (!win.isDestroyed()) win.close(); }
+  };
+}
+
+/** Moves the app on screen to the background (hidden, still running). Evicted apps are closed. */
+function backgroundCurrent() {
+  if (!currentApp) return;
+  const { id, adapter } = currentApp;
+  currentApp = null;
+  webWindow = null;
+  adapter.hide();
+  backgroundEntries.set(id, adapter);
+  for (const evictedId of backgroundApps.put(id)) closeBackground(evictedId);
+}
+
+/** Closes a background app and forgets it. */
+function closeBackground(id) {
+  const adapter = backgroundEntries.get(id);
+  backgroundEntries.delete(id);
+  backgroundApps.take(id);
+  adapter?.close();
+}
+
 function openWebsite(tile) {
   let parsed;
   let loadError = '';
   try { parsed = new URL(tile.url); } catch { throw new Error('Invalid website URL'); }
   if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Website URL must use HTTP or HTTPS');
   const partitionId = tile.id.replace(/[^a-z0-9_-]/gi, '-').slice(0, 80);
-  webWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     fullscreen: !windowed,
     frame: windowed,
     width: 1280,
@@ -244,6 +280,9 @@ function openWebsite(tile) {
       additionalArguments: [`--hml-app-name=${encodeURIComponent(String(tile.name || tile.title || 'this app').slice(0, 80))}`, require('./remote-keymap').remoteKeymapArgument()]
     }
   });
+  webWindow = win;
+  const adapter = webAdapter(win);
+  currentApp = { id: tile.id, adapter };
   webWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   const allowHttp = (event, url) => { if (!/^https?:\/\//i.test(url)) event.preventDefault(); };
   webWindow.webContents.on('will-navigate', allowHttp);
@@ -267,11 +306,19 @@ function openWebsite(tile) {
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
   });
   // Raise the (already black) launcher before the web window disappears so the desktop never flashes through.
-  webWindow.on('close', () => {
+  win.on('close', () => {
+    // Only the app on screen brings the launcher back; a background window closing (eviction) must not.
+    if (currentApp?.adapter !== adapter) return;
     sessionExt.controller.closing();
     showLauncher();
   });
-  webWindow.once('closed', () => {
+  win.once('closed', () => {
+    if (currentApp?.adapter !== adapter) {
+      // A background window closed (evicted, crashed or closed by the user): only forget it.
+      if (backgroundEntries.get(tile.id) === adapter) { backgroundEntries.delete(tile.id); backgroundApps.take(tile.id); }
+      return;
+    }
+    currentApp = null;
     webWindow = null;
     returnToLauncher({ tileId: tile.id, website: true, ...(loadError ? { error: loadError } : {}) });
   });
@@ -568,9 +615,24 @@ handle('launcher:get-weather', async (_event, location) => {
 });
 async function launchTile(tileId) {
   if (typeof tileId !== 'string' || !tileId) throw new Error('Application ID is required');
-  if (webWindow || tvBrowser || processManager.active) throw new Error('Another application is already running');
+  if (processManager.active) throw new Error('Another application is already running');
   const tile = model.rows.flatMap((row) => row.tiles).find((candidate) => candidate.id === tileId);
   if (!tile) throw new Error('Unknown tile');
+  if (backgroundEntries.has(tile.id)) {
+    // Resume: the app is already running in the background; no new process.
+    const adapter = backgroundEntries.get(tile.id);
+    backgroundEntries.delete(tile.id);
+    backgroundApps.take(tile.id);
+    if (!sessionExt.controller.begin(tile)) throw new Error('Another application is already running');
+    currentApp = { id: tile.id, adapter };
+    webWindow = adapter.win || null;
+    adapter.show();
+    void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
+    sendToWindow('launcher:app-launched', { tileId: tile.id, type: tile.type, resumed: true });
+    return true;
+  }
+  if (currentApp || tvBrowser) backgroundCurrent();
+  if (tvBrowser) throw new Error('Another application is already running');
   if (!sessionExt.controller.begin(tile)) throw new Error('Another application is already running');
   try {
     if (tile.type === 'website') {
@@ -596,6 +658,17 @@ handle('launcher:get-game-library', () => library.getGameLibrary());
 handle('launcher:force-sync', async () => {
   await hostMonitor?.poll();
   return library.getGameLibrary();
+});
+
+ipcMain.on('web-app:home', (event) => {
+  if (!webWindow || event.sender !== webWindow.webContents || event.senderFrame !== webWindow.webContents.mainFrame) return;
+  const id = currentApp?.id;
+  if (!id) return;
+  sessionExt.controller.closing();
+  backgroundCurrent();
+  showLauncher();
+  if (window && !window.isDestroyed()) window.webContents.send('launcher:app-closed', { tileId: id, website: true, background: true });
+  sessionExt.controller.finish();
 });
 
 ipcMain.on('web-app:close', (event) => { if (webWindow && event.sender === webWindow.webContents && event.senderFrame === webWindow.webContents.mainFrame) webWindow.close(); });
