@@ -1,60 +1,86 @@
-# CURRENT_STATE_claude (round R06)
+# CURRENT_STATE_claude (round R07)
 
 Status: PARTIAL            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
-Agent: claude  ·  Tool: Claude Code  ·  Branch: r06/claude  ·  Last update: 2026-10-19
+Agent: claude  ·  Tool: Claude Code  ·  Branch: r07/claude  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. `backend/actions.js` (ACTIONS, findAction), `ACTIONS` in `GET /api/settings-description`, `test/admin-actions.test.js`
-- [ ] 2. Confirmation wiring (`createConfirmations()` from `backend/confirmation.js`, freebuff) and `GET /api/actions/confirm/<name>` — blocked: freebuff branch has no commits yet
-- [ ] 3. Routes: `GET /api/status`, `GET /api/log`, `GET /api/diagnostics`, `POST /api/actions/<name>` — blocked: codex branch has no commits yet
-- [ ] 4. `src/main/index.js` wiring: log ring, status sources, the five actions — blocked by 2 and 3
-- [ ] 5. Panel pages: Status, Log, Actions, Object editors (`panel.js`, `index.html`) — blocked by 3 (status/log endpoints)
-- [ ] 6. Object editors for `soloist`, `backgroundApps`, `homeHeader`, `remote`, `vpn`, `wallpaper` — blocked: copilot branch has no commits yet
-- [ ] 7. Real-machine check: every action and editor from the panel, secret-leak search over diagnostics — needs the user at the TV
-- [ ] 8. Side task: focused tile frame corners — not started (see Unverified)
-- [ ] 9. `npm run check`, commit, final `Status:` — npm check passes for task 1 (626/626)
+- [x] 1. Status and log routes (`routes.js`, `index.js`): code written, not run; server wiring is a request below
+- [x] 2. Diagnostics route with fixture-secret test (`test/admin-actions.test.js`): code and test written, not run
+- [x] 3. Panel pages Status, Log, Diagnostics link (`panel.js`, `index.html`): code written, not run; uses only contract class names
+- [ ] 4. Actions routes: BLOCKED on `git merge main` (needs shell) for `backend/confirmation.js`; step 4 of the order (vpn/spotify sources) done
+- [ ] 5. Object editors: BLOCKED on a decision (see Requests); `validateFieldValue` is CommonJS and the panel runs in the browser
+- [ ] 6. Focus frame: not measured (no shell, no real display in this session)
+- [ ] 7. `npm run check`, commits, final status: NOT DONE, the shell is refused in this session (see Unverified)
 
 ## Done
-- Action registry `backend/actions.js`: `reload-config`, `restart-soloist`, `clear-cache`, `pair-tv`, `restart-launcher` (only destructive one); frozen; `findAction` returns null for unknown names, `__proto__`, `constructor`, non-strings — commit `<see git log>`.
-- `GET /api/settings-description` now returns `ACTIONS` as well — same commit.
-- `test/admin-actions.test.js` (5 tests); `test/admin-static.test.js` description assertions extended with `ACTIONS`.
+- Nothing committed yet. All changes are in the working tree of `.worktrees/r07-claude`, uncommitted (see Files changed).
+- Third session (2026-10-19, coordinator instructions): every shell form (Bash, PowerShell, `npm run check` alone, `git status`) returned
+  "requires approval". No `npm run check`, no commit, no `git merge main`. Task 4 and task 5 stay blocked (see Requests 4 and 5).
+- Coordinator step 4 done by reading: `statusSources()` in `index.js` has `vpn` (from `vpnExt.statusSummary()`, a list of VpnStatus entries,
+  `ok` when one is connected) and `spotify` (from `mediaExt.statusSummary()`, `ok` when the service returns a status, else `unknown`).
+  Both `require('./ext/vpn')` and `require('./ext/media')` share the module cache with the registry. On this branch `statusSummary` does not exist yet,
+  so the two probes report `error` until `main` is merged. Not run.
+- Not touched: `server.js` (per instructions), `main`, `panel.css`.
+- Second session (2026-10-19): re-read `routes.js`, `index.js`, `panel.js`, `index.html`, `test/admin-actions.test.js`, `status.js`, `log.js`,
+  `diagnostics.js` by reading. Found no mismatch between the route, log, diagnostics and status code and the test's expectations.
+  Checked that every name used in `index.js` `statusSources()` and `adminSecretNames()` resolves (`readNetwork`, `ensureManager`, `secrets.*`, `model.remoteStatus`).
+- Blocked in this session: every shell call (`npm run check`, `node`, `git add`, `git commit`, `git merge`) is refused with "requires approval",
+  in both Bash and PowerShell. Read-only git (`status`, `log`, `diff`) and file reads/edits work.
+- `backend/confirmation.js` (codex) exists in the main checkout and exports `createConfirmations`. Not yet on this branch: needs `git merge main`.
+- `src/main/ext/vpn.js` (`statusSummary` returns a Promise of the VPN list) and `src/main/ext/media.js` (`statusSummary` returns `service.status()` or `null`)
+  exist in the main checkout. Not yet on this branch.
+- `src/main/admin/object-fields.js` in the main checkout is still CommonJS (`module.exports` only, no UMD). Task 5 stays blocked on request 4.
 
 ## Verified
-- `node --test test/admin-actions.test.js test/admin-static.test.js`: 11 pass, 0 fail.
-- `npm run check` in this worktree: 626 tests, 626 pass, 0 fail (second run; see Unverified for the first run).
-- Worktree `node_modules` is a junction to `D:\Github Repos\Home-Media-Launcher\node_modules` (not committed).
+- Read `AGENTS.md`, `agents/rounds/R07/PLAN.md`, `claude.md`, `cursor.md`, `codex.md`, `backend/ADMIN.md`, `routes.js`, `server.js`,
+  `status.js`, `log.js`, `diagnostics.js`, `redact.js`, `object-fields.js`, `ext/soloist.js`, `ext/vpn.js`, `panel.js`, `index.html`, `form-model.js`.
+- Checked by reading only: the circular import between `routes.js` and `diagnostics.js` is avoided by a lazy `require` in `buildDiagnosticsReport`.
+- Checked by reading only: `buildDiagnostics` already redacts config and secret values, so the diagnostics route passes raw settings.
 
 ## Unverified / not done
-- **First `npm run check` run failed** with one `ERR_ASSERTION` (`actual: [Object]`, `expected: null`) that I did not isolate; the
-  immediate rerun passed 626/626. Possibly a test that reads shared state through the junction. Needs a look before merge.
-- **Tasks 2-6 not started**: they import `backend/confirmation.js` (freebuff), `src/main/admin/log.js`, `redact.js`, `status.js`,
-  `diagnostics.js` (codex) and `src/main/admin/object-fields.js` (copilot). None of those branches has a commit yet
-  (`git log main..r06/<agent>` is empty for all five free-tool and codex branches). I did not write stubs for them.
-- **Task 7 (real machine)**: needs the actions and editors built first, and the user at the TV and phone.
-- **Task 8 (focus frame)**: not started and not measured. Code reading only: `.tile` radius is `--hig-radius-lg`; `.tile::before`
-  and `.tile .art` both use `border-radius: inherit` (so they match each other); `.tile::after` glow uses `--hig-radius-xl`, but it is a
-  radial gradient with `closest-side` and an opacity-only transition. The measurement with `desktopCapturer` on the real display has
-  not been done, so no fix is applied.
+- `npm run check` never ran (refused in both sessions). Every line in this branch is unverified: no syntax check, no test run.
+- No commit exists for this round yet (`git add` and `git commit` are refused too). Planned groups, unchanged: (a) routes and tests,
+  (b) `index.js` wiring, (c) panel pages, (d) `ADMIN.md`, (e) this state file. Each needs the `Co-Authored-By` line from `claude.md`.
+- Task 4 (actions) not started: needs `git merge main` first (codex's `createConfirmations` is on disk in the main checkout only).
+- Task 4 wiring not done: `statusSources()` still has no `vpn` and `spotify` entries (step 4 of the coordinator's order, after the merge).
+- Real display: the panel pages were not opened in a browser, and the focus frame was not measured.
+- Task 4 (actions) not started: needs `backend/confirmation.js`.
+- Task 5 (object editors) not started: see Requests.
+- Task 6 (focus frame) not started.
 
 ## Files changed
-- `backend/actions.js` — new: action registry.
-- `test/admin-actions.test.js` — new: 5 tests.
-- `src/main/admin/routes.js` — imports `ACTIONS`; `GET /api/settings-description` returns it.
-- `test/admin-static.test.js` — imports `ACTIONS`; description assertions include it.
-- `agents/state/CURRENT_STATE_claude.md` — this file.
+- `src/main/admin/routes.js`: `createAdminRoutes` takes `getStatus`, `getLogTail`, `getSecretNames`; new `GET /api/status`, `GET /api/log`,
+  `GET /api/diagnostics` (login, 503 when a dependency is missing); `dispatch` accepts `query`.
+- `src/main/index.js`: `createLogRing` and `logRing.wrap(console)` at start-up; `statusSources()` (version, uptime, admin, host, soloist,
+  network, weather); `adminSecretNames()`; the three new options passed to `createAdminServer`.
+- `src/main/admin/panel/panel.js`: page navigation (Settings, Status, Log), status grid with 5 s polling only while visible, log view with
+  refresh, diagnostics link `.diagnostics-link`. Text via `textContent` only.
+- `src/main/admin/panel/index.html`: `<nav id="page-nav" hidden>` above `main`.
+- `test/admin-actions.test.js`: route test for 401 without session, 405 on POST, log tail, diagnostics headers and no fixture secret in the body.
+- `backend/ADMIN.md`: API section for status, log and diagnostics.
 
 ## Requests for the coordinator
-- Merge order matters here: the free-tool and codex branches must land before tasks 2-6 can start. Nothing in them exists yet, so the
-  coordinator should check whether those agents have been run (`git log main..r06/<agent>`).
-- Decide whether the R06 side task 8 should stay in this round or move to R08, since it needs a real-display measurement session.
-- The first `npm run check` failure above: the coordinator should confirm it is not caused by the junction setup.
+1. **`src/main/admin/server.js` (not on any ownership list; needed for tasks 1 and 2 to work).** In `createAdminServer`, accept
+   `getStatus`, `getLogTail`, `getSecretNames` and pass them to `createAdminRoutes`. In `handleRequest`, pass
+   `query: new URL(request.url, boundUrl).searchParams` to `routes.dispatch`. Until this lands the three routes return 503 and the panel
+   shows "Status is not available" (the wiring in `index.js` already passes the options, and the server drops them).
+2. **`src/main/ext/vpn.js` and `src/main/ext/media.js` (not mine).** Export a read-only status getter so `statusSources()` can add `vpn`
+   and `spotify`. Right now those two report "Not available" in the status page. I did not add a stub.
+3. **Shell approval.** The Bash and PowerShell tools need approval for this session. Please approve, or run in the worktree:
+   `npm run check`, then commit the four groups above as separate commits with the `Co-Authored-By` line from the prompt.
+4. **Task 5 decision.** `object-fields.js` (copilot) is CommonJS, and `panel.js` is a browser IIFE with no bundler. To use
+   `validateFieldValue` in the browser without copying it, copilot should wrap `object-fields.js` as UMD (same pattern as
+   `panel/form-model.js`) and it must be served to `/admin/` (for example through `/api/settings-description`, which I can extend
+   in `routes.js`). Confirm which option you want before I write the editors.
+5. **Task 4** waits for codex's `backend/confirmation.js` on `main`. Codex's state file should name the export as `createConfirmations`.
+6. **`.page-nav` styling.** The page nav uses `button button-quiet` and no extra class, because `.page-nav` is not in the cursor contract.
+   The buttons look like the existing quiet buttons. Cursor may add a layout rule later if wanted.
 
 ## Resume notes
-Next, once `r06/freebuff` and `r06/codex` have commits on `main` (or on their branches, merged into this one):
-1. `git merge --no-ff r06/freebuff r06/codex r06/copilot` into `r06/claude`, resolve, run `npm run check`.
-2. Task 2: `backend/confirmation.js` — `createConfirmations()` instance created once in `createAdminRoutes`; `GET /api/actions/confirm/<name>`
-   for destructive actions only.
-3. Task 3: routes `GET /api/status`, `GET /api/log?tail=N`, `GET /api/diagnostics` (attachment), `POST /api/actions/<name>` (CSRF header,
-   428 without the token for destructive ones, 404 for unknown names). Use `findAction` from `backend/actions.js`.
-4. Task 4 in `src/main/index.js`, then tasks 5-6 in `src/main/admin/panel/panel.js` and `index.html`.
-5. Task 8 with a real `desktopCapturer` capture before and after, in the same session as task 7.
+Status is PARTIAL because the shell is refused. To finish in order:
+1. Run `npm run check` in this worktree. Fix any failure in `routes.js`, `index.js`, `panel.js` or `admin-actions.test.js`.
+2. Commit groups: (a) routes and tests, (b) index.js wiring, (c) panel pages, (d) ADMIN.md, (e) this state file.
+3. Merge `main` after codex and copilot are merged; then add task 4 (routes in `routes.js`, `ACTIONS` in `backend/actions.js`, `data-action` buttons with `.action-result`).
+4. Task 5 after the decision in Requests item 4.
+5. Task 6: on the real display, read `border-radius`, `inset`, `padding`, `box-shadow` of `.tile`, `.tile::before`, `.tile::after` and `.tile .art`,
+   record them here, then fix with one radius token.
