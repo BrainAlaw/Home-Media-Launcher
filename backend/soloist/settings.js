@@ -47,4 +47,11 @@ function normaliseSoloistSettings(value) {
   };
 }
 
-module.exports = { DEFAULT_DEVICE_NAME, DEFAULT_SOLOIST_SETTINGS, validateSoloistSettings, normaliseSoloistSettings };
+module.exports = {
+  DEFAULT_DEVICE_NAME,
+  DEVICE_NAME_MAX,
+  BINARY_PATH_MAX,
+  DEFAULT_SOLOIST_SETTINGS,
+  validateSoloistSettings,
+  normaliseSoloistSettings
+};
