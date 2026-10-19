@@ -1,30 +1,28 @@
-# CURRENT_STATE_copilot (round R01)
+# CURRENT_STATE_copilot (round R06)
 
-Status: DONE
-Agent: copilot · Tool: GitHub Copilot · Branch: r01/copilot · Last update: 2026-10-18 22:54
+Status: IN_PROGRESS
+Agent: copilot · Tool: GitHub Copilot · Branch: r06/copilot · Last update: 2026-10-19 09:49
 
 ## Tasks
-- [x] 1. Add a full valid config test covering every Settings dialog key.
-- [x] 2. Add valid and invalid cases for each key, including website category validation.
-- [x] 3. Run `npm test` and finish the state file.
+- [ ] 1. Create field specs for the six structured settings and validate their keys against source validators.
+- [ ] 2. Implement `validateFieldValue` and add focused tests for field specs and all validation rules.
+- [ ] 3. Run focused and full tests; finish the state file.
 
 ## Done
-- Full valid config test — commit `dc82385`.
-- Valid and invalid cases for all requested settings keys and website category — commit `42d45f6`.
+- None yet.
 
 ## Verified
-- `npm run check` passed.
-- `npm test` passed: 552 tests, 0 failures, 0 skipped.
+- Confirmed the R06 worktree is clean on branch `r06/copilot`.
+- Read `AGENTS.md`, the R06 Copilot prompt, and the named validator source files.
 
 ## Unverified / not done
-- Nothing.
+- Implementation and tests not yet started.
 
 ## Files changed
-- `test/config-roundtrip.test.js` — valid and invalid config validation coverage.
-- `agents/state/CURRENT_STATE_copilot.md` — task status and verification results.
+- `agents/state/CURRENT_STATE_copilot.md` — R06 task tracking.
 
 ## Requests for the coordinator
-- None.
+- None yet.
 
 ## Resume notes
-None.
+Commit this initial R06 state file, then implement only the two owned source/test files.
