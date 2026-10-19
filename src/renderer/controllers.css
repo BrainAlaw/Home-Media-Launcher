@@ -6,7 +6,7 @@
 .device-note { margin: 0; padding: var(--hig-space-2) 4px; color: var(--hig-label-secondary); font: var(--hig-font-body); }
 .device-note[data-state="error"] { color: var(--danger); }
 
-dialog button.device-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--hig-space-2); width: 100%; min-height: calc(var(--hig-space-1) * 10.5); padding: var(--hig-space-2) var(--hig-space-3); border: 1px solid var(--hig-separator); border-radius: var(--hig-radius-xl); background: var(--hig-fill-secondary); color: var(--text); text-align: left; }
+dialog button.device-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--hig-space-2); width: 100%; min-height: calc(var(--hig-space-1) * 10.5); padding: var(--hig-space-2) var(--hig-space-3); border: 1px solid var(--hig-separator); border-radius: var(--hig-radius-xl); background: var(--hig-fill-secondary); color: var(--text); text-align: left; cursor: pointer; }
 dialog button.device-row:hover { background: var(--hig-fill); }
 dialog button.device-row:focus { background: var(--hig-fill); box-shadow: var(--hig-focus-edge), var(--hig-elev-3); }
 .device-icon { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-circle); background: color-mix(in srgb, var(--accent) 22%, var(--color-transparent)); color: var(--accent-2); }
@@ -23,7 +23,7 @@ dialog button.device-row:focus { background: var(--hig-fill); box-shadow: var(--
 .device-empty span { color: var(--hig-label-secondary); font: var(--hig-font-body); }
 
 .controller-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-dialog .controller-actions button { min-height: 52px; padding-inline: 24px; text-align: center; }
+dialog .controller-actions button { min-height: 52px; padding-inline: 24px; text-align: center; cursor: pointer; }
 dialog .controller-actions .primary { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; }
 #controller-hint { margin-top: 14px; }
 
@@ -52,10 +52,10 @@ dialog.wizard { width: min(780px, 92vw); height: fit-content; min-height: min(58
 .wizard-panel h2 { margin: 0; font: var(--hig-font-title2); font-weight: var(--title-weight); letter-spacing: var(--title-tracking); text-transform: var(--label-transform); }
 .wizard-panel p { margin: 0; max-width: 48ch; color: var(--hig-label-secondary); font: var(--hig-font-body); }
 .wizard-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
-dialog .wizard-chips .chip { padding: var(--hig-space-1) var(--hig-space-2); border-radius: var(--hig-radius-pill); text-align: center; font: var(--hig-font-caption1); }
+dialog .wizard-chips .chip { padding: var(--hig-space-1) var(--hig-space-2); border-radius: var(--hig-radius-pill); text-align: center; font: var(--hig-font-caption1); cursor: pointer; }
 dialog .wizard-chips .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 26%, var(--color-transparent)); }
 .wizard-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 10px; }
-dialog .wizard-actions button { min-width: 180px; min-height: calc(var(--hig-space-1) * 7); text-align: center; font-weight: 600; }
+dialog .wizard-actions button { min-width: 180px; min-height: calc(var(--hig-space-1) * 7); text-align: center; font-weight: 600; cursor: pointer; }
 
 /* Controller illustration */
 .cg { width: 100%; height: auto; overflow: visible; }
