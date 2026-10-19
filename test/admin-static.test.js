@@ -12,6 +12,7 @@ const { createAdminRoutes } = require('../src/main/admin/routes');
 const { createAdminServer, SECURITY_HEADERS } = require('../src/main/admin/server');
 const { resolvePanelFile, serveStatic } = require('../src/main/admin/static');
 const { GROUPS, SETTINGS, INTERNAL_PATHS } = require('../backend/settings-descriptor');
+const { ACTIONS } = require('../backend/actions');
 
 const ROOT = path.join(os.tmpdir(), 'hml-admin-static-root');
 const OUTSIDE_SECRET = 'outside-secret-token';
@@ -158,7 +159,7 @@ test('settings description exposes groups, settings and internal paths without a
   });
   const response = await routes.dispatch({ method: 'GET', pathname: '/api/settings-description' });
   assert.equal(response.status, 200);
-  assert.deepEqual(response.body, { GROUPS, SETTINGS, INTERNAL_PATHS });
+  assert.deepEqual(response.body, { GROUPS, SETTINGS, INTERNAL_PATHS, ACTIONS });
   const serialised = JSON.stringify(response.body);
   assert.ok(!serialised.includes('secret-value-123'));
   for (const entry of SETTINGS) {
@@ -188,7 +189,7 @@ test('admin server serves the panel path through static serving and keeps the JS
     assert.equal(description.status, 200);
     assert.equal(description.headers.get('content-type'), 'application/json; charset=utf-8');
     const body = await description.json();
-    assert.deepEqual(Object.keys(body).sort(), ['GROUPS', 'INTERNAL_PATHS', 'SETTINGS']);
+    assert.deepEqual(Object.keys(body).sort(), ['ACTIONS', 'GROUPS', 'INTERNAL_PATHS', 'SETTINGS']);
   } finally {
     await server.stop();
   }

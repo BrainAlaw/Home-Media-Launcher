@@ -2,6 +2,7 @@
 
 const { version } = require('../../../package.json');
 const { GROUPS, SETTINGS, INTERNAL_PATHS } = require('../../../backend/settings-descriptor');
+const { ACTIONS } = require('../../../backend/actions');
 
 const SESSION_COOKIE = 'hml_admin_session';
 const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
@@ -86,7 +87,7 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
 
     if (pathname === '/api/settings-description') {
       if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
-      return json(200, { GROUPS, SETTINGS, INTERNAL_PATHS });
+      return json(200, { GROUPS, SETTINGS, INTERNAL_PATHS, ACTIONS });
     }
 
     if (pathname === '/api/session') {
