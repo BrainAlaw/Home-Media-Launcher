@@ -5,7 +5,8 @@
     "12": "up",
     "13": "down",
     "14": "left",
-    "15": "right"
+    "15": "right",
+    "16": "close"
   },
   "keys": {
     "ArrowUp": "up",
@@ -13,8 +14,12 @@
     "ArrowLeft": "left",
     "ArrowRight": "right",
     "Enter": "confirm",
-    "Home": "exit",
-    "BrowserHome": "exit"
+    "Home": "home",
+    "BrowserHome": "home"
+  },
+  "longKeys": {
+    "BrowserBack": "close",
+    "GoBack": "close"
   },
   "axisDeadzone": 0.6,
   "longPressMs": 700,

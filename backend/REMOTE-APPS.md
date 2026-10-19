@@ -1,17 +1,21 @@
 # Remote controls in websites and Chromium web apps
 
-Fullscreen website windows accept navigation from a standard gamepad and Bluetooth TV remotes. The preload translates mapped input into synthetic keyboard `keydown` and `keyup` events for the focused page element.
+The launcher supports two website paths: Gaming websites open in a fullscreen Electron window; Home Theatre websites open in a fullscreen external Chromium browser. Both paths support controller navigation and Bluetooth TV remote keys, with different app lifecycle handling.
 
-## Supported controls
+## Behaviour
 
-- Gamepad D-pad and left stick: arrow keys. Directions begin repeating after 380 ms, then repeat every 90 ms.
-- Gamepad A: Enter. Gamepad B: Escape as a normal tap, so the page can use its own Escape behaviour. Holding B for 700 ms still exits.
-- Bluetooth remote arrows and Enter: arrow keys and Enter.
-- Remote Back (`BrowserBack`): steps back through the page's history. If there is no history it does nothing; it never closes the app. Closing is done by a long Home press, the Guide button, or holding Escape or B.
-- Hold remote `Home` or `BrowserHome` for 700 ms to close the web app and return to the launcher. A short press is ignored by the page.
-- Hold gamepad Guide (button 16) for 700 ms to exit. Escape held for 700 ms and Select + Start together remain available as exit gestures.
+| Input | Gaming website (Electron) | Home Theatre website (external browser) |
+| --- | --- | --- |
+| D-pad / left stick | Arrow navigation keys | Focus-aware directional navigation |
+| A / Enter | Enter | Select focused item |
+| B | Escape tap; holding B for 700 ms closes the app | Holding B for 700 ms closes the browser app |
+| Home / BrowserHome | Returns to the launcher; the website stays running in the background | Returns to the launcher through the `hmlHome` binding; the browser stays running |
+| Back / BrowserBack / GoBack, short press | Goes back in page history; does nothing if there is no previous entry | Goes back in page history; does nothing if there is no previous entry |
+| Back / BrowserBack / GoBack, held for 700 ms | Closes the app and returns to the launcher | Closes the browser app and returns to the launcher |
+| Guide (gamepad button 16), held for 700 ms | Closes the app and returns to the launcher | Closes the browser app and returns to the launcher |
+| Escape held for 700 ms; Select + Start | Existing close gestures remain available | Escape held for 700 ms remains available |
 
-The existing exit overlay appears while a hold gesture is in progress. The launcher closes the website window and restores focus when an exit gesture completes.
+Gaming web key events are synthetic keyboard events dispatched to the focused page element. Home is reported to the main process over IPC. Home Theatre controls run in the external browser; Home and close requests are reported through DevTools bindings. The launcher handles the `home` event by hiding the browser while keeping it alive, and handles `close` by terminating the browser session.
 
 ## Limitations
 
@@ -19,16 +23,11 @@ The existing exit overlay appears while a hold gesture is in progress. The launc
 - Pointer-only interfaces cannot be fully operated with these controls.
 - Login forms that require text entry still need a keyboard.
 - Remote key names depend on what the operating system reports through `KeyboardEvent.key` or `.code`.
+- `TvBrowserSession.hide()` and `.show()` use Chromium DevTools window-state commands, but hiding and restoring the Home Theatre browser has not yet been verified on Linux.
+- Home Theatre websites require Microsoft Edge, Google Chrome, or Chromium with its local DevTools endpoint enabled.
 
 ## Changing the mapping
 
-Edit [`remote-keymap.json`](remote-keymap.json). It is the source of truth for gamepad button indexes, remote key names, the left-stick deadzone, long-press duration, and exit buttons. Restart the launcher after editing; each website receives the mapping when its window opens. Actions are `up`, `down`, `left`, `right`, `confirm`, `back`, and `exit`. The gamepad exit button list defaults to `[16]` (Guide).
+Edit [`remote-keymap.json`](remote-keymap.json). It is the source of truth for gamepad button indexes, remote key names, long-press keys, the left-stick deadzone, long-press duration, and close buttons. Restart the launcher after editing; each website reads the mapping when its window or browser session opens. Allowed actions are `up`, `down`, `left`, `right`, `confirm`, `back`, `close`, and `home`. The Guide close button defaults to `[16]`.
 
-If the argument is missing or invalid, website input mapping is disabled and the built-in Guide, Escape, B, and Select + Start exit gestures remain available.
-
-## Known limits (stage A, as of R02)
-
-- **Home Theatre websites are not covered yet.** Websites in the Home Theatre category (Netflix, YouTube, Twitch, and so on, the default for new websites) open through `openTvWebsite` / `TvBrowserSession`, not `openWebsite`. The remote keymap and the long-press Home exit apply to websites in other categories only. Planned next: the same keymap argument for the TV browser's preload.
-- Pages receive the remote's arrows and Enter as keys the OS delivers. Keys injected by the launcher (for example in tests) arrive with `isTrusted: false`; some pages ignore untrusted events.
-- Remote Back (`BrowserBack`) steps back through the page history and does nothing when there is no history. It never closes the app.
-- The gamepad path is verified only on a real controller; the scripted test pad cannot reach the sandboxed preload.
+If the keymap argument is missing or invalid, Gaming websites disable key mapping but retain the built-in Guide, Escape, B, and Select + Start close gestures.
