@@ -24,6 +24,8 @@ const optionalInt = (value) => (Number.isFinite(value) ? Math.max(0, Math.floor(
 
 module.exports = {
   namespace: 'media',
+  // Read-only summary for the admin status page. Not an IPC handler. The Spotify state is token-free by construction.
+  statusSummary: () => (service ? service.status() : null),
   handlers: {
     status: () => service.status(),
     login: () => service.login(),
