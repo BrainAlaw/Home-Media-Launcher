@@ -108,7 +108,8 @@ dialog .artwork-candidate { position: relative; aspect-ratio: 16 / 9; padding: 0
 .catalog-toggle input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: var(--radius-circle); background: var(--text-dim); }
 .catalog-toggle input:checked { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 55%, var(--color-transparent)); }
 .catalog-toggle input:checked::before { left: 23px; background: var(--accent-contrast); }
-.catalog-toggle input:focus { outline: none; border-color: var(--focus-ring); box-shadow: var(--focus-glow); }
+/* The glow replaces the focus outline for every focus, keyboard and mouse alike, so `outline: none` is paired with :focus-visible here. */
+.catalog-toggle input:is(:focus, :focus-visible) { outline: none; border-color: var(--focus-ring); box-shadow: var(--focus-glow); }
 
 /* Custom application and website cards: header (name + Remove), then labelled fields on a two-column grid. */
 .application-card { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px 16px; padding: 16px 18px; margin-bottom: 14px; }
