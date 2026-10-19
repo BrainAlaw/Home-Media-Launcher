@@ -28,7 +28,8 @@ for (const file of COPY_FILES) {
 }
 const configPath = path.join(profile, 'config.json');
 const baseConfig = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, 'utf8')) : { settings: {}, rows: [] };
-const lanAddress = Object.values(os.networkInterfaces()).flat().find((item) => item.family === 'IPv4' && !item.internal)?.address;
+const isPrivate = (address) => /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(address);
+const lanAddress = Object.values(os.networkInterfaces()).flat().find((item) => item.family === 'IPv4' && !item.internal && isPrivate(item.address))?.address;
 if (!lanAddress) throw new Error('no LAN IPv4 address found');
 fs.writeFileSync(configPath, JSON.stringify({ ...baseConfig, settings: { ...(baseConfig.settings || {}), admin: { enabled: true, port: PORT, bindAddress: lanAddress } } }, null, 2));
 process.env.HOME_MEDIA_LAUNCHER_CONFIG = configPath;
