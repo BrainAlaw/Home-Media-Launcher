@@ -6,6 +6,21 @@ const { ACTIONS } = require('../../../backend/actions');
 
 const SESSION_COOKIE = 'hml_admin_session';
 const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
+const LOG_TAIL_DEFAULT = 100;
+const DIAGNOSTICS_LOG_TAIL = 500;
+const DIAGNOSTICS_FILENAME = 'hml-diagnostics.json';
+
+// Loaded lazily: diagnostics.js imports redactConfig from this module, so a top-level require would be circular.
+function buildDiagnosticsReport(input) {
+  return require('./diagnostics').buildDiagnostics(input);
+}
+
+function logTailCount(query) {
+  const raw = query?.get?.('tail');
+  if (raw === null || raw === undefined || raw === '') return LOG_TAIL_DEFAULT;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : LOG_TAIL_DEFAULT;
+}
 
 function hasSecret(value) {
   return value !== undefined && value !== null && value !== '';
@@ -58,12 +73,21 @@ function sessionCookie(token, maxAge = SESSION_MAX_AGE_SECONDS) {
   return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
 }
 
-function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion = version, onPaired = () => {} }) {
+/**
+ * @param {object} options
+ * @param {() => Promise<object>} [options.getStatus] returns the sanitised status report (status.js buildStatus).
+ * @param {(count: number) => object[]} [options.getLogTail] returns the newest log records (log.js ring.tail).
+ * @param {() => object} [options.getSecretNames] returns { NAME: value } for every secret the launcher reads; values are only used for redaction.
+ */
+function createAdminRoutes({
+  getConfig, saveConfig, validate, auth, appVersion = version, onPaired = () => {},
+  getStatus = null, getLogTail = null, getSecretNames = null
+}) {
   if (typeof getConfig !== 'function' || typeof saveConfig !== 'function' || typeof validate !== 'function' || !auth) {
     throw new TypeError('Admin routes require config functions, validation, and authentication');
   }
 
-  async function dispatch({ method, pathname, body, address, sessionToken }) {
+  async function dispatch({ method, pathname, query, body, address, sessionToken }) {
     if (pathname === '/api/health') {
       if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
       return json(200, { ok: true, version: appVersion });
@@ -102,6 +126,35 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
       if (method !== 'POST') return json(405, { error: 'Method not allowed' }, { Allow: 'POST' });
       auth.revokeSession(sessionToken);
       return json(200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
+    }
+
+    if (pathname === '/api/status' || pathname === '/api/log' || pathname === '/api/diagnostics') {
+      if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
+      const session = auth.verifySession(sessionToken);
+      if (!session) return json(401, { error: 'Authentication required' });
+      const refreshedCookie = { 'Set-Cookie': sessionCookie(sessionToken) };
+      if (pathname === '/api/status') {
+        if (!getStatus) return json(503, { error: 'Status is not available' }, refreshedCookie);
+        return json(200, await getStatus(), refreshedCookie);
+      }
+      if (pathname === '/api/log') {
+        if (!getLogTail) return json(503, { error: 'Log is not available' }, refreshedCookie);
+        return json(200, { entries: getLogTail(logTailCount(query)) }, refreshedCookie);
+      }
+      if (!getStatus || !getLogTail || !getSecretNames) return json(503, { error: 'Diagnostics are not available' }, refreshedCookie);
+      let settings;
+      try { settings = (await getConfig())?.settings ?? {}; }
+      catch { return json(500, { error: 'Could not read configuration' }, refreshedCookie); }
+      const report = buildDiagnosticsReport({
+        status: await getStatus(),
+        logTail: getLogTail(DIAGNOSTICS_LOG_TAIL),
+        settings,
+        secretNames: getSecretNames()
+      });
+      return json(200, report, {
+        ...refreshedCookie,
+        'Content-Disposition': `attachment; filename="${DIAGNOSTICS_FILENAME}"`
+      });
     }
 
     if (pathname === '/api/config') {
