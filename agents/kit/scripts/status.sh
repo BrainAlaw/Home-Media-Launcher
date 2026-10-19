@@ -62,7 +62,8 @@ for agent in "$@"; do
   limit="-"
   runlog="$WT/logs/$round_lower-$agent.log"
   case "$FINAL_STATUSES" in *" $status "*) ;; *)
-    if [ -f "$runlog" ] && tail -n 300 "$runlog" | grep -q -i -E "usage limit|rate limit|quota exceeded|ActionRequiredError"; then
+    # Only the CLIs' own error messages. Plain words like "usage limit" also appear in the rules files the agents read at start, so they do not count.
+    if [ -f "$runlog" ] && tail -n 300 "$runlog" | grep -q -E "hit your usage limit|hit its usage limit|ActionRequiredError|rate limit exceeded|quota exceeded"; then
       limit="LIMIT"
       limited+=("$agent")
     fi ;;
