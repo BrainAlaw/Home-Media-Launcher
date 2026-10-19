@@ -84,5 +84,6 @@ for agent in ${limited[@]+"${limited[@]}"}; do
     printf '%s\n\nWorktree to open in Freebuff: %s/%s-%s\n' "$prompt" "$WT" "$round_lower" "$agent" > "$file"
     if command -v code >/dev/null 2>&1; then code -r "$file" >/dev/null 2>&1 || true; fi
   fi
-  printf 'MANUAL %s %s/%s-%s :: %s\n' "$agent" "$WT" "$round_lower" "$agent" "$prompt"
+  # The watcher shows only this: who hit the limit and which prompt file was opened for it.
+  printf 'MANUAL %s hit its usage limit. Prompt file opened in VS Code: %s-%s.md (%s)\n' "$agent" "$round_lower" "$agent" "$round_id"
 done

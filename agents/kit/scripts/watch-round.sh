@@ -70,7 +70,7 @@ frame() {
   fi
   # Copy-ready manual prompts, last resort only: one line per agent at the bottom of the view.
   if grep -q '^MANUAL ' <<< "$manual"; then
-    printf '\nmanual fallback (paste by hand into a Freebuff window opened on the worktree):\n'
+    printf '\nusage limits (last resort: paste the prompt file by hand into Freebuff):\n'
     grep '^MANUAL ' <<< "$manual" | while IFS= read -r line; do
       printf '%s\n' "$line"
     done
