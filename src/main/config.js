@@ -7,6 +7,7 @@ const { launchSpec } = require('../../backend/launch-spec');
 const { validateMenu } = require('../../backend/menu-config');
 const { isSafeProfileName, isValidSurfsharkMode } = require('../../backend/vpn');
 const { validateSoloistSettings } = require('../../backend/soloist/settings');
+const { validateBackgroundApps } = require('./background-apps');
 const WallpaperSources = require('../renderer/wallpaper-sources');
 const Categories = require('../renderer/categories');
 
@@ -97,6 +98,7 @@ function validateConfig(config) {
     if (config.settings?.[key] !== undefined && typeof config.settings[key] !== 'boolean') throw new Error(`${key} must be boolean`);
   }
   validateSoloistSettings(config.settings?.soloist);
+  validateBackgroundApps(config.settings?.backgroundApps);
   const vpn = config.settings?.vpn;
   if (vpn !== undefined) {
     if (!vpn || typeof vpn !== 'object' || Array.isArray(vpn)) throw new Error('vpn must be an object');

@@ -1,0 +1,59 @@
+/* Fullscreen loading card shown while a launched app starts (see launch-loading.js). Transform and opacity only. */
+.launch-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9050; /* above the black launch cover (9000), below toasts (9100) */
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 28px;
+  background: #050608;
+  color: var(--hig-label, #f2f4f8);
+  opacity: 0;
+  pointer-events: none;
+}
+.launch-loading.visible { opacity: 1; }
+.launch-loading-logo {
+  width: min(22vh, 220px);
+  aspect-ratio: 1;
+  border-radius: 22%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #1b2030, #0c0f17);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 24px 60px rgba(0, 0, 0, 0.55);
+  font-size: calc(min(22vh, 220px) * 0.46);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+.launch-loading.has-logo .launch-loading-logo {
+  color: transparent;
+  background-size: 72% auto;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.launch-loading-name {
+  margin: 0;
+  font-size: calc(var(--hig-fs-title2, 2.4vh) * 1.1);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.launch-loading-track {
+  width: min(42vw, 520px);
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.launch-loading-bar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.95));
+  transform-origin: left center;
+  transform: scaleX(0);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .launch-loading { transition: none !important; }
+  .launch-loading-bar { transition: none !important; }
+}

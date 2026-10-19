@@ -174,6 +174,8 @@ contextBridge.exposeInMainWorld('launcher', {
   /** @param {{ id: string }} appConfig */
   launchApp: (appConfig) => ipcRenderer.invoke('launcher:launch-app', appConfig),
   onAppLaunched: (callback) => subscribe('launcher:app-launched', callback),
+  /** The app window is visible: the loading card can finish. */
+  onAppReady: (callback) => subscribe('launcher:app-ready', callback),
   onAppClosed: (callback) => subscribe('launcher:app-closed', callback),
   onSyncProgress: (callback) => subscribe('launcher:sync-progress', callback),
   /** @param {(status: Record<string, unknown>) => void} callback */

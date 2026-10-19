@@ -596,6 +596,10 @@ function moveHome(direction) {
 
 /* ------------------------------------------------------------------ launching */
 
+const launchLoading = window.LaunchLoading.createLaunchLoading();
+window.launcher.onAppReady?.(() => launchLoading.ready());
+window.launcher.onAppClosed?.(() => launchLoading.hide());
+
 async function activate(element) {
   if (!element) return;
   if (!element.dataset.tileId) { element.click(); return; }
@@ -605,13 +609,15 @@ async function activate(element) {
   state.locked = true;
   element.classList.add('launching');
   void launchTransition.cover(element);
+  launchLoading.show(tile);
   try {
-    if (!(await launchSession.launch(tile))) { state.locked = false; void launchTransition.reveal(tile.id); return; }
+    if (!(await launchSession.launch(tile))) { state.locked = false; launchLoading.hide(); void launchTransition.reveal(tile.id); return; }
     state.recents = pushRecent(state.recents, tile.id);
     saveRecents();
   } catch (error) {
     state.locked = false;
     element.classList.remove('launching');
+    launchLoading.hide();
     // Animate back to the launcher and tell the user why nothing started.
     void launchTransition.reveal(tile.id);
     showToast(`Launch failed: ${window.LaunchSession.describeLaunchError(error)}`);
