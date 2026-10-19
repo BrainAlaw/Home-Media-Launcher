@@ -107,6 +107,9 @@
   }
 
   function makeField(entry, settings) {
+    if (entry.type === 'object' && Array.isArray(descriptor?.OBJECT_FIELDS?.[entry.path])) {
+      return makeObjectEditor(entry, descriptor.OBJECT_FIELDS[entry.path], settings);
+    }
     const wrapper = document.createElement('div');
     wrapper.className = `field${entry.type === 'object' ? ' field-wide' : ''}`;
     const label = document.createElement('label');
@@ -130,8 +133,8 @@
       control.textContent = value === undefined ? 'Not set' : JSON.stringify(value, null, 2);
       control.setAttribute('aria-label', `${entry.label}, read only`);
       const note = document.createElement('p');
-      note.className = 'field-help';
-      note.textContent = 'Structured settings are read only in this panel. Edit on the TV for now.';
+      note.className = 'object-editor-readonly-hint';
+      note.textContent = 'Edit on the TV for now';
       wrapper.append(label, help, control, note);
       return wrapper;
     }
@@ -193,6 +196,152 @@
       error.textContent = hint.valid ? '' : hint.message;
       error.classList.toggle('visible', !hint.valid);
     }
+    return wrapper;
+  }
+
+  function showFieldError(row, message) {
+    row.querySelector('.object-editor-field-error')?.remove();
+    if (!message) return;
+    const error = document.createElement('p');
+    error.className = 'object-editor-field-error';
+    error.setAttribute('role', 'alert');
+    error.textContent = message;
+    row.append(error);
+  }
+
+  /** One input for an object field. `read` returns the raw state that object-editor-model.js converts. */
+  function makeObjectControl(spec, raw, id) {
+    if (spec.type === 'boolean') {
+      const row = document.createElement('div');
+      row.className = 'checkbox-row';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = id;
+      input.checked = raw === true;
+      row.append(input, document.createTextNode('Enabled'));
+      return { element: row, read: () => input.checked };
+    }
+    if (spec.type === 'enum') {
+      const select = document.createElement('select');
+      select.id = id;
+      if (!spec.options.includes(raw)) select.append(new Option('Choose a value', ''));
+      for (const option of spec.options) select.append(new Option(option, option));
+      select.value = raw;
+      return { element: select, read: () => select.value };
+    }
+    if (spec.type === 'list') {
+      const area = document.createElement('textarea');
+      area.id = id;
+      area.rows = 3;
+      area.spellcheck = false;
+      area.value = raw;
+      return { element: area, read: () => area.value };
+    }
+    const input = document.createElement('input');
+    input.id = id;
+    input.autocomplete = 'off';
+    input.type = spec.type === 'number' ? 'number' : 'text';
+    input.value = raw;
+    if (spec.type === 'number') {
+      input.min = String(spec.min);
+      input.max = String(spec.max);
+      input.step = '1';
+    } else if (spec.maxLength !== undefined) {
+      input.maxLength = spec.maxLength;
+    }
+    return { element: input, read: () => input.value };
+  }
+
+  /** Form for one structured setting (OBJECT_FIELDS). Saves the whole object with PUT /api/config. */
+  function makeObjectEditor(entry, fields, settings) {
+    const model = window.AdminObjectEditorModel;
+    const objectName = entry.path;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'field-wide';
+    const title = document.createElement('h3');
+    title.id = `object-title-${objectName}`;
+    title.textContent = entry.label;
+    const help = document.createElement('p');
+    help.className = 'field-help';
+    help.textContent = entry.help || '';
+    const editor = document.createElement('div');
+    editor.className = 'object-editor';
+    editor.setAttribute('role', 'group');
+    editor.setAttribute('aria-labelledby', title.id);
+
+    const draft = model.draftFromObject(fields, window.AdminPanelFormModel.valueAt(settings, objectName));
+    const rows = new Map();
+    const controls = fields.map((spec) => {
+      const id = `object-${objectName}-${spec.key}`;
+      const row = document.createElement('div');
+      row.className = 'object-editor-field';
+      const label = document.createElement('label');
+      label.htmlFor = id;
+      label.textContent = spec.label;
+      const control = makeObjectControl(spec, draft[spec.key], id);
+      const hint = document.createElement('p');
+      hint.className = 'field-help';
+      hint.textContent = spec.help || '';
+      row.append(label, control.element, hint);
+      rows.set(spec.key, row);
+      return { spec, read: control.read };
+    });
+
+    const formError = document.createElement('p');
+    formError.className = 'object-editor-field-error';
+    formError.setAttribute('role', 'alert');
+    formError.hidden = true;
+    const actions = document.createElement('div');
+    actions.className = 'object-editor-actions';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'button';
+    save.textContent = `Save ${entry.label}`;
+    const message = document.createElement('p');
+    message.className = 'status';
+    message.setAttribute('role', 'status');
+    actions.append(save, message);
+    editor.append(...rows.values(), formError, actions);
+
+    save.addEventListener('click', async () => {
+      const raw = Object.fromEntries(controls.map((control) => [control.spec.key, control.read()]));
+      const { object, errors } = model.buildObject(fields, window.AdminPanelFormModel.valueAt(originalSettings, objectName), raw);
+      for (const spec of fields) showFieldError(rows.get(spec.key), errors[spec.key] || '');
+      if (Object.keys(errors).length) {
+        setStatus(message, 'Fix the highlighted fields.', 'error');
+        return;
+      }
+      formError.hidden = true;
+      formError.textContent = '';
+      save.disabled = true;
+      setStatus(message, 'Saving…');
+      try {
+        const response = await fetch('/api/config', {
+          method: 'PUT', headers: requestHeaders, body: JSON.stringify(model.patchFor(objectName, object))
+        });
+        if (response.status === 422) {
+          const body = await response.json().catch(() => ({}));
+          const text = body.error || 'Configuration is invalid.';
+          const key = model.fieldForServerError(text, fields);
+          if (key) showFieldError(rows.get(key), text);
+          else {
+            formError.textContent = text;
+            formError.hidden = false;
+          }
+          return;
+        }
+        await readJson(response);
+        originalSettings[objectName] = JSON.parse(JSON.stringify(object));
+        workingSettings[objectName] = JSON.parse(JSON.stringify(object));
+        setStatus(message, 'Saved.', 'success');
+      } catch (failure) {
+        setStatus(message, failure.message, 'error');
+      } finally {
+        save.disabled = false;
+      }
+    });
+
+    wrapper.append(title, help, editor);
     return wrapper;
   }
 
