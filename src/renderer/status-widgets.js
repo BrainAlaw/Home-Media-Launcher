@@ -205,7 +205,6 @@ if (typeof module === 'object' && module.exports) {
     card.querySelector('strong').textContent = networkLabel(status);
     card.querySelector('small').textContent = networkLine({ detail: networkDetail(status), ping: lastPing, speed });
     card.querySelector('.net-action').textContent = speed?.state === 'running' ? 'Cancel' : 'Speed test';
-    card.setAttribute('aria-label', `${networkLabel(status)}. ${speed?.state === 'running' ? 'Cancel the speed test' : 'Run a 20 second speed test'}`);
     const fill = card.querySelector('.net-progress i');
     const fraction = speed?.state === 'running' ? Math.min(1, (speed.elapsedMs || 0) / (speed.durationMs || 1)) : 0;
     fill.style.transform = `scaleX(${fraction})`;
