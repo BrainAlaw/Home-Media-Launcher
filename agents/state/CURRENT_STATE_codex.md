@@ -17,7 +17,7 @@ Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:0
 ## Verified
 - `npm run check`: 590 passed, 0 failed, 1 skipped (bash-dependent test unavailable in the Windows environment).
 - `git diff --check` passed; worktree clean after this state commit.
-- Focused admin tests: 19 passed across auth, routes, and server.
+- Focused admin tests: 18 passed across auth, routes, and server.
 
 ## Unverified / not done
 - Main-process integration, LAN checks from a second device, and manual pairing UI verification are coordinator-owned and remain outside this worktree.
@@ -36,3 +36,4 @@ Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:0
 
 ## Resume notes
 No remaining implementation in this worktree. Coordinator should wire `createAdminServer` into `src/main/index.js`, display pairing codes, and run the planned LAN/device verification.
+
