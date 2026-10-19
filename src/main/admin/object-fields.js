@@ -1,8 +1,10 @@
 'use strict';
 
-const { DEVICE_NAME_MAX, BINARY_PATH_MAX } = require('../../../backend/soloist/settings');
 const { MIN_MAX, MAX_MAX } = require('../background-apps');
 
+// Mirror private limits in backend/soloist/settings.js.
+const DEVICE_NAME_MAX = 64;
+const BINARY_PATH_MAX = 512;
 const field = (key, label, type, help, extra = {}) => ({ key, label, type, help, ...extra });
 
 const OBJECT_FIELDS = {
