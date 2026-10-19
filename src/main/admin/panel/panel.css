@@ -268,4 +268,23 @@ a:focus-visible {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+  .panel .status-grid,
+  .panel .status-item,
+  .panel .status-item-label,
+  .panel .status-item-value,
+  .panel .log-view,
+  .panel .log-line,
+  .panel .action-list,
+  .panel .action-button,
+  .panel .action-button-destructive,
+  .panel .action-result,
+  .panel .diagnostics-link,
+  .panel .object-editor,
+  .panel .object-editor-field,
+  .panel .object-editor-field-error,
+  .panel .object-editor-actions,
+  .panel .object-editor-readonly-hint {
+    transition: none !important;
+    animation: none !important;
+  }
 }
