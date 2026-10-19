@@ -24,7 +24,12 @@ idle_seconds() {
   newest="$(find "$dir" \( -name node_modules -o -name .git \) -prune -o -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n 1)"
   [ -n "$newest" ] || { echo "-"; return; }
   now="$(date +%s)"
-  echo "$(( now - ${newest%.*} ))s"
+  # Coarse label, so the line changes only when a minute, hour or day passes, not on every refresh.
+  local age=$(( now - ${newest%.*} ))
+  if [ "$age" -lt 60 ]; then echo "now"
+  elif [ "$age" -lt 3600 ]; then echo "$(( age / 60 ))m"
+  elif [ "$age" -lt 86400 ]; then echo "$(( age / 3600 ))h"
+  else echo "$(( age / 86400 ))d"; fi
 }
 
 for agent in "$@"; do
