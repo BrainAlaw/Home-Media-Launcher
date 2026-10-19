@@ -282,7 +282,7 @@ if (typeof module === 'object' && module.exports) {
   function createVpnRow(entry) {
     const row = document.createElement('button');
     row.type = 'button';
-    row.className = 'menu-action menu-toggle vpn-row';
+    row.className = 'menu-action menu-toggle qs-row vpn-row';
     row.dataset.vpnId = entry.id;
     row.setAttribute('role', 'switch');
     row.setAttribute('aria-checked', 'false');
