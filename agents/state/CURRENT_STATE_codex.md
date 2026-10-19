@@ -1,32 +1,31 @@
-# CURRENT_STATE_codex (round R08)
+# CURRENT_STATE_codex (round R09)
 
 Status: DONE
-Agent: codex  ·  Tool: Codex  ·  Branch: r08/codex  ·  Last update: 2026-10-19
+Agent: codex  ·  Tool: Codex  ·  Branch: r09/codex  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Create `src/renderer/quick-settings-model.js` with the specified interface.
-- [x] 2. Add `node:test` coverage in `test/quick-settings-model.test.js`.
-- [x] 3. Run `npm run check` and commit task updates.
-- [x] 4. Set final status and report the export names.
+- [x] 1. Change download duration, add upload measurement, export API.
+- [x] 2. Add upload tests.
+- [x] 3. Run `npm run check` and tick task items.
+- [x] 4. Set final status and complete report.
 
 ## Done
-- Row model and tests implemented — commit `610b9fe`.
-- Final round status recorded — pending commit.
+- Added ten-second download and upload measurements, with upload request chunks bounded to 1 MB per stream — commit `dc23612`.
+- Added upload success, cancellation, error, and duration tests — commit `dc23612`.
 
 ## Verified
-- `npm run check`: passed; 673 tests, 0 failures.
-- Exports: `rowKind`, `rowClass` via CommonJS and `window.QuickSettingsModel`.
+- `npm run check` — passed; 678 tests, 0 failures.
 
 ## Unverified / not done
-- Real display verification is outside this pure model task and is assigned to the coordinator.
+- Electron and live Cloudflare upload were not run, as directed by the prompt.
 
 ## Files changed
-- `src/renderer/quick-settings-model.js` — pure row kind and class mapping.
-- `test/quick-settings-model.test.js` — logic and VM browser-global coverage.
-- `agents/state/CURRENT_STATE_codex.md` — round status and results.
+- `backend/net-probe.js` — ten-second download duration, upload measurement, exports.
+- `test/net-probe-upload.test.js` — upload measurement coverage.
+- `agents/state/CURRENT_STATE_codex.md` — final task report.
 
 ## Requests for the coordinator
-- Exports are `rowKind` and `rowClass`.
+- None.
 
 ## Resume notes
-None.
+- None; implementation and required checks are complete.
