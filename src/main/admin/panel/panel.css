@@ -189,6 +189,74 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+.panel .object-editor {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #ffffff1a;
+  border-radius: 13px;
+  background: var(--surface);
+  min-width: 0;
+  max-width: 100%;
+}
+.panel .object-editor-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.panel .object-editor-field > label {
+  font-size: .95rem;
+  font-weight: 650;
+}
+.panel .object-editor-field input:not([type="checkbox"]),
+.panel .object-editor-field select,
+.panel .object-editor-field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid #8997a966;
+  border-radius: 8px;
+  background: #11151b;
+  color: inherit;
+  font: inherit;
+}
+.panel .object-editor-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+.panel .object-editor-field-error {
+  margin: 0;
+  color: #8a3b00;
+  background: #fff1d6;
+  border: 1px solid #e0a85a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: .9rem;
+}
+.panel .object-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 2px;
+}
+.panel .object-editor-readonly-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .panel .object-editor-field-error {
+    color: #ffd7a8;
+    background: #3a2a14;
+    border-color: #c48a3a;
+  }
+}
+
 @media (max-width: 640px) {
   .panel { padding-inline: 16px; overflow-x: hidden; max-width: 100%; }
   .panel .status-grid { grid-template-columns: minmax(0, 1fr); }
