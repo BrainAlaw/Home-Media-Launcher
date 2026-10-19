@@ -1,31 +1,33 @@
-# CURRENT_STATE_codex (round R09)
+# CURRENT_STATE_codex (round R10)
 
 Status: DONE
-Agent: codex  ·  Tool: Codex  ·  Branch: r09/codex  ·  Last update: 2026-10-19
+Agent: codex · Tool: Codex · Branch: r10/codex · Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Change download duration, add upload measurement, export API.
-- [x] 2. Add upload tests.
-- [x] 3. Run `npm run check` and tick task items.
-- [x] 4. Set final status and complete report.
+- [x] 1. Read required renderer files; document screens, home and Quick settings.
+- [x] 2. Document Settings, pairing, controllers, keyboard, icon popup and media.
+- [x] 3. Document gaps and not-verified claims.
+- [x] 4. Finalise state and commit.
 
 ## Done
-- Added ten-second download and upload measurements, with upload request chunks bounded to 1 MB per stream — commit `dc23612`.
-- Added upload success, cancellation, error, and duration tests — commit `dc23612`.
+- Completed `docs/MOUSE-AUDIT.md` with screen tables, code references, gap groups and runtime verification limits.
+- Commit could not be created: Git cannot write the worktree index under the current filesystem sandbox.
 
 ## Verified
-- `npm run check` — passed; 678 tests, 0 failures.
+- `npm run check` passed: 683 tests, 0 failures (after each completed audit stage).
+- `git diff --check` passed.
+- Required renderer JavaScript and stylesheets inspected; no Electron run.
 
 ## Unverified / not done
-- Electron and live Cloudflare upload were not run, as directed by the prompt.
+- No runtime mouse behaviour was visually verified, as prohibited by the prompt.
+- Commit not created because `.git/worktrees/r10-codex/index.lock` is outside the writable root and creation returned `Permission denied`.
 
 ## Files changed
-- `backend/net-probe.js` — ten-second download duration, upload measurement, exports.
-- `test/net-probe-upload.test.js` — upload measurement coverage.
-- `agents/state/CURRENT_STATE_codex.md` — final task report.
+- docs/MOUSE-AUDIT.md — mouse support audit across the requested screens.
+- agents/state/CURRENT_STATE_codex.md — R10 progress and verification record.
 
 ## Requests for the coordinator
-- None.
+- Commit the two owned files from an environment with write access to the shared Git metadata.
 
 ## Resume notes
-- None; implementation and required checks are complete.
+No audit work remains. Stage and commit `docs/MOUSE-AUDIT.md` and `agents/state/CURRENT_STATE_codex.md` once Git metadata is writable.
