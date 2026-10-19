@@ -32,7 +32,7 @@ Orientation documents: `CURRENT_STATE.md` (overall state, owned by the coordinat
 
 ## 3. How multi-agent work is organised
 
-Several agents work **at the same time**, each in its **own git worktree and branch**, on a **disjoint set of files**. Claude Code is the coordinator.
+Several agents work **at the same time**, each in its **own git worktree and branch**, on a **disjoint set of files**. Claude Code is the coordinator. The project-independent version of this process (templates, worktree script) is in `agents/kit/`.
 
 ### 3.1 Roster
 

@@ -32,13 +32,22 @@ are scope 6 below.
    Each field comes from the field model (`src/main/admin/object-fields.js`), validated with the same rules as the config validator.
    Not in this round: `header`, `categories`, `theme`, `background`, `wallpaperSources`. They stay read-only with the
    "Edit on the TV for now" hint, and are listed as scope for R08. Their validators need a full read first.
+7. **Side task, visual bug (claude, task 8 of its prompt)**: on the default theme the focused tile's highlight frame has corners that do
+   not match the tile's rounded corners. Measure the radii on the real display first, then fix them with one radius token shared by the
+   frame, the art and the glow. Files: `src/renderer/styles.css`, `src/renderer/home.css`, `src/renderer/hig.css` (tokens only).
+
+## Worktree location
+
+The worktrees of this round are the sibling folders in the table below (`D:\Github Repos\hml-r06-<agent>`). They were created before
+the `.worktrees/` rule (`AGENTS.md` section 3.2) and stay where they are until they are merged and removed. Moving a live worktree
+in the middle of a round would break the agent working in it. Rounds from R07 use `.worktrees/r<NN>-<agent>`.
 
 ## Owners
 
 | Agent | Tier | Worktree | Branch | Task |
 |---|---|---|---|---|
 | `codex` | M | `D:\Github Repos\hml-r06-codex` | `r06/codex` | Log ring buffer with redaction, status and diagnostics builders (pure, tested) |
-| `claude` | L | `D:\Github Repos\hml-r06-claude` | `r06/claude` | Actions and confirmation wiring, routes, `index.js` wiring, panel pages for status, log, actions and object editors, real-machine check |
+| `claude` | L | `D:\Github Repos\hml-r06-claude` | `r06/claude` | Actions and confirmation wiring, routes, `index.js` wiring, panel pages for status, log, actions and object editors, real-machine check, side task: focus frame corners (scope 7). Runs in its own Claude Code session |
 | `copilot` | S | `D:\Github Repos\hml-r06-copilot` | `r06/copilot` | Pure field model for the object editors (`object-fields.js`) with tests |
 | `freebuff` | S | `D:\Github Repos\hml-r06-freebuff` | `r06/freebuff` | Pure single-use confirmation tokens (`backend/confirmation.js`) with tests |
 | `opencode` | S | `D:\Github Repos\hml-r06-opencode` | `r06/opencode` | Static security test for the panel sources (`test/admin-panel-security.test.js`) |
@@ -76,7 +85,7 @@ Shared hot files (`index.js`, `preload.js`, `contracts.d.ts`) are touched by `cl
 
 1. `copilot`, `freebuff`, `opencode`, `cursor` (small, independent; merge as they finish)
 2. `codex` (log, redaction, status and diagnostics builders)
-3. `claude` (actions, routes, index.js wiring, panel pages, object editors), after merging the branches above into it
+3. `claude` (actions, routes, index.js wiring, panel pages, object editors, focus frame side task), after merging the branches above into it
 4. Coordinator: real machine check of every action and every editor from the panel, a secret-leak search over the diagnostics
    file, then the user decides.
 
