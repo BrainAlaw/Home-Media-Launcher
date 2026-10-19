@@ -57,6 +57,7 @@ Free-tool tasks are fully specified in their prompt files. Each finishes on its 
 | `test/admin-panel-security.test.js` | `opencode` | none |
 | `src/main/admin/panel/panel.css` | `cursor` | none |
 | `src/main/admin/panel/panel.js`, `index.html` | `claude` | none |
+| `src/renderer/styles.css`, `home.css`, `hig.css` (focus frame side task, claude task 8) | `claude` | none this round |
 | `src/main/admin/routes.js`, `src/main/index.js`, `backend/ADMIN.md` | `claude` | none |
 | `agents/state/CURRENT_STATE_<agent>.md` | each agent | none |
 

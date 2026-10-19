@@ -45,6 +45,19 @@
    Then a secret-leak search: grep the downloaded diagnostics for the values of `VP_API`, `WEATHER_API`, `STEAMDB_API`,
    `SPOTIFY_CLIENT_ID` and `SPOTIFY_SOLOIST_API` (read them only inside the check process, never print them; report counts only).
    The result must be zero hits. The TV and phone steps need the user at the TV; say so in the state file if they are not done.
-8. `npm run check`, commit, state file `Status: DONE` or `PARTIAL` with the real-machine results.
+8. **Side task (visual bug, default theme): focused tile frame corners.** On the focused tile the highlight frame has corners that do not
+   match the tile's rounded corners. The user sees it on the default theme (the one in `src/renderer/theme.css` without a
+   `data-theme` override). Do this after tasks 1-7 or before 7 if the rest is blocked; it does not depend on them.
+   - Measure first, do not guess. On the real display, with the default theme and one focused tile, read the computed
+     `border-radius`, `inset`, `padding` and `box-shadow` of `.tile`, `.tile::before` (specular frame, `src/renderer/styles.css:69`),
+     `.tile::after` (ambient glow, `src/renderer/home.css:69`, radius `--hig-radius-xl`, larger than the tile) and `.tile .art`.
+     Record the numbers in the state file. The two candidates are: the glow radius (`xl`) differs from the tile radius (`lg`), and
+     the specular mask edge sits differently from the art radius.
+   - Fix with one radius token shared by the frame, the art and the glow, so the corners match. Keep motion, scale and colour unchanged.
+     Do not add `border-radius` overrides only for the neon theme.
+   - Check the result on the real display with `desktopCapturer`, before and after, and in the state file. Also check one other built-in
+     theme to make sure the fix did not break it.
+   - Files: `src/renderer/styles.css`, `src/renderer/home.css`, `src/renderer/hig.css` (tokens only). Nothing else.
+9. `npm run check`, commit, state file `Status: DONE` or `PARTIAL` with the real-machine results.
 
 Do not merge into `main`, do not push, do not touch `main`. The coordinator merges after triage.
