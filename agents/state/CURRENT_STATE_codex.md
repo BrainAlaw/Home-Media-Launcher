@@ -1,13 +1,13 @@
 # CURRENT_STATE_codex (round R05)
 
-Status: IN_PROGRESS
+Status: DONE
 Agent: codex · Tool: OpenAI Codex · Branch: r05/codex · Last update: 2026-10-19
 
 ## Tasks
 - [x] 1. Build pure settings form model and unit tests.
 - [x] 2. Build descriptor-driven panel UI with session, pairing, load and save flows.
 - [x] 3. Report required coordinator routes and descriptor gaps.
-- [ ] 4. Run npm test, commit changes, and finish state report.
+- [x] 4. Run npm test, commit changes, and finish state report.
 
 ## Done
 - State file created before code changes.
@@ -27,6 +27,7 @@ Agent: codex · Tool: OpenAI Codex · Branch: r05/codex · Last update: 2026-10-
 - `GET /api/config` redacts secret-like values; preserve their current values server-side when accepting a full settings update so redacted `<set>` markers are never persisted.
 
 ## Resume notes
-Task 2 is implemented; run final `npm test`, update completion evidence and commit the final state.
+No further Codex-owned work remains.
+
 
 
