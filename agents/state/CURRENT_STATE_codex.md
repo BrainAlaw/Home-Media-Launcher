@@ -1,28 +1,31 @@
 # CURRENT_STATE_codex (round R09)
 
-Status: IN_PROGRESS
+Status: DONE
 Agent: codex  ·  Tool: Codex  ·  Branch: r09/codex  ·  Last update: 2026-10-19
 
 ## Tasks
-- [ ] 1. Change download duration, add upload measurement, export API.
-- [ ] 2. Add upload tests.
-- [ ] 3. Run `npm run check` and tick task items.
-- [ ] 4. Set final status and complete report.
+- [x] 1. Change download duration, add upload measurement, export API.
+- [x] 2. Add upload tests.
+- [x] 3. Run `npm run check` and tick task items.
+- [x] 4. Set final status and complete report.
 
 ## Done
-- Initial state created before implementation.
+- Added ten-second download and upload measurements, with upload request chunks bounded to 1 MB per stream — commit `dc23612`.
+- Added upload success, cancellation, error, and duration tests — commit `dc23612`.
 
 ## Verified
-- Read the R09 plan and assigned backend module.
+- `npm run check` — passed; 678 tests, 0 failures.
 
 ## Unverified / not done
-- Implementation and checks not yet complete.
+- Electron and live Cloudflare upload were not run, as directed by the prompt.
 
 ## Files changed
-- `agents/state/CURRENT_STATE_codex.md` — round task status.
+- `backend/net-probe.js` — ten-second download duration, upload measurement, exports.
+- `test/net-probe-upload.test.js` — upload measurement coverage.
+- `agents/state/CURRENT_STATE_codex.md` — final task report.
 
 ## Requests for the coordinator
 - None.
 
 ## Resume notes
-- Implement upload measurement in `backend/net-probe.js`, add its focused test, run `npm run check`, then finish this state report.
+- None; implementation and required checks are complete.
