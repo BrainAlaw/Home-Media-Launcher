@@ -1,46 +1,46 @@
-# CURRENT_STATE_claude (round R03)
+# CURRENT_STATE_claude (round R04)
 
-Status: PARTIAL            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
-Agent: claude  ·  Tool: Claude Code  ·  Branch: r03/claude  ·  Last update: 2026-10-19
+Status: DONE            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
+Agent: claude  ·  Tool: Claude Code  ·  Branch: r04/claude  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. `background-apps.js` and `test/background-apps.test.js`
-- [x] 2. `config.js` validation for `backgroundApps.max`
-- [x] 3. `index.js`: registry wiring, `web-app:home`, `launchTile` rules (resume, background the current one, evict), Gaming `hide`/`show`
-- [x] 4. Loading card: `launch-loading.js`, `launch-loading.css`, `test/launch-loading.test.js`, wiring in `app.js`, `index.html`, `preload.js`, `index.js` (`launcher:app-ready`)
-- [x] 3b. Home Theatre background (TvBrowserSession `home`/`close` events, `hide()`/`show()`) via `tvAdapter`
-- [x] 5. Real display (Gaming): Home keeps the app, four apps evict the oldest, resume, loading card (`scripts/e2e/background-check.cjs`, 5 of 5 ok, long-Back step blocked)
-- [ ] 5b. Real display, Home Theatre path (needs Edge/Chrome on the Windows machine, not run yet)
-- [x] 6. Final state
+- [x] 1. `backend/settings-descriptor.js` and `test/settings-descriptor.test.js` (coverage of every validated setting)
+- [x] 2. Rules in `AGENTS.md` and `CLAUDE.md` (every setting and action reaches the admin panel)
+- [x] 3. `settings.admin` validation (`enabled`, `port`, `bindAddress`) and `test/admin-config.test.js`
+- [x] 4. Merge of `r04/codex`, glue in `index.js` (start on model build, pairing IPC, events, stop on quit)
+- [x] 5. Pairing card (`admin-pairing.js`, `.css`), Settings button, preload lines, `onPaired` hook in codex's routes
+- [x] 6. Real machine check (`scripts/e2e/admin-check.cjs`): 9 of 9 on 192.168.0.196:8787; `backend/ADMIN.md` written
 
 ## Done
-- Registry with limit (default 3, 1-8), eviction closes the oldest, resume removes from background.
-- Home on a Gaming website keeps the app (`web-app:home` IPC from the preload that codex is adding).
-- Launch of a background app resumes it (`launcher:app-launched` with `resumed: true`).
-- Loading card: waiting curve to 92%, fills and fades out on `launcher:app-ready`; hides on failure and on `launcher:app-closed`.
+- Descriptor with 19 user-facing settings and 6 internal paths (each with a reason). The coverage test fails on a new validated key without an entry.
+- Admin block moved to `settings.admin` to match the server code.
+- Default bind now prefers RFC 1918 addresses; Tailscale (100.64/10) is ignored. Found on the real machine: it had picked Tailscale.
+- Pairing card on the real display (screenshot in `scripts/e2e/out/admin-2026-10-19T08-15-00-767Z/`).
 
 ## Verified
-- `npm test`: 573 pass, 0 fail (after merging codex).
-- Real display, Gaming websites (second monitor): Home returns and keeps A, opening B, C, D evicts A, resume of C brings back exactly one window, loading card visible on load (screenshot `bg-2026-10-19T07-52-36-254Z/01-a-loading-card.png`).
-- Found and fixed on the way: Back is consumed by the main process (long press now closes there); website windows are revealed after `did-finish-load`; the card sits above the black launch cover (z 9050); the harness must click tiles, not call `launchApp`, or the card never shows.
+- `npm test`: 603 pass, 0 fail.
+- Real machine, 192.168.0.196: health, security headers, pairing card, 6-digit code, wrong code 401, right code sets the cookie, config read with secrets masked, cross-site write 403.
 
 ## Unverified / not done
-- Home Theatre path on the real display (browser hide/show, Home binding, card for the browser).
-- Long Back on the real remote (the harness cannot inject `BrowserBack`).
-- Browser hide on Linux (not testable here).
-- Pad steps (needs a real controller).
+- A second device on the LAN (only `/api/health` can be called without a UI; the panel UI is R05).
+- Windows Firewall: the first start raises a prompt for private networks; it must be allowed once (documented in `backend/ADMIN.md`).
+- The config read is checked for secret values with a pattern; the list of secret-looking keys should be reviewed in R05.
 
 ## Files changed
-- `src/main/background-apps.js`, `test/background-apps.test.js` — new registry.
-- `src/main/config.js` — `backgroundApps` validation.
-- `src/main/index.js` — background wiring, `web-app:home`, loading events.
-- `src/renderer/launch-loading.js`, `src/renderer/launch-loading.css`, `test/launch-loading.test.js` — new card.
-- `src/renderer/app.js`, `src/renderer/index.html`, `src/main/preload.js` — card wiring.
+- `backend/settings-descriptor.js`, `test/settings-descriptor.test.js` — new.
+- `backend/ADMIN.md` — new.
+- `src/main/config.js` — admin validation (`settings.admin`).
+- `src/main/index.js` — admin glue.
+- `src/main/admin/server.js` — default bind (private LAN only); `onPaired` passed to the routes (small change in codex's file, coordinator decision).
+- `src/main/admin/routes.js` — `onPaired` hook.
+- `src/renderer/admin-pairing.js`, `admin-pairing.css`, `test/admin-pairing.test.js` — new.
+- `src/renderer/index.html`, `src/main/preload.js` — card and button wiring.
+- `AGENTS.md`, `CLAUDE.md` — the rule for settings and the panel.
+- `scripts/e2e/admin-check.cjs` — new real-machine check.
 
 ## Requests for the coordinator
-- Verify Home Theatre (Edge/Chrome) on the real display: background, resume and the card.
-- Verify long Back with the real remote.
-- Backgrounds UI in Settings (`backgroundApps.max`) is config-only for now; a Settings control is a follow-up.
+- R05 (panel web UI) must build every page from `backend/settings-descriptor.js`, not by hand.
+- R06: status and diagnostics endpoints are not written yet; they go in the same descriptor/actions rule.
 
 ## Resume notes
-Merge `r03/codex` into this branch when codex is DONE, then add the TV adapter in `openTvWebsite` (task 3b), then run the real-display steps of task 5.
+Merge done into `main` after this state is committed. Next: R05 (web panel generated from the descriptor), then R06 (status and actions).

@@ -1,45 +1,39 @@
-# CURRENT_STATE_codex (round R03)
+# CURRENT_STATE_codex (round R04)
 
 Status: DONE
-Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:00
+Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:00
 
 ## Tasks
-- [x] 1. Update remote keymap actions and validation tests — `npm test` passed (558 passed, 1 skipped).
-- [x] 2. Implement Gaming web Home, Back history, and long Back close — `node --check src/main/web-preload.js` passed.
-- [x] 3. Build configurable TV control script and tests — targeted test and `npm run check` passed (559 passed, 1 skipped).
-- [x] 4. Add TV browser home/close bindings and hide/show methods with tests — `npm run check` passed (562 passed, 1 skipped).
-- [x] 5. Update remote app documentation — Gaming/Home Theatre controls, limitations, and Linux hide/show verification caveat included.
-- [x] 6. Run full checks and complete handoff state — `npm run check` passed (562 passed, 1 skipped).
+- [x] 1. Implement pairing codes, lockout, and sessions — 5 focused tests and `npm run check` passed (577 passed, 1 skipped).
+- [x] 2. Implement API route table and config redaction — 5 focused tests and `npm run check` passed (582 passed, 1 skipped).
+- [x] 3. Implement HTTP server, security controls, and endpoint tests — `npm run check` passed (590 passed, 1 skipped), including endpoint rate-limit and malformed HTTP header tests.
+- [x] 4. Run full checks and complete handoff state — final `npm run check` passed (590 passed, 1 skipped).
 
 ## Done
-- Updated map schema to `close`/`home`, added `longKeys`, and rejected the removed `exit` action.
-- Gaming preload sends Home IPC, navigates history on short Back, and closes through shared `triggerExit` on long Back.
-- Added `buildTvControlScript(keymap)` and retained `TV_CONTROL_SCRIPT` as the default generated script; it inlines mappings and the configured hold duration.
-- TvBrowserSession installs hmlHome/hmlClose bindings, emits corresponding events, and supports hide/show through browser window bounds; fake-connection tests cover payloads and missing-browser errors.
-- Updated remote app documentation for Home and Back behaviour and the unverified Linux window-state commands.
+- Created pairing codes with expiry, per-address lockout/rate limiting, and in-memory hashed sliding sessions.
+- Added route table, recursive config redaction, auth/session/config/logout endpoints, and validate-before-save behavior.
+- Added secure HTTP server lifecycle, LAN IPv4 binding, Origin/CSRF validation, body/type checks, response security headers, and end-to-end API tests.
 
 ## Verified
-- `npm run check`: 562 passed, 0 failed, 1 skipped (bash-dependent Linux script test unavailable in this Windows environment).
-- `node --check src/main/web-preload.js` passed.
-- Focused TV controls tests: 7 passed.
+- `npm run check`: 590 passed, 0 failed, 1 skipped (bash-dependent test unavailable in the Windows environment).
 - `git diff --check` passed; worktree clean after this state commit.
+- Focused admin tests: 18 passed across auth, routes, and server.
 
 ## Unverified / not done
-- No live controller/remote test or Linux verification of Chromium hide/show was available in this worktree.
+- Main-process integration, LAN checks from a second device, and manual pairing UI verification are coordinator-owned and remain outside this worktree.
 
 ## Files changed
-- `backend/remote-keymap.json` — R03 actions, long keys, and Guide close mapping.
-- `src/main/remote-keymap.js` — validates the R03 action schema.
-- `src/main/web-preload.js` — Gaming Home, short Back history, and long Back close.
-- `backend/tv-controls.js` — configurable TV control script generated from the keymap.
-- `src/main/tv-browser.js` — Home/close bindings and browser hide/show methods.
-- `test/remote-keymap.test.js` — updated schema validation coverage.
-- `test/tv-controls.test.js` — script generation, binding events, and hide/show command coverage.
-- `backend/REMOTE-APPS.md` — updated control behaviour and limitations.
+- `src/main/admin/auth.js` — pairing code, lockout, rate limit, and in-memory hashed sessions.
+- `src/main/admin/routes.js` — API route table and recursive config redaction.
+- `src/main/admin/server.js` — HTTP lifecycle, binding, CSRF, JSON limits, and response headers.
+- `test/admin-auth.test.js` — auth and timing tests.
+- `test/admin-routes.test.js` — routes, redaction, and validation-before-save tests.
+- `test/admin-server.test.js` — HTTP security and end-to-end pairing tests.
 - `agents/state/CURRENT_STATE_codex.md` — task tracking and handoff.
 
 ## Requests for the coordinator
-- Wire Gaming `web-app:home` IPC and TvBrowserSession `home`/`close` events into the main-process lifecycle in the coordinator-owned `src/main/index.js`. Run real-display checks for both website paths; Linux hide/show remains unverified.
+- None.
 
 ## Resume notes
-No remaining changes in this worktree. Coordinator-owned main-process event wiring remains as listed above.
+No remaining implementation in this worktree. Coordinator should wire `createAdminServer` into `src/main/index.js`, display pairing codes, and run the planned LAN/device verification.
+

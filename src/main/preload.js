@@ -176,6 +176,10 @@ contextBridge.exposeInMainWorld('launcher', {
   onAppLaunched: (callback) => subscribe('launcher:app-launched', callback),
   /** The app window is visible: the loading card can finish. */
   onAppReady: (callback) => subscribe('launcher:app-ready', callback),
+  /** Admin panel pairing: the code to show on the TV, the pairing success, and the request from the Settings button. */
+  onAdminPairCode: (callback) => subscribe('launcher:admin-pair-code', callback),
+  onAdminPaired: (callback) => subscribe('launcher:admin-paired', callback),
+  adminPair: () => ipcRenderer.invoke('launcher:admin-pair'),
   onAppClosed: (callback) => subscribe('launcher:app-closed', callback),
   onSyncProgress: (callback) => subscribe('launcher:sync-progress', callback),
   /** @param {(status: Record<string, unknown>) => void} callback */
