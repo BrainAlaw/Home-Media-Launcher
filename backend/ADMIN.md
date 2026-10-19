@@ -46,5 +46,20 @@ Choose **Allow** for **private networks**. Without it other devices cannot reach
 - `POST /api/logout`, `GET /api/session`.
 - `GET /api/config`: login needed, secrets masked.
 - `PUT /api/config`: login and the `X-HML-Request` header; validated, then saved.
+- `GET /api/settings-description`: no login needed. Returns `{ GROUPS, SETTINGS, INTERNAL_PATHS }` from
+  `backend/settings-descriptor.js`. It holds no values, so it is safe to show before pairing.
 
-The web panel itself arrives in the next round.
+## Panel files (`/admin/`)
+
+- `GET /admin/` serves `index.html`; `GET /admin/<file>` serves a flat file from `src/main/admin/panel/`. No login: the page is
+  public, the data is not.
+- Allowed types: `.html .js .css .json .svg .png`. Anything else, sub-folders, dot files, encoded separators, `..`, drive letters
+  and `%` in names give 404. `GET /admin` redirects to `/admin/`. Other methods give 405.
+- Responses carry the security headers (`Content-Security-Policy: default-src 'self'`, `nosniff`, `no-referrer`) and
+  `Cache-Control: no-cache` so an updated panel is loaded at once.
+- The panel has no inline script and no `eval`; its JavaScript and CSS are separate files.
+
+## Object settings in the panel (R05)
+
+`remote`, `vpn`, `wallpaper`, `wallpaperSources`, `soloist`, `backgroundApps`, `header`, `homeHeader`, `categories`, `theme` and
+`background` are read-only in the panel for now. Edit them on the TV. Editors come in a later round.
