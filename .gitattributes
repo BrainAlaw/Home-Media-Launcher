@@ -1,0 +1,2 @@
+# Shell scripts run under bash: keep LF on every platform
+*.sh text eol=lf
