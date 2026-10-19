@@ -55,11 +55,14 @@ frame() {
     # MANUAL lines (agents that hit a usage limit) are collected for the block at the bottom, not shown in the table.
     manual+="$(grep '^MANUAL ' <<< "$status_out" || true)"$'\n'
     status_out="$(grep -v '^MANUAL ' <<< "$status_out" || true)"
-    # Keep the round only if some agent is not final yet (the STATUS column is the second field).
+    # Keep the round if some agent is not final yet (STATUS is the second field). An agent at its usage limit shows
+    # BLOCKED, which is final, but it stays in view: LIMIT is the sixth field and counts as active.
     local active=0
     while read -r line; do
       first_status="$(echo "$line" | awk '{print $2}')"
+      limit_col="$(echo "$line" | awk '{print $6}')"
       case "$FINAL_STATUSES" in *" $first_status "*) ;; *) active=1 ;; esac
+      [ "$limit_col" = "LIMIT" ] && active=1
     done < <(tail -n +2 <<< "$status_out" | grep -v '^$' | grep -v 'no worktree' || true)
     [ "$active" -eq 1 ] || continue
     shown=$((shown + 1))

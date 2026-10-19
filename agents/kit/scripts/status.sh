@@ -60,17 +60,22 @@ for agent in "$@"; do
   # A usage limit is read from the CLI's own output (the run log that the launcher wrote), not from the agent's files.
   # It matters only while the agent is not final. Reading this file costs no agent tokens.
   limit="-"
+  shown_status="$status"
   runlog="$WT/logs/$round_lower-$agent.log"
   case "$FINAL_STATUSES" in *" $status "*) ;; *)
-    # Only the CLIs' own error messages. Plain words like "usage limit" also appear in the rules files the agents read at start, so they do not count.
-    if [ -f "$runlog" ] && tail -n 300 "$runlog" | grep -q -E "hit your usage limit|hit its usage limit|ActionRequiredError|rate limit exceeded|quota exceeded"; then
+    # The limit counts only if the CLI's own error is among the last lines of its run log. An older error that the
+    # agent has since moved past, or a log that was overwritten by a new run, no longer matches.
+    # This cannot check the quota itself: that would need a paid call. It clears when the agent is started again.
+    if [ -f "$runlog" ] && tail -n 5 "$runlog" | tr -d '\r' | grep -v '^[[:space:]]*$' | tail -n 3 | grep -q -E "hit your usage limit|hit its usage limit|ActionRequiredError|rate limit exceeded|quota exceeded"; then
       limit="LIMIT"
+      shown_status="BLOCKED"
       limited+=("$agent")
+      limit_age="$(( ( $(date +%s) - $(stat -c %Y "$runlog") ) / 60 ))m"
     fi ;;
   esac
   # The prompt file exists only while the limit is active; the next limit opens it again.
   [ "$limit" = "-" ] && rm -f "$WT/manual/$round_lower-$agent.md"
-  printf '%-9s %-12s %-8s %-7s %-7s %-6s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$limit" "$(idle_label "$dir")"
+  printf '%-9s %-12s %-8s %-7s %-7s %-6s %s\n' "$agent" "$shown_status" "$ticked" "$ahead" "$dirty" "$limit" "$(idle_label "$dir")"
 done
 
 # For every agent that hit a limit: the manual fallback, pasted by hand into a Freebuff window (last resort only).
@@ -86,5 +91,7 @@ for agent in ${limited[@]+"${limited[@]}"}; do
     if command -v code >/dev/null 2>&1; then code -r "$file" >/dev/null 2>&1 || true; fi
   fi
   # The watcher shows only this: who hit the limit and which prompt file was opened for it.
-  printf 'MANUAL %s hit its usage limit. Prompt file opened in VS Code: %s-%s.md (%s)\n' "$agent" "$round_lower" "$agent" "$round_id"
+  runlog="$WT/logs/$round_lower-$agent.log"
+  age="$(( ( $(date +%s) - $(stat -c %Y "$runlog") ) / 60 ))m"
+  printf 'MANUAL %s hit its usage limit (error seen %s ago). Prompt file opened in VS Code: %s-%s.md (%s)\n' "$agent" "$age" "$round_lower" "$agent" "$round_id"
 done
