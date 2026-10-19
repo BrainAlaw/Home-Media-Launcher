@@ -70,6 +70,65 @@ a:focus-visible {
   .field-grid { grid-template-columns: minmax(0, 1fr); }
   .field-wide { grid-column: auto; }
 }
+/* Panel pages: status, log, actions, object editors (R07) */
+.panel { min-width: 0; max-width: 100%; }
+.panel .status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.panel .status-item {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #ffffff1a;
+  border-radius: 12px;
+  background: var(--surface);
+  display: grid;
+  gap: 6px;
+}
+.panel .status-item-label {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.panel .status-item-value {
+  font-size: 1.05rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.panel .status-state-ok { border-color: #a7e7bd66; }
+.panel .status-state-ok .status-item-value::before {
+  content: "OK · ";
+  color: var(--success);
+  font-weight: 700;
+}
+.panel .status-state-ok .status-item-value { color: var(--success); }
+.panel .status-state-unknown { border-color: #b2bdcb66; }
+.panel .status-state-unknown .status-item-value::before {
+  content: "Unknown · ";
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel .status-state-unknown .status-item-value { color: var(--muted); }
+.panel .status-state-error { border-color: #ffaaa566; }
+.panel .status-state-error .status-item-value::before {
+  content: "Error · ";
+  color: var(--danger);
+  font-weight: 700;
+}
+.panel .status-state-error .status-item-value { color: var(--danger); }
+
+@media (max-width: 640px) {
+  .panel { padding-inline: 16px; overflow-x: hidden; max-width: 100%; }
+  .panel .status-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition: none !important;
