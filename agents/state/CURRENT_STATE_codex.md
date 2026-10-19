@@ -4,7 +4,7 @@ Status: IN_PROGRESS
 Agent: codex · Tool: OpenAI Codex · Branch: r06/codex · Last update: 2026-10-19
 
 ## Tasks
-- [ ] 1. Implement safe text redaction with tests.
+- [x] 1. Implement safe text redaction with tests.
 - [ ] 2. Implement the redacting log ring with tests.
 - [ ] 3. Implement timeout-bounded status builder with tests.
 - [ ] 4. Implement diagnostics builder with tests.
@@ -27,3 +27,4 @@ Agent: codex · Tool: OpenAI Codex · Branch: r06/codex · Last update: 2026-10-
 
 ## Resume notes
 Implement task 1 in the owned redaction module and test.
+
