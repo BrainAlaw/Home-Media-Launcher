@@ -57,7 +57,8 @@ const INTERNAL_PATHS = Object.freeze([
   { path: 'iconOverrides', reason: 'Icon choices made in the icon popup; edited per item, not as a block.' },
   { path: 'menu', reason: 'Root-level menu definition, not a setting.' },
   { path: 'rows', reason: 'Root-level custom tiles, edited on the Applications page.' },
-  { path: 'websites', reason: 'Root-level website list, edited on the Websites page.' }
+  { path: 'websites', reason: 'Root-level website list, edited on the Websites page.' },
+  { path: 'admin', reason: 'Bootstrap block (enabled, port, bind address): needed before the panel exists, so it is set in config.json.' }
 ]);
 
 module.exports = { GROUPS, SETTINGS, INTERNAL_PATHS };
