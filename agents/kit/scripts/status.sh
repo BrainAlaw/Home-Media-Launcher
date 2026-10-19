@@ -67,10 +67,15 @@ for agent in "$@"; do
     # agent has since moved past, or a log that was overwritten by a new run, no longer matches.
     # This cannot check the quota itself: that would need a paid call. It clears when the agent is started again.
     if [ -f "$runlog" ] && tail -n 5 "$runlog" | tr -d '\r' | grep -v '^[[:space:]]*$' | tail -n 3 | grep -q -E "hit your usage limit|hit its usage limit|ActionRequiredError|rate limit exceeded|quota exceeded"; then
-      limit="LIMIT"
-      shown_status="BLOCKED"
-      limited+=("$agent")
-      limit_age="$(( ( $(date +%s) - $(stat -c %Y "$runlog") ) / 60 ))m"
+      # A successful limit-probe check newer than the error means the limit is gone (see limit-probe.sh).
+      probe="$WT/manual/probe-$round_lower-$agent.txt"
+      if [ -f "$probe" ] && grep -q '^ok' "$probe" && [ "$(stat -c %Y "$probe")" -gt "$(stat -c %Y "$runlog")" ]; then
+        limit="-"
+      else
+        limit="LIMIT"
+        shown_status="BLOCKED"
+        limited+=("$agent")
+      fi
     fi ;;
   esac
   # The prompt file exists only while the limit is active; the next limit opens it again.
