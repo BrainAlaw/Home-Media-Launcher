@@ -1,41 +1,48 @@
-# CURRENT_STATE_codex (round R05)
+# CURRENT_STATE_codex (round R06)
 
 Status: DONE
-Agent: codex · Tool: OpenAI Codex · Branch: r05/codex · Last update: 2026-10-19
+Agent: codex · Tool: OpenAI Codex · Branch: r06/codex · Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Build pure settings form model and unit tests.
-- [x] 2. Build descriptor-driven panel UI with session, pairing, load and save flows.
-- [x] 3. Report required coordinator routes and descriptor gaps.
-- [x] 4. Run npm test, commit changes, and finish state report.
+- [x] 1. Implement safe text redaction with tests.
+- [x] 2. Implement the redacting log ring with tests.
+- [x] 3. Implement timeout-bounded status builder with tests.
+- [x] 4. Implement diagnostics builder with tests.
+- [x] 5. Run npm test, commit changes, and finish the state report.
 
 ## Done
-- State file created before code changes — commit `3744d1e`.
-- Model and tests — commit `71635c8`.
-- Descriptor-driven panel UI — commit `5483a4f`.
-- Final state — commit `93ef32d`.
+- Initial state — commit `981836e`.
+- Redaction — commit `3745271`.
+- Log ring — commit `6617dad`.
+- Status builder — commit `251864b`.
+- Diagnostics builder — commit `694afde`.
 
 ## Verified
-- `npm test` — 608 tests, 607 passed, 1 skipped, 0 failed.
-- `npm run check` — passed (608 tests, 607 passed, 1 skipped, 0 failed).
-- `node --check` passed for `panel.js` and `form-model.js`.
+- Focused redaction/log/status/diagnostics tests — 14 passed.
+- Final `npm test` — 635 tests, 634 passed, 1 skipped, 0 failed.
+- `npm run check` passed after status work (632 passed, 1 skipped, 0 failed).
+- Final `npm run check` encountered the intermittent unrelated failure `test/controller-pairing.test.js:385`: expected `stopping` to be `null`.
 
 ## Unverified / not done
-- Panel display and real-network interaction were not verified; no real display/network run was available.
+- No live admin-server integration run was performed; these modules are pure/injected for coordinator wiring.
 
 ## Files changed
-- `src/main/admin/panel/form-model.js` — pure descriptor-backed form helpers.
-- `src/main/admin/panel/index.html` — local panel document and descriptor fallback block.
-- `src/main/admin/panel/panel.js` — generated forms, pairing, session, config load/save.
-- `src/main/admin/panel/panel.css` — responsive accessible panel layout.
-- `test/admin-panel-model.test.js` — model helper tests.
-- `agents/state/CURRENT_STATE_codex.md` — task progress and coordinator requests.
+- `src/main/admin/redact.js` — replaces explicit secret values, known environment assignments, bearer tokens and cookie values.
+- `test/admin-redact.test.js` — realistic Spotify, Vibepollo and admin-cookie redaction cases.
+- `src/main/admin/log.js` — bounded in-memory ring, redaction on write, console wrapping.
+- `test/admin-log.test.js` — capacity, ordering, redaction, tail clamp and console passthrough coverage.
+- `src/main/admin/status.js` — parallel timeout-bounded probes and detail sanitisation.
+- `test/admin-status.test.js` — timeout, throw, missing probe and secret filtering coverage.
+- `src/main/admin/diagnostics.js` — diagnostics JSON with redacted status/log and masked settings.
+- `test/admin-diagnostics.test.js` — verifies passed secret values do not appear in output.
+- `agents/state/CURRENT_STATE_codex.md` — progress, verification and wiring contract.
 
 ## Requests for the coordinator
-- Add `GET /api/settings-description` returning `GROUPS`, `SETTINGS`, and `INTERNAL_PATHS` without secrets; the panel falls back to its inline JSON descriptor.
-- Current `PUT /api/config` validates and saves the request body as a full config, while this panel sends the required `{ settings: ... }` payload. Merge posted settings into the current full config before validation/save.
-- `GET /api/config` redacts secret-like values; preserve their current values server-side when accepting an update so redacted `<set>` markers are never persisted.
-- The `admin` group has no `SETTINGS` entry; its page explains that bootstrap settings are configured in `config.json`.
+Wire the following in `index.js`:
+- `const logs = createLogRing({ capacity: 500, redact: (text) => redactText(text, secretValues) });` then `logs.wrap(console)` to capture `log`, `warn`, and `error` while preserving console output. `logs.tail(n)` supplies diagnostic log rows.
+- `buildStatus({ version, uptime, admin, host, spotify, soloist, vpn, network, weather, timeoutMs, timeouts, secretValues })`; each named source is an async or sync zero-argument function. Optional `probe(name, fn, timeoutMs, secrets)` can replace the default probe.
+- `buildDiagnostics({ status, logTail, settings, secretNames })`; `secretNames` accepts an object of names to values/booleans or an array of names / `{ name, set, value }` entries. Output only includes `{ name, set }`.
+- `npm run check` had an intermittent unrelated `controller-pairing.test.js:385` failure after a subsequent successful full `npm test`; please rerun the repo check on integration.
 
 ## Resume notes
 No further Codex-owned work remains.
