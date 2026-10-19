@@ -47,7 +47,7 @@ Cursor's worktree `.worktrees/r11-cursor` holds one state commit plus uncommitte
 for reference and every line was re-checked against the current `main`-based content of this branch before reuse.
 
 ### Tasks
-- [ ] 1. In `src/renderer/settings-apps.css`, `src/renderer/appearance.css`, `src/renderer/controllers.css`: add `cursor: pointer`
+- [x] 1. In `src/renderer/settings-apps.css`, `src/renderer/appearance.css`, `src/renderer/controllers.css`: add `cursor: pointer`
        to the clickable elements (buttons, choice buttons, clickable rows). No new hover colour — the shared
        `.pointer-target:hover` rule in `pointer-target.css` (claude's file) owns hover. Commit.
 - [ ] 2. Make sure focus outlines are not removed in the three files (no `outline: none` without a `:focus-visible` replacement); fix any found. Commit.
