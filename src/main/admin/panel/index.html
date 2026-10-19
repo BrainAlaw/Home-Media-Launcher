@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Home Media Launcher settings</title>
+  <link rel="stylesheet" href="/panel.css">
+  <script defer src="/form-model.js"></script>
+  <script defer src="/panel.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">HOME MEDIA LAUNCHER</p>
+      <h1>Settings</h1>
+    </div>
+    <button id="logout-button" class="button button-quiet" type="button" hidden>Sign out</button>
+  </header>
+  <main id="app" class="app-shell" aria-live="polite">
+    <p class="status" role="status">Loading settings…</p>
+  </main>
+  <script id="settings-descriptor" type="application/json">{}</script>
+</body>
+</html>
