@@ -429,7 +429,7 @@ function tagFocusable(button, tile, rowId) {
 
 function updateTile(button, tile, rowId) {
   button.type = 'button';
-  button.className = 'tile';
+  button.className = 'tile pointer-target';
   button.style.removeProperty('--virtual-x');
   button.style.removeProperty('--tile-accent');
   button.style.setProperty('--hue', String(hueFor(tile.name))); // tints the focus glow (--tile-accent)
@@ -827,9 +827,13 @@ new window.GamepadInput.GamepadInput({ onAction: handleAction }).start();
 
 /* ------------------------------------------------------------------ pointer (secondary) */
 
+// A click on a home control does what Enter does: focus the control, then send the same `confirm` action.
 homeElement.addEventListener('click', (event) => {
+  if (state.view !== 'home') return;
   const element = event.target.closest('.focusable');
-  if (element) { setFocus(element); activate(element); }
+  if (!element) return;
+  setFocus(element);
+  handleAction('confirm');
 });
 
 // Only real pointer movement moves focus: scrolling content under a parked cursor must not steal it.
