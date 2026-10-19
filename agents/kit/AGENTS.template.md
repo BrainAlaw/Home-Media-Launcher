@@ -53,7 +53,7 @@ agents/
 .worktrees/r<NN>-<agent>/              worktree of one agent (git-ignored), branch r<NN>/<agent>
 ```
 
-Worktrees live in `.worktrees/` inside the repository. The coordinator creates them with `agents/kit/worktrees.sh create <NN> <agent>`.
+Worktrees live in `.worktrees/` inside the repository. The coordinator creates them with `agents/kit/scripts/worktrees.sh create <NN> <agent>`.
 
 ### 3.3 What every agent must do
 

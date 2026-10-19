@@ -22,9 +22,9 @@ and their state files (written by them).
    run `{{CHECK_COMMAND}}`, run the app and verify on the real machine where the change needs it. Fix integration breakage yourself.
    Never merge a branch whose state is `BLOCKED` without reading why.
 4. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues), remove merged worktrees
-   (`agents/kit/worktrees.sh remove <NN> <agent>`).
+   (`agents/kit/scripts/worktrees.sh remove <NN> <agent>`).
 5. **Plan the next round.** Present the plan to the user. After they agree, create the worktrees with
-   `LINK_DIRS="{{LINK_DIRS}}" agents/kit/worktrees.sh create <NN> <agent> ...` and write `agents/rounds/R<NN>/PLAN.md` plus one prompt file per
+   `LINK_DIRS="{{LINK_DIRS}}" agents/kit/scripts/worktrees.sh create <NN> <agent> ...` and write `agents/rounds/R<NN>/PLAN.md` plus one prompt file per
    agent, **including `claude.md` for yourself**.
 6. Tell the user, per tool, the exact folder to open and the one-line instruction to paste.
 
