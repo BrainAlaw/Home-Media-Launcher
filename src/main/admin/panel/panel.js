@@ -114,7 +114,7 @@
       control.setAttribute('aria-label', `${entry.label}, read only`);
       const note = document.createElement('p');
       note.className = 'field-help';
-      note.textContent = 'Structured settings are read only in this panel.';
+      note.textContent = 'Structured settings are read only in this panel. Edit on the TV for now.';
       wrapper.append(label, help, control, note);
       return wrapper;
     }
