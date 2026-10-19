@@ -238,12 +238,33 @@ function webAdapter(win) {
   };
 }
 
+/** Adapter for a Home Theatre browser session (external browser, controlled through DevTools). */
+function tvAdapter(session) {
+  return {
+    session,
+    win: null,
+    hide: () => { session.hide().catch(() => {}); },
+    show: () => { session.show().catch(() => {}); },
+    close: () => { void session.terminate(); }
+  };
+}
+
+/** Home from an app on screen: the app keeps running in the background and the launcher comes back. */
+function sendAppHome(id) {
+  sessionExt.controller.closing();
+  backgroundCurrent();
+  showLauncher();
+  if (window && !window.isDestroyed()) window.webContents.send('launcher:app-closed', { tileId: id, website: true, background: true });
+  sessionExt.controller.finish();
+}
+
 /** Moves the app on screen to the background (hidden, still running). Evicted apps are closed. */
 function backgroundCurrent() {
   if (!currentApp) return;
   const { id, adapter } = currentApp;
   currentApp = null;
   webWindow = null;
+  if (adapter.session && tvBrowser === adapter.session) tvBrowser = null;
   adapter.hide();
   backgroundEntries.set(id, adapter);
   for (const evictedId of backgroundApps.put(id)) closeBackground(evictedId);
@@ -345,17 +366,28 @@ async function openTvWebsite(tile) {
   try { parsed = new URL(tile.url); } catch { throw new Error('Invalid website URL'); }
   if (!['https:', 'http:'].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error('TV apps require HTTP(S) without embedded credentials');
   const session = new TvBrowserSession({ userData: app.getPath('userData') });
+  const adapter = tvAdapter(session);
   let ready = false;
   tvBrowser = session;
   session.once('closed', (result) => {
-    if (tvBrowser !== session) return;
-    tvBrowser = null;
+    if (currentApp?.adapter !== adapter) {
+      // A background session ended (evicted, crashed or closed): only forget it.
+      if (backgroundEntries.get(tile.id) === adapter) { backgroundEntries.delete(tile.id); backgroundApps.take(tile.id); }
+      if (tvBrowser === session) tvBrowser = null;
+      return;
+    }
+    if (tvBrowser === session) tvBrowser = null;
+    currentApp = null;
     if (ready) returnToLauncher({ tileId: tile.id, website: true, tvControls: true, ...(result?.error ? { error: result.error } : {}) });
   });
+  session.on('home', () => { if (currentApp?.adapter === adapter) sendAppHome(tile.id); });
+  session.on('close', () => { if (currentApp?.adapter === adapter) void session.terminate(); });
   try {
     await session.start({ url: parsed.toString(), name: tile.name || tile.title || 'Home Theatre' });
     ready = true;
+    currentApp = { id: tile.id, adapter };
     sendToWindow('launcher:app-launched', { tileId: tile.id, type: 'website', tvControls: true });
+    sendToWindow('launcher:app-ready', { tileId: tile.id, tvControls: true });
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
     return true;
   } catch (error) {
@@ -627,6 +659,7 @@ async function launchTile(tileId) {
     if (!sessionExt.controller.begin(tile)) throw new Error('Another application is already running');
     currentApp = { id: tile.id, adapter };
     webWindow = adapter.win || null;
+    if (adapter.session) tvBrowser = adapter.session;
     adapter.show();
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
     sendToWindow('launcher:app-launched', { tileId: tile.id, type: tile.type, resumed: true });
@@ -667,11 +700,7 @@ ipcMain.on('web-app:home', (event) => {
   if (!webWindow || event.sender !== webWindow.webContents || event.senderFrame !== webWindow.webContents.mainFrame) return;
   const id = currentApp?.id;
   if (!id) return;
-  sessionExt.controller.closing();
-  backgroundCurrent();
-  showLauncher();
-  if (window && !window.isDestroyed()) window.webContents.send('launcher:app-closed', { tileId: id, website: true, background: true });
-  sessionExt.controller.finish();
+  sendAppHome(id);
 });
 
 ipcMain.on('web-app:close', (event) => { if (webWindow && event.sender === webWindow.webContents && event.senderFrame === webWindow.webContents.mainFrame) webWindow.close(); });
