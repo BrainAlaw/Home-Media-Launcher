@@ -178,7 +178,8 @@ class TvBrowserSession extends EventEmitter {
   async installControls(sessionId, evaluateCurrentDocument = true) {
     await this.connection.send('Runtime.enable', {}, sessionId);
     await this.connection.send('Page.enable', {}, sessionId);
-    await this.connection.send('Runtime.addBinding', { name: 'hmlTvClose' }, sessionId);
+    await this.connection.send('Runtime.addBinding', { name: 'hmlHome' }, sessionId);
+    await this.connection.send('Runtime.addBinding', { name: 'hmlClose' }, sessionId);
     await this.connection.send('Runtime.addBinding', { name: 'hmlTvKey' }, sessionId);
     await this.connection.send('Page.addScriptToEvaluateOnNewDocument', { source: TV_CONTROL_SCRIPT }, sessionId);
     if (evaluateCurrentDocument) await this.connection.send('Runtime.evaluate', { expression: TV_CONTROL_SCRIPT }, sessionId);
@@ -186,8 +187,12 @@ class TvBrowserSession extends EventEmitter {
   }
 
   onDevToolsEvent(message) {
-    if (message.method === 'Runtime.bindingCalled' && message.params?.name === 'hmlTvClose') {
-      void this.terminate();
+    if (message.method === 'Runtime.bindingCalled' && message.params?.name === 'hmlHome') {
+      this.emit('home');
+      return;
+    }
+    if (message.method === 'Runtime.bindingCalled' && message.params?.name === 'hmlClose') {
+      this.emit('close', message.params?.payload);
       return;
     }
     if (message.method === 'Runtime.bindingCalled' && message.params?.name === 'hmlTvKey' && message.params?.payload === 'Enter') {
@@ -216,6 +221,25 @@ class TvBrowserSession extends EventEmitter {
       await this.installControls(attached.sessionId);
     } catch { this.attachingTargets.delete(targetId); /* The target may close while its popup is being attached. */ }
   }
+
+  async setWindowState(windowState) {
+    if (!this.connection || this.closing || this.finished) throw new Error('TV browser is not running');
+    try {
+      const result = await this.connection.send('Target.getTargets');
+      const target = result.targetInfos?.find((entry) => entry.type === 'page');
+      if (!target) throw new Error('TV browser window is unavailable');
+      const { windowId } = await this.connection.send('Browser.getWindowForTarget', { targetId: target.targetId });
+      if (!Number.isInteger(windowId)) throw new Error('TV browser window is unavailable');
+      await this.connection.send('Browser.setWindowBounds', { windowId, bounds: { windowState } });
+    } catch (error) {
+      if (error.message.includes('TV browser window is unavailable')) throw error;
+      throw new Error(`TV browser is no longer available: ${error.message}`);
+    }
+  }
+
+  hide() { return this.setWindowState('minimized'); }
+
+  show() { return this.setWindowState('fullscreen'); }
 
   async terminate() {
     if (this.closing || !this.child?.pid) return;

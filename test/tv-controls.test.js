@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const { nearestFocusable, buildTvControlScript, TV_CONTROL_SCRIPT } = require('../backend/tv-controls');
-const { isLoopbackDevToolsUrl } = require('../src/main/tv-browser');
+const { TvBrowserSession, isLoopbackDevToolsUrl } = require('../src/main/tv-browser');
 
 const rect = (left, top, width = 40, height = 40) => ({ left, top, width, height });
 
@@ -51,3 +51,45 @@ test('TV control script inlines configured remote key names and hold timing', ()
   assert.doesNotThrow(() => new vm.Script(script));
 });
 
+
+
+test('TV browser hide and show use DevTools window bounds', async () => {
+  const browser = new TvBrowserSession({ userData: 'unused' });
+  const calls = [];
+  browser.connection = {
+    async send(method, params) {
+      calls.push({ method, params });
+      if (method === 'Target.getTargets') return { targetInfos: [{ type: 'page', targetId: 'page-target' }] };
+      if (method === 'Browser.getWindowForTarget') return { windowId: 17 };
+      return {};
+    }
+  };
+
+  await browser.hide();
+  await browser.show();
+  assert.deepEqual(calls, [
+    { method: 'Target.getTargets', params: undefined },
+    { method: 'Browser.getWindowForTarget', params: { targetId: 'page-target' } },
+    { method: 'Browser.setWindowBounds', params: { windowId: 17, bounds: { windowState: 'minimized' } } },
+    { method: 'Target.getTargets', params: undefined },
+    { method: 'Browser.getWindowForTarget', params: { targetId: 'page-target' } },
+    { method: 'Browser.setWindowBounds', params: { windowId: 17, bounds: { windowState: 'fullscreen' } } },
+  ]);
+});
+
+test('TV browser hide and show reject when the browser has gone', async () => {
+  const browser = new TvBrowserSession({ userData: 'unused' });
+  await assert.rejects(browser.hide(), /TV browser is not running/);
+  browser.connection = { async send() { return { targetInfos: [] }; } };
+  await assert.rejects(browser.show(), /TV browser window is unavailable/);
+});
+
+test('TV browser emits home and close from DevTools bindings', () => {
+  const browser = new TvBrowserSession({ userData: 'unused' });
+  const events = [];
+  browser.on('home', () => events.push('home'));
+  browser.on('close', (reason) => events.push(`close:${reason}`));
+  browser.onDevToolsEvent({ method: 'Runtime.bindingCalled', params: { name: 'hmlHome' } });
+  browser.onDevToolsEvent({ method: 'Runtime.bindingCalled', params: { name: 'hmlClose', payload: 'hold' } });
+  assert.deepEqual(events, ['home', 'close:hold']);
+});
