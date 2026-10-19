@@ -1,6 +1,7 @@
 'use strict';
 
 const { version } = require('../../../package.json');
+const { GROUPS, SETTINGS, INTERNAL_PATHS } = require('../../../backend/settings-descriptor');
 
 const SESSION_COOKIE = 'hml_admin_session';
 const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
@@ -16,6 +17,36 @@ function redactConfig(config) {
     if (/(token|key|secret|password)/i.test(key)) return [key, hasSecret(value) ? '<set>' : '<unset>'];
     return [key, redactConfig(value)];
   }));
+}
+
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const REDACTED_MARKERS = new Set(['<set>', '<unset>']);
+const SECRET_KEY = /(token|key|secret|password)/i;
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Applies a settings patch on top of the stored settings. Keys absent from the patch keep their stored value.
+ * A redacted marker ('<set>' or '<unset>') on a secret-looking key keeps the stored value, so a panel that echoes a
+ * GET response never overwrites a secret with the marker. Arrays are replaced, except that items carrying markers
+ * are merged positionally with the stored item at the same index (GET keeps the order).
+ */
+function mergeSettingsPatch(stored, patch) {
+  const base = isPlainObject(stored) ? stored : {};
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    if (UNSAFE_KEYS.has(key)) continue;
+    if (SECRET_KEY.test(key) && typeof value === 'string' && REDACTED_MARKERS.has(value)) continue;
+    if (isPlainObject(value) && isPlainObject(base[key])) merged[key] = mergeSettingsPatch(base[key], value);
+    else if (Array.isArray(value) && Array.isArray(base[key])) {
+      merged[key] = value.map((item, index) => (isPlainObject(item) && isPlainObject(base[key][index])
+        ? mergeSettingsPatch(base[key][index], item)
+        : item));
+    } else merged[key] = value;
+  }
+  return merged;
 }
 
 function json(status, body, headers = {}) {
@@ -53,6 +84,11 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
       });
     }
 
+    if (pathname === '/api/settings-description') {
+      if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
+      return json(200, { GROUPS, SETTINGS, INTERNAL_PATHS });
+    }
+
     if (pathname === '/api/session') {
       if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
       const session = auth.verifySession(sessionToken);
@@ -78,10 +114,22 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
         const session = auth.verifySession(sessionToken);
         if (!session) return json(401, { error: 'Authentication required' });
         const refreshedCookie = { 'Set-Cookie': sessionCookie(sessionToken) };
-        try { await validate(body); }
+        const patch = isPlainObject(body) ? body : {};
+        if (patch.settings !== undefined && !isPlainObject(patch.settings)) {
+          return json(422, { error: 'settings must be an object' }, refreshedCookie);
+        }
+        let next;
+        try {
+          const stored = await getConfig();
+          const { settings: settingsPatch = {}, ...rest } = patch;
+          next = { ...stored, ...rest, settings: mergeSettingsPatch(stored?.settings, settingsPatch) };
+        } catch {
+          return json(500, { error: 'Could not read configuration' }, refreshedCookie);
+        }
+        try { await validate(next); }
         catch (error) { return json(422, { error: error.message || 'Configuration is invalid' }, refreshedCookie); }
         try {
-          await saveConfig(body);
+          await saveConfig(next);
           return json(200, { ok: true }, refreshedCookie);
         } catch {
           return json(500, { error: 'Could not save configuration' }, refreshedCookie);

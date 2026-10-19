@@ -4,9 +4,12 @@ const http = require('node:http');
 const net = require('node:net');
 const os = require('node:os');
 const { createAdminAuth } = require('./auth');
+const path = require('node:path');
 const { createAdminRoutes } = require('./routes');
+const { serveStatic } = require('./static');
 
 const DEFAULT_PORT = 8787;
+const PANEL_ROOT = path.join(__dirname, 'panel');
 const MAX_BODY_BYTES = 64 * 1024;
 const SECURITY_HEADERS = Object.freeze({
   'Content-Security-Policy': "default-src 'self'",
@@ -126,10 +129,14 @@ function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () =>
           || (providedOrigin === undefined && request.headers['sec-fetch-site'] === 'same-origin');
         if (!requestMarker || !validOrigin) throw new HttpError(403, 'Request origin check failed');
       }
-      const body = await readJsonBody(request);
       let pathname;
       try { pathname = new URL(request.url, boundUrl).pathname; }
       catch { throw new HttpError(400, 'Invalid request path'); }
+      if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+        await serveStatic(request, response, PANEL_ROOT, SECURITY_HEADERS);
+        return;
+      }
+      const body = await readJsonBody(request);
       const result = await routes.dispatch({
         method: request.method,
         pathname,
