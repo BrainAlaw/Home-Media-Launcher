@@ -1,48 +1,36 @@
-# CURRENT_STATE_codex (round R06)
+# CURRENT_STATE_codex (round R07)
 
 Status: DONE
-Agent: codex · Tool: OpenAI Codex · Branch: r06/codex · Last update: 2026-10-19
+Agent: codex  ·  Tool: Codex  ·  Branch: r07/codex  ·  Last update: 2026-10-19 10:45
 
 ## Tasks
-- [x] 1. Implement safe text redaction with tests.
-- [x] 2. Implement the redacting log ring with tests.
-- [x] 3. Implement timeout-bounded status builder with tests.
-- [x] 4. Implement diagnostics builder with tests.
-- [x] 5. Run npm test, commit changes, and finish the state report.
+- [x] 1. Create `backend/confirmation.js` with the specified injected clock and random source.
+- [x] 2. Add `node:test` coverage in `test/admin-confirmation.test.js` for the specified cases.
+- [x] 3. Run the focused test and `npm test`; commit task updates.
+- [x] 4. Set final status and report the export name.
 
 ## Done
-- Initial state — commit `981836e`.
-- Redaction — commit `3745271`.
-- Log ring — commit `6617dad`.
-- Status builder — commit `251864b`.
-- Diagnostics builder — commit `694afde`.
+- Confirmation module implemented — commit `ac217e0`.
+- Confirmation tests added — commit `33059bd`.
+- Required validation passed — commit `d2ce5e5`.
 
 ## Verified
-- Focused redaction/log/status/diagnostics tests — 14 passed.
-- Final `npm test` — 635 tests, 634 passed, 1 skipped, 0 failed.
-- `npm run check` passed after status work (632 passed, 1 skipped, 0 failed).
-- Final `npm run check` encountered the intermittent unrelated failure `test/controller-pairing.test.js:385`: expected `stopping` to be `null`.
+- `node --test test/admin-confirmation.test.js`: 8 passed.
+- `npm test`: 653 passed, 0 failed.
+- `npm run check`: passed, including all 653 tests.
+- Read `AGENTS.md`, `agents/rounds/R07/PLAN.md`, `backend/ADMIN.md`, and the `dispatch` shape in `src/main/admin/routes.js`.
+- Read the supplied confirmation implementation and test draft for reference.
 
 ## Unverified / not done
-- No live admin-server integration run was performed; these modules are pure/injected for coordinator wiring.
+- One intermediate full-suite run failed in unrelated timing-sensitive tests under load; subsequent `npm test` and `npm run check` runs passed.
 
 ## Files changed
-- `src/main/admin/redact.js` — replaces explicit secret values, known environment assignments, bearer tokens and cookie values.
-- `test/admin-redact.test.js` — realistic Spotify, Vibepollo and admin-cookie redaction cases.
-- `src/main/admin/log.js` — bounded in-memory ring, redaction on write, console wrapping.
-- `test/admin-log.test.js` — capacity, ordering, redaction, tail clamp and console passthrough coverage.
-- `src/main/admin/status.js` — parallel timeout-bounded probes and detail sanitisation.
-- `test/admin-status.test.js` — timeout, throw, missing probe and secret filtering coverage.
-- `src/main/admin/diagnostics.js` — diagnostics JSON with redacted status/log and masked settings.
-- `test/admin-diagnostics.test.js` — verifies passed secret values do not appear in output.
-- `agents/state/CURRENT_STATE_codex.md` — progress, verification and wiring contract.
+- `backend/confirmation.js` — single-use confirmation token API.
+- `test/admin-confirmation.test.js` — deterministic unit coverage.
+- `agents/state/CURRENT_STATE_codex.md` — round status and task checklist.
 
 ## Requests for the coordinator
-Wire the following in `index.js`:
-- `const logs = createLogRing({ capacity: 500, redact: (text) => redactText(text, secretValues) });` then `logs.wrap(console)` to capture `log`, `warn`, and `error` while preserving console output. `logs.tail(n)` supplies diagnostic log rows.
-- `buildStatus({ version, uptime, admin, host, spotify, soloist, vpn, network, weather, timeoutMs, timeouts, secretValues })`; each named source is an async or sync zero-argument function. Optional `probe(name, fn, timeoutMs, secrets)` can replace the default probe.
-- `buildDiagnostics({ status, logTail, settings, secretNames })`; `secretNames` accepts an object of names to values/booleans or an array of names / `{ name, set, value }` entries. Output only includes `{ name, set }`.
-- `npm run check` had an intermittent unrelated `controller-pairing.test.js:385` failure after a subsequent successful full `npm test`; please rerun the repo check on integration.
+- Import `createConfirmations` from `backend/confirmation.js`.
 
 ## Resume notes
-No further Codex-owned work remains.
+None.

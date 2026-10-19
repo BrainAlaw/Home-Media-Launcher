@@ -70,10 +70,221 @@ a:focus-visible {
   .field-grid { grid-template-columns: minmax(0, 1fr); }
   .field-wide { grid-column: auto; }
 }
+/* Panel pages: status, log, actions, object editors (R07) */
+.panel { min-width: 0; max-width: 100%; }
+.panel .status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.panel .status-item {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid #ffffff1a;
+  border-radius: 12px;
+  background: var(--surface);
+  display: grid;
+  gap: 6px;
+}
+.panel .status-item-label {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.panel .status-item-value {
+  font-size: 1.05rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.panel .status-state-ok { border-color: #a7e7bd66; }
+.panel .status-state-ok .status-item-value::before {
+  content: "OK · ";
+  color: var(--success);
+  font-weight: 700;
+}
+.panel .status-state-ok .status-item-value { color: var(--success); }
+.panel .status-state-unknown { border-color: #b2bdcb66; }
+.panel .status-state-unknown .status-item-value::before {
+  content: "Unknown · ";
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel .status-state-unknown .status-item-value { color: var(--muted); }
+.panel .status-state-error { border-color: #ffaaa566; }
+.panel .status-state-error .status-item-value::before {
+  content: "Error · ";
+  color: var(--danger);
+  font-weight: 700;
+}
+.panel .status-state-error .status-item-value { color: var(--danger); }
+
+.panel .log-view {
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: min(50vh, 420px);
+  margin: 0;
+  padding: 14px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid #ffffff1a;
+  border-radius: 12px;
+  background: #10141a;
+  color: #d7e3f5;
+  font: .82rem/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.panel .log-line { display: block; margin: 0; }
+
+.panel .action-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.panel .action-button,
+.panel .diagnostics-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 17px;
+  border: 0;
+  border-radius: 9px;
+  background: #a9caff;
+  color: #101827;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity .15s ease, background-color .15s ease;
+}
+.panel .action-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+.panel .action-button-destructive {
+  background: #ffaaa5;
+  color: #3a1010;
+}
+.panel .action-result {
+  margin: 10px 0 0;
+  font-size: .9rem;
+  color: var(--muted);
+}
+.panel .action-result-ok { color: var(--success); }
+.panel .action-result-error { color: var(--danger); }
+.panel .action-button:focus-visible,
+.panel .diagnostics-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel .object-editor {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 18px;
+  border: 1px solid #ffffff1a;
+  border-radius: 13px;
+  background: var(--surface);
+  min-width: 0;
+  max-width: 100%;
+}
+.panel .object-editor-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.panel .object-editor-field > label {
+  font-size: .95rem;
+  font-weight: 650;
+}
+.panel .object-editor-field input:not([type="checkbox"]),
+.panel .object-editor-field select,
+.panel .object-editor-field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid #8997a966;
+  border-radius: 8px;
+  background: #11151b;
+  color: inherit;
+  font: inherit;
+}
+.panel .object-editor-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+.panel .object-editor-field-error {
+  margin: 0;
+  color: #8a3b00;
+  background: #fff1d6;
+  border: 1px solid #e0a85a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: .9rem;
+}
+.panel .object-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 2px;
+}
+.panel .object-editor-readonly-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: .84rem;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .panel .object-editor-field-error {
+    color: #ffd7a8;
+    background: #3a2a14;
+    border-color: #c48a3a;
+  }
+}
+
+@media (max-width: 640px) {
+  .panel { padding-inline: 16px; overflow-x: hidden; max-width: 100%; }
+  .panel .status-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition: none !important;
     animation: none !important;
     scroll-behavior: auto !important;
+  }
+  .panel .status-grid,
+  .panel .status-item,
+  .panel .status-item-label,
+  .panel .status-item-value,
+  .panel .log-view,
+  .panel .log-line,
+  .panel .action-list,
+  .panel .action-button,
+  .panel .action-button-destructive,
+  .panel .action-result,
+  .panel .diagnostics-link,
+  .panel .object-editor,
+  .panel .object-editor-field,
+  .panel .object-editor-field-error,
+  .panel .object-editor-actions,
+  .panel .object-editor-readonly-hint {
+    transition: none !important;
+    animation: none !important;
   }
 }

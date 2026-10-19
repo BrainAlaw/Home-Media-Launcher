@@ -104,9 +104,12 @@ function sendJson(response, status, body, headers = {}) {
   response.end(encoded);
 }
 
-function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () => {}, onPaired = () => {}, log = () => {} }) {
+function createAdminServer({
+  getConfig, saveConfig, validate, onPairCode = () => {}, onPaired = () => {}, log = () => {},
+  getStatus = null, getLogTail = null, getSecretNames = null
+}) {
   const auth = createAdminAuth();
-  const routes = createAdminRoutes({ getConfig, saveConfig, validate, auth, onPaired });
+  const routes = createAdminRoutes({ getConfig, saveConfig, validate, auth, onPaired, getStatus, getLogTail, getSecretNames });
   let server = null;
   let enabled = false;
   let bindAddress = null;
@@ -140,6 +143,7 @@ function createAdminServer({ getConfig, saveConfig, validate, onPairCode = () =>
       const result = await routes.dispatch({
         method: request.method,
         pathname,
+        query: new URL(request.url, boundUrl).searchParams,
         body,
         address: request.socket.remoteAddress,
         sessionToken: getSessionToken(request)

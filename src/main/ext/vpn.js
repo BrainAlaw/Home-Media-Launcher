@@ -32,6 +32,8 @@ function poll(ctx, signal) {
 
 module.exports = {
   namespace: 'vpn',
+  // Read-only summary for the admin status page. Not an IPC handler, so the renderer cannot reach it through ext:vpn.
+  statusSummary: () => (service ? service.list() : Promise.resolve([])),
   handlers: {
     list: (ctx) => publish(ctx, service.list()),
     toggle: (ctx, id, enabled) => {
