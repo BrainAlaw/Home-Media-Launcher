@@ -107,6 +107,9 @@
 .tile.focused.launching::after { opacity: 1; }
 .tile.launching { animation-delay: var(--hig-dur-fast); }
 
+/* Tiles are art, not boxes: the shared pointer-target fill does not apply to them (hover uses the tile rules below). */
+.tile.pointer-target:hover { background: none; }
+
 /* Mouse hover: the same language at roughly 40 percent strength. Focus (when present) keeps the stronger state. */
 @media (hover: hover) {
   .tile:hover:not(.focused) { scale: var(--hig-tile-hover-scale); transform: translate3d(0, calc(var(--hig-tile-lift) * .4), 0); opacity: 1; transition-duration: var(--hig-dur-base); }

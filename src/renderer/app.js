@@ -429,7 +429,7 @@ function tagFocusable(button, tile, rowId) {
 
 function updateTile(button, tile, rowId) {
   button.type = 'button';
-  button.className = 'tile';
+  button.className = 'tile pointer-target';
   button.style.removeProperty('--virtual-x');
   button.style.removeProperty('--tile-accent');
   button.style.setProperty('--hue', String(hueFor(tile.name))); // tints the focus glow (--tile-accent)
@@ -827,10 +827,31 @@ new window.GamepadInput.GamepadInput({ onAction: handleAction }).start();
 
 /* ------------------------------------------------------------------ pointer (secondary) */
 
+// A click on a home control does what Enter does: focus the control, then send the same `confirm` action.
 homeElement.addEventListener('click', (event) => {
+  if (state.view !== 'home') return;
   const element = event.target.closest('.focusable');
-  if (element) { setFocus(element); activate(element); }
+  if (!element) return;
+  setFocus(element);
+  handleAction('confirm');
 });
+
+/** Vertical wheel scrolls a horizontal tile track (same mapping as MouseModeModel.wheelToHorizontal). */
+function homeWheelToHorizontal({ deltaX, deltaY }) {
+  return deltaX || deltaY;
+}
+
+// Over a tile track the wheel scrolls it sideways; at either end the page keeps its native vertical scroll.
+homeElement.addEventListener('wheel', (event) => {
+  const track = event.target.closest?.('.track');
+  if (!track || event.ctrlKey) return;
+  const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? track.clientWidth : 1;
+  const delta = homeWheelToHorizontal(event) * scale;
+  const next = Math.max(0, Math.min(track.scrollWidth - track.clientWidth, track.scrollLeft + delta));
+  if (next === track.scrollLeft) return;
+  event.preventDefault();
+  track.scrollLeft = next;
+}, { passive: false });
 
 // Only real pointer movement moves focus: scrolling content under a parked cursor must not steal it.
 document.addEventListener('pointermove', (event) => {

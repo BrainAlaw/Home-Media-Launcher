@@ -1,38 +1,48 @@
-# CURRENT_STATE_claude (round R10)
+# CURRENT_STATE_claude (round R11)
 
-Status: DONE            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
-Agent: claude  ·  Tool: Claude Code (subagent, Tier L)  ·  Branch: r10/claude  ·  Last update: 2026-10-19 11:58
+Status: PARTIAL            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
+Agent: claude  ·  Tool: Claude Code (subagent)  ·  Branch: r11/claude  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Hover fix: every Quick settings row (static and VPN) gets the same JS motion (design a, see Done)
-- [x] 2. Remove the CSS transform rules that conflict with the JS motion on .qs-row
-- [x] 3. npm run check passes; state file set to final status
+- [x] 1. pointer-target.css with .pointer-target:hover, linked in index.html (commits 5fc4f7a, bc69fac). The mouse-mode-model.js script tag is not added: the file is not on this branch yet.
+- [x] 2. Home screen: tile click = Enter, tiles get .pointer-target (commit 4777e90)
+- [x] 3. Home wheel: vertical wheel over a tile track scrolls it sideways (commit 9a79963), inline mapping
+- [~] 4. On-screen keyboard: key hover focus added (commit 608bcb5). Caret placement by click NOT done, see Unverified.
+- [x] 5. test/home-mouse.test.js: wheel mapping, tile click path = Enter path, pointer-target wiring (commit 3121438)
+- [x] 6. npm run check passes (687 tests, 0 failures)
 
 ## Done
-- Design (a) chosen: VPN rows are registered with the navigation menu as they appear. A MutationObserver on the system panel calls
-  `register()` for every added `.menu-action`, so the VPN rows get the same inline spring motion as Settings and Start at login. — commit `cf7f673`
-- Design (b) rejected: the JS motion for a row also drives the press scale, the focus spring and the content slide. Removing the
-  inline transform would drop those on the static rows, which is a visual change, so the no-visual-change condition of (b) is not met.
-- The CSS `transform` in the `.qs-row` focus/hover rule and in the `.qs-row` icon hover rule was dead (inline value wins) and
-  conflicting; removed. Background, z-index and chevron rules kept. — commit `e25cd9f`
-- `createVpnRow` in `status-widgets.js` needed no change (registration happens in `navigation-menu.js`).
+- pointer-target.css: `.pointer-target:hover` (hig-fill background, pointer cursor); linked in index.html — commits `5fc4f7a`, `bc69fac`
+- Home: click on `.focusable` now does `setFocus` + `handleAction('confirm')` (same path as Enter); tiles are `tile pointer-target`; `.tile.pointer-target:hover` keeps `background: none` in home.css — commit `4777e90`
+- Home wheel: `homeWheelToHorizontal` (deltaX || deltaY) plus a wheel listener on `#rows` that scrolls the `.track` and passes through at the ends — commit `9a79963`
+- OSK: mouse movement over a key moves the key highlight (mouse pointer type only) — commit `608bcb5`
+- Tests: `test/home-mouse.test.js` (4 tests, source-level plus VM for the mapping) — commit `3121438`
 
 ## Verified
-- `npm run check` in the worktree: exit 0, 683 tests pass, 0 fail.
-- By reading the code: static rows and VPN rows both get the inline transform from `track()`; no other rule sets `transform` on `.qs-row`
-  (checked `styles.css`, `menu.css`, `status.css`; the `.menu-toggle` knob transform is on `.switch-knob`, not the row).
+- `npm run check`: 687 tests pass, 0 fail (run inside the worktree).
+- `node --test test/home-mouse.test.js`: 4 pass.
 
 ## Unverified / not done
-- The hover is NOT checked on the real screen. Electron was not run (per rules). The coordinator must check on the PC that the VPN rows hover like Settings.
-- Coordinator note: the static rows' look may change slightly. The icon no longer gets a CSS lift on any row (it never did on static rows),
-  and the row lift is now the JS scale 1.045, which VPN rows now share.
+- not checked on a real display (hover fill, tile hover, wheel scroll, OSK hover were not seen on screen; Electron not run per the prompt).
+- OSK caret placement by click is NOT implemented. `keyboard-layout.js` has no caret index: `insert`, `backspace` and `press` only append to `text`, so the caret is always at the end. Clicking the field leaves it at the end. Mouse typing works through the existing key buttons (they already accepted clicks). A real mid-text caret needs a cursor index in `keyboard-layout.js` (not owned by this round).
+- OSK key buttons do not get `.pointer-target`: they already had hover feedback per the audit, and `on-screen-keyboard.css` is not in my owned files, so their fill was not changed.
+- Home pointer hover focus (`pointermove` on `.focusable`) already existed before this round; it is kept unchanged.
+- `mouse-mode-model.js` (codex) is not on this branch. The wheel mapping is inline in `app.js` as `homeWheelToHorizontal`; once the coordinator merges codex, it can be swapped for `MouseModeModel.wheelToHorizontal` and the script tag added to index.html.
+- Media widget click (activate action) is codex's (media-widget.js). The home click handler only handles `.focusable` elements, so the widget is not affected by this round's code.
 
 ## Files changed
-- `src/renderer/navigation-menu.js` — MutationObserver registers rows added later; disconnected in `dispose()`.
-- `src/renderer/styles.css` — removed dead `transform` from the `.qs-row` hover rule and icon hover rule; comment updated.
+- src/renderer/pointer-target.css — new, shared hover rule
+- src/renderer/index.html — stylesheet link for pointer-target.css
+- src/renderer/app.js — tile class, click path, wheel mapping and listener
+- src/renderer/home.css — tile hover override for the shared fill
+- src/renderer/on-screen-keyboard.js — pointermove highlight on keys
+- test/home-mouse.test.js — new tests
+- agents/state/CURRENT_STATE_claude.md — this file
 
 ## Requests for the coordinator
-- None blocking. Mouse audit (codex) is separate.
+- After merging codex: replace `homeWheelToHorizontal` with `MouseModeModel.wheelToHorizontal` (optional), and add `<script src="mouse-mode-model.js"></script>` to index.html (the claude branch does not include it).
+- Future round: add a caret index to `keyboard-layout.js` (insert/backspace/press at a position) before the OSK field can take a mouse caret placement.
+- Settings: no user-facing setting was added in this round.
 
 ## Resume notes
-- Complete. Next step is the real-display check of the VPN rows hover on the PC.
+- Caret placement on the OSK text field: needs the `keyboard-layout.js` change above; then `on-screen-keyboard.js` field click handler maps the click x-position to a caret index.

@@ -1,0 +1,9 @@
+/*
+ * POINTER TARGET: shared mouse hover feedback for every clickable element (R11 mouse mode).
+ * Focus styles are untouched; this only adds the hover fill and the pointer cursor.
+ * Elements that are not buttons but become clickable carry role="button", tabindex="-1" and this class.
+ */
+.pointer-target:hover {
+  background: var(--hig-fill);
+  cursor: pointer;
+}
