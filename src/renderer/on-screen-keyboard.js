@@ -85,6 +85,12 @@
             button.dataset.shift = model.shift;
           }
           button.addEventListener('mousedown', (event) => event.preventDefault());
+          // Real mouse movement moves the key highlight; keyboard and gamepad keep their own cursor path.
+          button.addEventListener('pointermove', (event) => {
+            if (event.pointerType !== 'mouse' || (position.row === r && position.col === c)) return;
+            position = { row: r, col: c, anchor: key.x + key.width / 2 };
+            paintFocus();
+          }, { passive: true });
           button.addEventListener('click', () => { position = { row: r, col: c, anchor: key.x + key.width / 2 }; paintFocus(); activate(key, button); });
           rowElement.append(button);
           return button;
