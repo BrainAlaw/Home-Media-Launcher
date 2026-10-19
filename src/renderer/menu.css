@@ -139,10 +139,6 @@ header { position: relative; z-index: 6; align-items: center; }
   background: color-mix(in srgb, var(--danger) var(--panel-lens-mix, 36%), var(--panel-base, #171b26));
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--danger) 70%, #fff);
 }
-/* The one focus and hover rule for every focusable Quick settings row (.qs-row). .qs-info rows match none of these. */
-#system-panel .qs-row:is(:focus, :focus-visible),
-#system-panel .qs-row:focus-within,
-#system-panel .qs-row:hover { background: transparent; border-color: transparent; box-shadow: none; will-change: auto; }
 #system-panel .menu-action[data-focused="true"] { color: #fff; }
 #system-panel .menu-action .menu-symbol { width: 38px; height: 38px; background: transparent; border-radius: 0; color: inherit; transition: none; }
 #system-panel .menu-symbol svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

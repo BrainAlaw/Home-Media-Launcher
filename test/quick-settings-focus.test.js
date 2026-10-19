@@ -64,9 +64,10 @@ test('quick-settings focus selectors follow the shared row contract', () => {
   const allFocusRules = [...focusRules].flatMap(([file, rules]) =>
     rules.map((rule) => ({ file, ...rule }))
   );
-  const sharedRowRules = allFocusRules.filter(({ selector }) => selector.includes('.qs-row'));
+  // Rules for the row itself. Rules for its children (.menu-symbol, .menu-chevron) are part of the same row look, not the row's focus rule.
+  const sharedRowRules = allFocusRules.filter(({ selector }) => selector.includes('.qs-row') && !/\.qs-row(?::is\([^)]*\))?\s+\.[\w-]+/.test(selector));
   const canonicalRules = allFocusRules.filter(
-    ({ selector }) => selector === '.qs-row:is(:focus, :focus-visible)'
+    ({ selector }) => selector.endsWith('.qs-row:is(:focus, :focus-visible)')
   );
 
   assert.ok(
