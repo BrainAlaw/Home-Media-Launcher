@@ -46,8 +46,12 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const results = [];
 const server = http.createServer((request, response) => {
   if (/^\/bg-[a-d]\/keys\.html$/.test(request.url || '')) {
-    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    response.end(fs.readFileSync(FIXTURE));
+    // bg-a is served slowly so the loading card is on screen long enough to be captured.
+    const delay = request.url.startsWith('/bg-a/') ? 2500 : 0;
+    setTimeout(() => {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      response.end(fs.readFileSync(FIXTURE));
+    }, delay);
     return;
   }
   response.writeHead(404).end();
@@ -98,8 +102,8 @@ function writeReport() {
   const failed = results.filter((item) => item.failures.length);
   const lines = [`# Background apps check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}`, ''];
   for (const item of results) {
-    if (item.blocked) { lines.push(`- BLOCKED Â· ${item.label} Â· ${item.blocked}`); continue; }
-    lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} Â· ${item.label} Â· launcher ${item.state.launcherVisible ? 'visible' : 'hidden'} Â· sites ${JSON.stringify(item.state.sites)}`);
+    if (item.blocked) { lines.push(`- BLOCKED · ${item.label} · ${item.blocked}`); continue; }
+    lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} · ${item.label} · launcher ${item.state.launcherVisible ? 'visible' : 'hidden'} · sites ${JSON.stringify(item.state.sites)}`);
     for (const failure of item.failures) lines.push(`  - ${failure}`);
   }
   lines.push('', '## Screenshots', '', ...results.map((item) => `- ${item.label}: ${item.shot || 'not captured'}`));
@@ -124,9 +128,9 @@ app.whenReady().then(async () => {
 
   // 1. open A, Home returns to the launcher and A stays alive
   await launch('bg-a');
+  await sleep(900);
+  await record('a-loading-card', (state) => state.launcherVisible || 'launcher should show the loading card while the page loads');
   await waitFor(() => siteWindows().some((win) => win.isVisible()));
-  await sleep(200);
-  await record('a-loading-card', () => true);
   await sleep(1200);
   await record('a-on-screen', (state) => state.sites.some((site) => site.visible) || 'A is not on screen');
   const pageA = siteWindows().find((win) => win.isVisible());

@@ -229,6 +229,9 @@ function handle(channel, callback) {
   });
 }
 
+/** Longest wait before a website window is shown even if the page has not finished loading. */
+const WEBSITE_REVEAL_FALLBACK_MS = 12000;
+
 /** Long-press length for Back (from the shared remote keymap, so the page and the main process agree). */
 let backDownAt = 0;
 function longBackMs() {
@@ -336,11 +339,18 @@ function openWebsite(tile) {
   webWindow.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   webWindow.webContents.session.setPermissionCheckHandler(() => false);
   // The launcher keeps covering the screen (black) until the web window is visibly up; only then is it hidden.
-  webWindow.once('ready-to-show', () => {
-    webWindow?.show();
+  // The page is revealed once it has loaded, so the loading card on the launcher stays on screen until then.
+  // A fallback reveals slow pages anyway.
+  let revealed = false;
+  const reveal = () => {
+    if (revealed || win.isDestroyed()) return;
+    revealed = true;
+    win.show();
     sendToWindow('launcher:app-ready', { tileId: tile.id });
     void sessionExt.controller.handoff({ hide: () => { if (window && !window.isDestroyed()) window.hide(); } });
-  });
+  };
+  win.webContents.once('did-finish-load', reveal);
+  setTimeout(reveal, WEBSITE_REVEAL_FALLBACK_MS).unref?.();
   // Raise the (already black) launcher before the web window disappears so the desktop never flashes through.
   win.on('close', () => {
     // Only the app on screen brings the launcher back; a background window closing (eviction) must not.
