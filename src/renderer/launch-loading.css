@@ -24,11 +24,13 @@
   font-size: calc(min(22vh, 220px) * 0.46);
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
-  background-size: 70% auto;
+}
+.launch-loading.has-logo .launch-loading-logo {
+  color: transparent;
+  background-size: 72% auto;
   background-position: center;
   background-repeat: no-repeat;
 }
-.launch-loading.has-logo .launch-loading-logo { background-size: 72% auto; color: transparent; }
 .launch-loading-name {
   margin: 0;
   font-size: calc(var(--hig-fs-title2, 2.4vh) * 1.1);

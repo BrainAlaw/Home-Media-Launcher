@@ -86,8 +86,9 @@ async function record(label, check, shot = true) {
 }
 
 async function launch(id) {
-  // Not awaited: the launch promise resolves only when the app closes.
-  await runIn(launcherWindow().webContents, `void window.api.launchApp({ id: '${id}' }), true`);
+  // Click the tile like a user does: the launcher's activate() shows the loading card and starts the launch.
+  const result = await runIn(launcherWindow().webContents, `(() => { const el = document.querySelector('[data-tile-id="${id}"]'); if (!el) return 'missing'; el.click(); return 'ok'; })()`);
+  if (result !== 'ok') throw new Error(`tile ${id} is not on the launcher (${result})`);
 }
 
 async function waitFor(predicate, timeoutMs = 15000) {
@@ -102,8 +103,8 @@ function writeReport() {
   const failed = results.filter((item) => item.failures.length);
   const lines = [`# Background apps check ${runId}`, '', `Steps: ${results.length}, failed: ${failed.length}`, ''];
   for (const item of results) {
-    if (item.blocked) { lines.push(`- BLOCKED · ${item.label} · ${item.blocked}`); continue; }
-    lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} · ${item.label} · launcher ${item.state.launcherVisible ? 'visible' : 'hidden'} · sites ${JSON.stringify(item.state.sites)}`);
+    if (item.blocked) { lines.push(`- BLOCKED ï¿½ ${item.label} ï¿½ ${item.blocked}`); continue; }
+    lines.push(`- ${item.failures.length ? 'FAIL' : 'ok'} ï¿½ ${item.label} ï¿½ launcher ${item.state.launcherVisible ? 'visible' : 'hidden'} ï¿½ sites ${JSON.stringify(item.state.sites)}`);
     for (const failure of item.failures) lines.push(`  - ${failure}`);
   }
   lines.push('', '## Screenshots', '', ...results.map((item) => `- ${item.label}: ${item.shot || 'not captured'}`));
