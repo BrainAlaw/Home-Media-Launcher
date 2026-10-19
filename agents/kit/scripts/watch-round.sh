@@ -68,13 +68,13 @@ frame() {
 }
 
 printf '\033[?25l\033[2J\033[H'
-printf 'active rounds · refresh every %ss · Ctrl+C to stop\n\n' "$INTERVAL"
 prev=""
 while true; do
-  cur="$(frame)"
+  # The whole frame, header included, is drawn from the top of the screen. A round that disappears therefore
+  # disappears from the screen too: nothing above or below the frame is left behind.
+  cur="$(printf 'active rounds · refresh every %ss · Ctrl+C to stop\n\n' "$INTERVAL"; frame)"
   if [ "$cur" != "$prev" ]; then
-    # Home the cursor, rewrite every line, clear each line's tail and everything below the frame.
-    printf '\033[3;1H'
+    printf '\033[H'
     while IFS= read -r line; do printf '%s\033[K\n' "$line"; done <<< "$cur"
     printf '\033[J'
     prev="$cur"

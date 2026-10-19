@@ -1,31 +1,29 @@
 #!/usr/bin/env bash
-# Read-only progress view of one round: one line per agent.
+# Read-only progress view of one round: one line per agent. No log files are read or needed.
 #   status.sh <NN> <agent> [agent...]
-# Columns: status, ticked items, commits ahead of main, uncommitted files, last log line.
+# Columns: status (from the state file), ticked items, commits ahead of main, uncommitted files, idle time.
 # A state file counts only when its header names this round (a file inherited from an earlier round shows STALE).
 
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 WT="$ROOT/.worktrees"
-LOGS="$WT/logs"
 
 [ $# -ge 2 ] || { echo "usage: status.sh <NN> <agent> [agent...]" >&2; exit 2; }
 round="$1"; shift
 round_id="R$round"
 round_lower="r$round"
 
-printf '%-9s %-12s %-8s %-7s %-7s %-9s %s\n' AGENT STATUS TICKED AHEAD DIRTY IDLE "LAST LOG LINE"
+printf '%-9s %-12s %-8s %-7s %-7s %s\n' AGENT STATUS TICKED AHEAD DIRTY IDLE
 
-# Seconds since the newest file in the worktree changed. Works for any agent that writes to its worktree,
-# including one that runs inside a chat session and never prints to a log. Skips dependencies and git internals.
-idle_seconds() {
-  local dir="$1" newest now
+# Coarse age of the newest file in the worktree: now, 5m, 2h, 3d. Works for any agent that writes to its worktree,
+# including a chat subagent. Skips dependencies and git internals.
+idle_label() {
+  local dir="$1" newest now age
   newest="$(find "$dir" \( -name node_modules -o -name .git \) -prune -o -type f -printf '%T@\n' 2>/dev/null | sort -n | tail -n 1)"
   [ -n "$newest" ] || { echo "-"; return; }
   now="$(date +%s)"
-  # Coarse label, so the line changes only when a minute, hour or day passes, not on every refresh.
-  local age=$(( now - ${newest%.*} ))
+  age=$(( now - ${newest%.*} ))
   if [ "$age" -lt 60 ]; then echo "now"
   elif [ "$age" -lt 3600 ]; then echo "$(( age / 60 ))m"
   elif [ "$age" -lt 86400 ]; then echo "$(( age / 3600 ))h"
@@ -55,10 +53,5 @@ for agent in "$@"; do
 
   ahead="$(git -C "$dir" rev-list --count "main..HEAD" 2>/dev/null || echo '?')"
   dirty="$(git -C "$dir" status --short | wc -l | tr -d ' ')"
-  last=""
-  logfile="$LOGS/$round_lower-$agent.log"
-  [ -f "$logfile" ] && last="$(tr -d '' < "$logfile" | grep -v '^[[:space:]]*$' | tail -n 1 | cut -c1-70 || true)"
-
-  idle="$(idle_seconds "$dir")"
-  printf '%-9s %-12s %-8s %-7s %-7s %-9s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$idle" "$last"
+  printf '%-9s %-12s %-8s %-7s %-7s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$(idle_label "$dir")"
 done
