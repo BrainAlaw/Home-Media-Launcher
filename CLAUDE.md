@@ -45,3 +45,9 @@ Do your own prompt file (`agents/rounds/R<NN>/claude.md`) in your own worktree l
 - Run the app after every merge: a duplicated global `const` between two renderer scripts once turned the whole home screen black while all tests passed.
 - On the Windows dev machine `in-process-gpu` renders a grey fullscreen window; the default is software compositing (`src/main/gpu-flags.js`). Verify with a real screen capture, not `capturePage`.
 - Subagents you spawn inside Claude Code count as your own budget: prefer delegating to the external tools through prompt files.
+
+## 5. Every feature reaches the admin panel
+
+- A new user-facing setting goes into `backend/settings-descriptor.js` in the same commit. If it must stay out of the panel, it goes into `INTERNAL_PATHS` with a reason. `test/settings-descriptor.test.js` fails otherwise.
+- A new action (for example restart a service, clear a cache) is exposed through the admin API in the same round, or it is not finished.
+- When you review a round, check this first: a feature that works on the TV but cannot be changed from the panel is a finding.
