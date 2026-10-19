@@ -53,6 +53,8 @@ Free tools run weaker models with small context windows and strict usage limits.
 | **M** (medium) | `codex` (several per round, each independent) | one subsystem per task, up to about 6 files and 500 lines, 3-6 items | goal, interfaces to keep, files to read, acceptance criteria |
 | **L** (large) | `claude` | cross-cutting work, integration, merging, real-display verification, anything ambiguous | as needed |
 
+**Allocation rule.** Before a round starts, the coordinator splits the work into independent tasks and gives each one to an agent that fits its tier and is free. Parallel work is the default: an idle tool is not left unused while a task waits. A task waits only when it depends on another task's output or needs a file another agent owns. If every suitable tool is busy or at its usage limit, the task waits; as a last resort the one-line prompt goes to Freebuff for a manual paste (`agents/kit/scripts/status.sh` shows the prompt when a limit is hit).
+
 If a Tier S agent finds the task bigger than described, it must not improvise: it stops, sets `Status: BLOCKED` and explains under "Requests for the coordinator".
 
 ### 3.2 Files and folders
