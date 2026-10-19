@@ -2,6 +2,13 @@
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
 
+## Round status (19 October 2026, admin panel)
+
+- **R04 merged** (`9cd0ee9`): admin server on the LAN (`settings.admin`, default bind RFC 1918 only), pairing card on the TV, pairing and session API. Real machine: 9 of 9 on `192.168.0.196:8787`.
+- **R05 merged** (`ae4584c`): settings panel at `/admin/` generated from `backend/settings-descriptor.js` (codex), static serving with security headers (`static.js`), `GET /api/settings-description`, `PUT /api/config` merges `settings` into the stored config (secrets echoed as `<set>` keep their value; `rows`, `websites`, `menu` survive). 621 tests pass.
+- **Not verified yet (R05):** the panel in the TV's Chromium and on a phone, a toggle changed from the panel and seen on the TV, and `desktopCapturer` of that change. Needs a person at the TV. Details in `agents/state/CURRENT_STATE_claude.md`.
+- **R06 started** (status, diagnostics, actions and object editors, combined with the former R07): worktrees `hml-r06-{codex,claude,copilot,freebuff,opencode,cursor}`, prompts in `agents/rounds/R06/`. Free tools (copilot, freebuff, opencode, cursor) have small Tier S tasks. Plan: `agents/rounds/R06/PLAN.md`. R08 scope: `header`, `categories`, `theme`, `background`, `wallpaperSources` editors.
+
 ## Round status (19 October 2026)
 
 - **R03 merged into `main`:** remote everywhere (Home returns and keeps the app in the background; long Back closes; short Back steps back in history) for Gaming websites and Home Theatre browser apps; background apps with limit (`settings.backgroundApps.max`, default 3, oldest closed first, resume on launch); fullscreen loading card (logo, name, smooth bar, fade in and out) on top of the launch cover. Details in `backend/REMOTE-APPS.md`.
