@@ -85,7 +85,7 @@
 /* Unavailable providers stay readable: dimmed but above AA, with the reason spelled out in the subtitle. */
 #system-panel .vpn-row[data-state="unavailable"] { opacity: .78; }
 #system-panel .vpn-row[data-state="on"] .menu-symbol { color: var(--success, #5ee08a); }
-#system-panel .vpn-row[data-state="on"][data-focused="true"] .menu-symbol { color: #fff; }
+#system-panel .qs-row[data-state="on"][data-focused="true"] .menu-symbol { color: #fff; }
 #system-panel .vpn-row .check { opacity: 0; }
 #system-panel .vpn-row[data-state="on"] .check { opacity: 1; }
 

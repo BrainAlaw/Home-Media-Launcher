@@ -6,7 +6,7 @@ Agent: claude  ·  Tool: Claude Code (subagent of the coordinator chat)  ·  Bra
 ## Tasks
 - [x] 1. Ethernet card (`#network-card`) becomes `.qs-info`: no tabindex, no button role, layout only
 - [x] 2. Tailscale, Surfshark, switch and action rows get `.qs-row`; one focus rule in menu.css and styles.css; VPN focus rules removed
-- [ ] 3. status.css keeps only layout for `.qs-info` and `.qs-row`; focus rules removed from card styles
+- [x] 3. status.css keeps only layout for `.qs-info` and `.qs-row`; focus rules removed from card styles
 - [ ] 4. `npm run check` passes; state file set to DONE or PARTIAL
 
 ## Done
