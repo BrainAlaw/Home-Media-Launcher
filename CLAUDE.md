@@ -45,6 +45,7 @@ Do your own prompt file (`agents/rounds/R<NN>/claude.md`) in your own worktree l
 - Run the app after every merge: a duplicated global `const` between two renderer scripts once turned the whole home screen black while all tests passed.
 - On the Windows dev machine `in-process-gpu` renders a grey fullscreen window; the default is software compositing (`src/main/gpu-flags.js`). Verify with a real screen capture, not `capturePage`.
 - Claude as a worker (round R07 onward) runs as a **subagent of this chat**, never as `claude -p`: headless runs were refused every shell command in this environment. The subagent gets its task text and worktree path. Its budget counts against this session, so keep its task small and its reports short. The coordinator reads its result from the state file and the commits; no log lines.
+- Codex needs the main repository's `.git` folder as a writable root for every run (`-c 'sandbox_workspace_write.writable_roots=[...]'`). Without it the worktree cannot commit: `index.lock` is outside the sandbox. The exact command is in `agent-kit/CLI.md`.
 
 ## 5. Every feature reaches the admin panel
 
