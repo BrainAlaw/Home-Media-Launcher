@@ -11,7 +11,8 @@
     soloist: 'Soloist', network: 'Network', weather: 'Weather'
   };
   const STATUS_STATE_TEXT = { ok: 'OK', unknown: 'Unknown', error: 'Error' };
-  const PAGES = [['settings', 'Settings'], ['status', 'Status'], ['log', 'Log']];
+  const PAGES = [['settings', 'Settings'], ['status', 'Status'], ['log', 'Log'], ['actions', 'Actions']];
+  const CONFIRMATION_LABEL_PREFIX = 'Confirm: ';
   let descriptor = null;
   let originalSettings = null;
   let workingSettings = null;
@@ -19,6 +20,7 @@
   let activePage = 'settings';
   let statusTimer = null;
   let statusRequest = null;
+  const pendingConfirmations = new Map(); // action name -> { token, expiresAt } from GET /api/actions/confirm/<name>
 
   async function readJson(response) {
     let body;
@@ -413,6 +415,79 @@
     void loadLog();
   }
 
+  function showActionResult(result, message, kind = '') {
+    result.textContent = message;
+    result.className = `action-result${kind ? ` action-result-${kind}` : ''}`;
+    result.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  }
+
+  /** Destructive actions take two presses: the first fetches a single-use token, the second sends it back. */
+  async function runAction(action, button, result) {
+    button.disabled = true;
+    try {
+      const body = {};
+      if (action.destructive) {
+        const pending = pendingConfirmations.get(action.name);
+        if (!pending || Date.now() >= pending.expiresAt) {
+          pendingConfirmations.set(action.name, await readJson(await fetch(`/api/actions/confirm/${encodeURIComponent(action.name)}`, {
+            headers: { Accept: 'application/json' }
+          })));
+          showActionResult(result, 'Press the button again to confirm. The confirmation expires after 60 seconds.');
+          return;
+        }
+        pendingConfirmations.delete(action.name);
+        body.confirm = pending.token;
+      }
+      const response = await readJson(await fetch(`/api/actions/${encodeURIComponent(action.name)}`, {
+        method: 'POST', headers: requestHeaders, body: JSON.stringify(body)
+      }));
+      showActionResult(result, response.message || 'Done.', 'ok');
+    } catch (failure) {
+      showActionResult(result, failure.message, 'error');
+    } finally {
+      button.textContent = pendingConfirmations.has(action.name) ? `${CONFIRMATION_LABEL_PREFIX}${action.label}` : action.label;
+      button.disabled = false;
+    }
+  }
+
+  function renderActionsPage() {
+    app.replaceChildren();
+    const card = document.createElement('section');
+    card.className = 'card';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Actions';
+    const list = document.createElement('ul');
+    list.className = 'action-list';
+    const result = document.createElement('p');
+    result.className = 'action-result';
+    result.setAttribute('role', 'status');
+    const actions = Array.isArray(descriptor?.ACTIONS) ? descriptor.ACTIONS : [];
+    if (!actions.length) {
+      const empty = document.createElement('p');
+      empty.className = 'empty-group';
+      empty.textContent = 'No actions are available.';
+      card.append(heading, empty);
+      app.append(card);
+      return;
+    }
+    for (const action of actions) {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `action-button${action.destructive ? ' action-button-destructive' : ''}`;
+      button.dataset.action = action.name;
+      button.textContent = action.label;
+      button.addEventListener('click', () => { void runAction(action, button, result); });
+      const help = document.createElement('p');
+      help.className = 'field-help';
+      help.textContent = action.help || '';
+      item.append(button, help);
+      list.append(item);
+    }
+    card.append(heading, list, result);
+    app.append(card);
+  }
+
   function selectPage(page) {
     activePage = page;
     for (const button of pageNav.querySelectorAll('button[data-page]')) {
@@ -420,6 +495,7 @@
     }
     if (page === 'status') renderStatusPage();
     else if (page === 'log') renderLogPage();
+    else if (page === 'actions') renderActionsPage();
     else renderSettings();
     syncStatusPolling();
   }

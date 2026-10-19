@@ -55,6 +55,12 @@ Choose **Allow** for **private networks**. Without it other devices cannot reach
 - `GET /api/diagnostics`: login needed. A JSON file (`Content-Disposition: attachment; filename="hml-diagnostics.json"`) with the
   status, the last 500 log lines, the settings with secrets masked, and the names of the secrets with a set/unset flag only.
   Every secret value is replaced with `<redacted>` in the output.
+- `GET /api/actions/confirm/<name>`: login needed, destructive actions only (other names 404). Returns `{ token, expiresAt }`.
+  The token is single-use and valid 60 seconds; a new request for the same name replaces the earlier token.
+- `POST /api/actions/<name>`: login and the `X-HML-Request` header. Unknown name 404. A destructive action needs
+  `{ "confirm": "<token>" }`: missing token 428, wrong, used or expired token 403. The handler then runs; a name without a
+  registered handler answers 503, a failing handler 500 with a generic message. Success: `{ ok: true, message }`.
+  The handlers come from `createAdminRoutes({ actions })` (`backend/actions.js` names them).
 
 ## Panel files (`/admin/`)
 
