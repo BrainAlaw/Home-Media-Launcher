@@ -50,7 +50,9 @@ for agent in "$@"; do
 
   ahead="$(git -C "$dir" rev-list --count "main..HEAD" 2>/dev/null || echo '?')"
   dirty="$(git -C "$dir" status --short | wc -l | tr -d ' ')"
-  last="$(tr -d '\r' < "$LOGS/$round_lower-$agent.log" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -n 1 | cut -c1-70 || true)"
+  last=""
+  logfile="$LOGS/$round_lower-$agent.log"
+  [ -f "$logfile" ] && last="$(tr -d '' < "$logfile" | grep -v '^[[:space:]]*$' | tail -n 1 | cut -c1-70 || true)"
 
   idle="$(idle_seconds "$dir")"
   printf '%-9s %-12s %-8s %-7s %-7s %-9s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$idle" "$last"
