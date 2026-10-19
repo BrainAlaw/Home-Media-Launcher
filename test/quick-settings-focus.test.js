@@ -16,13 +16,33 @@ function readRendererFile(file) {
   return fs.readFileSync(path.join(__dirname, '..', 'src', 'renderer', file), 'utf8');
 }
 
+function splitSelectors(selectorList) {
+  const selectors = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let index = 0; index < selectorList.length; index += 1) {
+    if (selectorList[index] === '(' || selectorList[index] === '[') {
+      depth += 1;
+    } else if (selectorList[index] === ')' || selectorList[index] === ']') {
+      depth -= 1;
+    } else if (selectorList[index] === ',' && depth === 0) {
+      selectors.push(selectorList.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+
+  selectors.push(selectorList.slice(start).trim());
+  return selectors;
+}
+
 function findFocusSelectors(source) {
   const rules = [];
   const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
   const rulePattern = /(?:^|[{}])([^{}]+)\{([^{}]*)\}/g;
 
   for (const match of css.matchAll(rulePattern)) {
-    for (const selector of match[1].split(',')) {
+    for (const selector of splitSelectors(match[1])) {
       const trimmedSelector = selector.trim();
       if (/:focus(?:-visible|-within)?\b/.test(trimmedSelector)) {
         rules.push({
@@ -51,12 +71,12 @@ test('quick-settings focus selectors follow the shared row contract', () => {
 
   assert.ok(
     sharedRowRules.length > 0,
-    'No focus selector mentions .qs-row in the Quick settings renderer files'
+    'menu.css: expected a focus selector mentioning .qs-row'
   );
   assert.equal(
     canonicalRules.length,
     1,
-    'Expected exactly one focus selector `.qs-row:is(:focus, :focus-visible)`'
+    'menu.css: expected exactly one focus selector `.qs-row:is(:focus, :focus-visible)`'
   );
 
   for (const { file, selector, declarations } of sharedRowRules) {
