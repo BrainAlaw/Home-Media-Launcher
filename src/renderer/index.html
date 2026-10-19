@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="home-layout.css">
   <link rel="stylesheet" href="launch-transition.css">
   <link rel="stylesheet" href="launch-loading.css">
+  <link rel="stylesheet" href="admin-pairing.css">
   <link rel="stylesheet" href="appearance.css">
 <link rel="stylesheet" href="settings-apps.css">
 <link rel="stylesheet" href="perf.css">
@@ -238,6 +239,7 @@
           <label class="toggle-row warning-toggle"><span>Allow a self-signed certificate</span><input id="allow-self-signed" type="checkbox"></label>
           <label>Moonlight executable<span class="field-with-button"><input id="moonlight-path" type="text" data-osk placeholder="moonlight"><button id="browse-moonlight" type="button">Browse</button></span></label>
           <button id="refresh-remote" type="button">Refresh server list</button>
+          <button id="admin-pair" type="button">Show admin panel pairing code</button>
         </section>
         <section class="settings-page" data-page="websites">
           <div class="applications-header"><div><h3>Websites</h3><p class="section-description">Open selected websites in an isolated fullscreen TV window. Select the pencil on an icon to change it; the category decides which home row a site appears in.</p></div><button id="add-website" type="button">+ Website</button></div>
@@ -301,6 +303,7 @@
   <script src="soloist-status.js"></script>
   <script src="launch-transition.js"></script>
   <script src="launch-loading.js"></script>
+  <script src="admin-pairing.js"></script>
   <script src="media-controls.js"></script>
   <script src="media-widget.js"></script>
   <script src="keyboard-layout.js"></script>

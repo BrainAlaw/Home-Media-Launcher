@@ -1,0 +1,49 @@
+/* Pairing card for the admin panel (see admin-pairing.js). Informational: it takes no focus. */
+.admin-pairing {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9200;
+  width: min(72vw, 880px);
+  padding: 48px 56px;
+  border-radius: 28px;
+  background: #0b0d12;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.7);
+  color: var(--hig-label, #f2f4f8);
+  text-align: center;
+  pointer-events: none;
+}
+.admin-pairing[hidden] { display: none; }
+.admin-pairing-title {
+  margin: 0 0 12px;
+  font-size: 34px;
+  font-weight: 600;
+}
+.admin-pairing-code {
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 96px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+.admin-pairing-url {
+  margin: 20px 0 8px;
+  font-size: 30px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  word-break: break-all;
+}
+.admin-pairing-hint {
+  margin: 0 0 24px;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.admin-pairing-countdown {
+  margin: 0;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+}
