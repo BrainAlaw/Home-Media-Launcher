@@ -23,7 +23,8 @@ function extractFunction(source, name) {
 
 test('wheel mapping turns a vertical wheel into horizontal track scrolling', () => {
   const source = readRendererFile('app.js');
-  const context = vm.createContext({});
+  const context = vm.createContext({ window: {} });
+  vm.runInContext(readRendererFile('mouse-mode-model.js'), context);
   vm.runInContext(extractFunction(source, 'homeWheelToHorizontal'), context);
   const map = context.homeWheelToHorizontal;
 

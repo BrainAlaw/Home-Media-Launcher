@@ -836,9 +836,9 @@ homeElement.addEventListener('click', (event) => {
   handleAction('confirm');
 });
 
-/** Vertical wheel scrolls a horizontal tile track (same mapping as MouseModeModel.wheelToHorizontal). */
-function homeWheelToHorizontal({ deltaX, deltaY }) {
-  return deltaX || deltaY;
+
+function homeWheelToHorizontal(event) {
+  return window.MouseModeModel.wheelToHorizontal(event);
 }
 
 // Over a tile track the wheel scrolls it sideways; at either end the page keeps its native vertical scroll.
