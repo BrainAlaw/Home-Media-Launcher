@@ -7,7 +7,14 @@ Resume point for the next session. Everything below is verified against the repo
 - **R04 merged** (`9cd0ee9`): admin server on the LAN (`settings.admin`, default bind RFC 1918 only), pairing card on the TV, pairing and session API. Real machine: 9 of 9 on `192.168.0.196:8787`.
 - **R05 merged** (`ae4584c`): settings panel at `/admin/` generated from `backend/settings-descriptor.js` (codex), static serving with security headers (`static.js`), `GET /api/settings-description`, `PUT /api/config` merges `settings` into the stored config (secrets echoed as `<set>` keep their value; `rows`, `websites`, `menu` survive). 621 tests pass.
 - **Not verified yet (R05):** the panel in the TV's Chromium and on a phone, a toggle changed from the panel and seen on the TV, and `desktopCapturer` of that change. Needs a person at the TV. Details in `agents/state/CURRENT_STATE_claude.md`.
-- **R06 started** (status, diagnostics, actions and object editors, combined with the former R07): worktrees `hml-r06-{codex,claude,copilot,freebuff,opencode,cursor}`, prompts in `agents/rounds/R06/`. Free tools (copilot, freebuff, opencode, cursor) have small Tier S tasks. Plan: `agents/rounds/R06/PLAN.md`. R08 scope: `header`, `categories`, `theme`, `background`, `wallpaperSources` editors.
+- **R06 closed with open items** (status, diagnostics, actions, object editors; plan `agents/rounds/R06/PLAN.md`). `npm run check` on `main`: 645 tests, 0 fail.
+  - **Merged:** `codex` (log ring, redaction, status and diagnostics builders, tests), `copilot` (object field model `object-fields.js`), `opencode` (panel security test), `cursor` (panel CSS polish), `claude` (partial: `backend/actions.js` registry, action list tests).
+  - **Not merged, still open (carry to R07):**
+    - `freebuff`: `IN_PROGRESS`, nothing ticked. `backend/confirmation.js` and its test exist but are **uncommitted** in `D:\Github Repos\hml-r06-freebuff` (8 of 8 tests pass there). The coordinator did not commit them for the agent.
+    - `claude` (`PARTIAL`, worktree `D:\Github Repos\hml-r06-claude` kept): tasks 2 to 8 not started. Still to do: confirmation route, status / log / diagnostics / action routes, `index.js` wiring, status / log / actions / object-editor panel pages, real-machine checks, and the focus-frame side task (not measured yet).
+  - **Requests to resolve:** `copilot` mirrors `DEVICE_NAME_MAX` and `BINARY_PATH_MAX` from `backend/soloist/settings.js` (export them and import). `codex` asks `index.js` to wire the log ring, `buildStatus` and `buildDiagnostics`.
+  - **Old worktrees** `hml-r06-codex/copilot/opencode/cursor` removed, their branches deleted after merge.
+  - R08 scope: `header`, `categories`, `theme`, `background`, `wallpaperSources` editors.
 
 ## Round status (19 October 2026)
 
