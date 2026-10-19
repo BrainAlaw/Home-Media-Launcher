@@ -65,7 +65,9 @@ agents/
   STATE_TEMPLATE.md             template for the state file
 ```
 
-Worktrees live next to the repository: `../hml-<agent>` on branch `r<NN>/<agent>` (for example `../hml-codex` on `r03/codex`). The coordinator creates them when a round starts; the path is stated at the top of every prompt file.
+Worktrees live inside the repository, in `.worktrees/hml-<agent>`, on branch `r<NN>/<agent>` (for example `.worktrees/hml-codex` on `r07/codex`). The folder `.worktrees/` is git-ignored, so the worktrees never reach GitHub. The coordinator creates them when a round starts; the path is stated at the top of every prompt file.
+- Why inside: one place for all round files, nothing next to the repo. `npm test` (`node --test`) does not pick up tests from `.worktrees/` (checked: 621 tests with and without a worktree there).
+- Rounds R01 to R06 use the older sibling folders `../hml-<agent>` and keep them until they are merged and removed. Do not move a live worktree in the middle of a round.
 
 ### 3.3 What every agent must do
 

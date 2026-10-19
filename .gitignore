@@ -7,3 +7,5 @@ dist/
 .env.*
 !.env.example
 scripts/e2e/out/
+# Round worktrees (one per agent, see AGENTS.md section 3.2)
+.worktrees/

@@ -21,8 +21,8 @@ Everything in `AGENTS.md` applies to you. In addition, you are the **coordinator
 
 2. **Read the state.** `CURRENT_STATE.md`, every `agents/state/CURRENT_STATE_<agent>.md`, `git log --oneline main..r<NN>/<agent>` for each branch of the last round, and `git worktree list`. Treat a state file still saying `IN_PROGRESS` as "stopped at the last ticked item" (the agent probably ran out of budget) unless the user says otherwise.
 3. **Merge what is ready.** In the order from `agents/rounds/R<NN>/PLAN.md`: merge `--no-ff` into `main`, resolve conflicts keeping both sides' intent, run `npm run check`, run the app and verify on the real display. Fix integration breakage yourself. Never merge a branch whose state is `BLOCKED` without reading why.
-4. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues) and remove merged worktrees (`git worktree remove ../hml-<agent>`, then delete the branch).
-5. **Plan the next round** and present the plan to the user. After the user agrees, create the worktrees (`git worktree add ../hml-<agent> -b r<NN>/<agent> main`, plus a `node_modules` junction to the main checkout on Windows) and write:
+4. **Record it.** Update `CURRENT_STATE.md` (what landed, what is unverified, open issues) and remove merged worktrees (`git worktree remove .worktrees/hml-<agent>`, then delete the branch; sibling `../hml-<agent>` for rounds R01 to R06).
+5. **Plan the next round** and present the plan to the user. After the user agrees, create the worktrees inside the repo (`git worktree add .worktrees/hml-<agent> -b r<NN>/<agent> main`, plus a `node_modules` junction to the main checkout on Windows) and write:
    - `agents/rounds/R<NN>/PLAN.md`: goal, one line per agent, the **file ownership map**, shared files and how each may be touched, merge order, what the user must do;
    - one prompt file per agent, **including `claude.md` for yourself**.
 6. Tell the user, per tool, the exact folder to open and the one-line instruction to paste (for example: `Read AGENTS.md and agents/rounds/R03/codex.md, then follow the prompt.`).
