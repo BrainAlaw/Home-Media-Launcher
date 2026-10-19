@@ -205,9 +205,12 @@ if (typeof module === 'object' && module.exports) {
       return { text: networkLine({ detail, ping: lastPing, speed }), opacity: 1 };
     }
     const model = window.SpeedCardModel;
-    const view = model.cardView(speed, now);
+    // The model takes one object; the finish time is the main process `doneAt` stamp.
+    const view = model.cardView({ speed, finishedAt: speed?.doneAt, now });
     if (view === 'ip') return { text: networkLine({ detail, ping: lastPing }), opacity: 1 };
-    return { text: resultLine(speed), opacity: view === 'fading' ? model.fadeOpacity(speed, now) : 1 };
+    // fadeOpacity takes the elapsed time since the fade started, not since the test finished.
+    const fadeElapsed = Number.isFinite(speed?.doneAt) ? now - speed.doneAt - model.RESULT_HOLD_MS : 0;
+    return { text: resultLine(speed), opacity: view === 'fading' ? model.fadeOpacity(view, fadeElapsed) : 1 };
   }
 
   /** Schedules the next repaint at the hold and fade boundaries of a finished test; no timer otherwise. */
