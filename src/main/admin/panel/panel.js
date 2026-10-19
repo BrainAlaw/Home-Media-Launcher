@@ -3,11 +3,22 @@
 (function () {
   const app = document.getElementById('app');
   const logoutButton = document.getElementById('logout-button');
+  const pageNav = document.getElementById('page-nav');
   const requestHeaders = { 'X-HML-Request': '1', 'Content-Type': 'application/json' };
+  const STATUS_INTERVAL_MS = 5000;
+  const STATUS_LABELS = {
+    version: 'Launcher', uptime: 'Uptime', admin: 'Admin panel', host: 'Vibepollo host',
+    soloist: 'Soloist', network: 'Network', weather: 'Weather'
+  };
+  const STATUS_STATE_TEXT = { ok: 'OK', unknown: 'Unknown', error: 'Error' };
+  const PAGES = [['settings', 'Settings'], ['status', 'Status'], ['log', 'Log']];
   let descriptor = null;
   let originalSettings = null;
   let workingSettings = null;
   let activeGroup = null;
+  let activePage = 'settings';
+  let statusTimer = null;
+  let statusRequest = null;
 
   async function readJson(response) {
     let body;
@@ -41,6 +52,10 @@
   }
 
   function showPairForm(message = '') {
+    pageNav.hidden = true;
+    pageNav.replaceChildren();
+    activePage = 'settings';
+    syncStatusPolling();
     app.replaceChildren();
     const card = document.createElement('section');
     card.className = 'card auth-card';
@@ -280,6 +295,155 @@
     selectGroup(activeGroup && descriptor.GROUPS[activeGroup] ? activeGroup : groups[0][0]);
   }
 
+  function describeDetail(detail) {
+    if (detail === undefined || detail === null || detail === '') return '';
+    if (typeof detail === 'string') return detail;
+    const text = JSON.stringify(detail);
+    return text.length > 200 ? `${text.slice(0, 197)}...` : text;
+  }
+
+  function renderStatusGrid(report) {
+    const grid = document.createElement('div');
+    grid.className = 'status-grid';
+    for (const [key, entry] of Object.entries(report)) {
+      const state = Object.hasOwn(STATUS_STATE_TEXT, entry.state) ? entry.state : 'unknown';
+      const item = document.createElement('section');
+      item.className = `status-item status-state-${state}`;
+      const label = document.createElement('h3');
+      label.className = 'status-item-label';
+      label.textContent = STATUS_LABELS[key] || key;
+      const value = document.createElement('p');
+      value.className = 'status-item-value';
+      const detail = describeDetail(entry.detail);
+      value.textContent = detail ? `${STATUS_STATE_TEXT[state]}: ${detail}` : STATUS_STATE_TEXT[state];
+      item.append(label, value);
+      grid.append(item);
+    }
+    return grid;
+  }
+
+  async function refreshStatus() {
+    if (statusRequest) return statusRequest;
+    const message = document.getElementById('status-message');
+    const body = document.getElementById('status-body');
+    if (!message || !body) return null;
+    statusRequest = (async () => {
+      try {
+        const report = await readJson(await fetch('/api/status', { headers: { Accept: 'application/json' } }));
+        body.replaceChildren(renderStatusGrid(report));
+        setStatus(message, `Updated ${new Date().toLocaleTimeString('en-GB')}.`);
+      } catch (failure) {
+        setStatus(message, failure.message, 'error');
+      } finally {
+        statusRequest = null;
+      }
+    })();
+    return statusRequest;
+  }
+
+  /** Status refreshes every few seconds, only while its page is open and the browser tab is visible. */
+  function syncStatusPolling() {
+    const shouldPoll = activePage === 'status' && document.visibilityState !== 'hidden';
+    if (shouldPoll && statusTimer === null) {
+      statusTimer = window.setInterval(() => { void refreshStatus(); }, STATUS_INTERVAL_MS);
+      void refreshStatus();
+    } else if (!shouldPoll && statusTimer !== null) {
+      window.clearInterval(statusTimer);
+      statusTimer = null;
+    }
+  }
+
+  function renderStatusPage() {
+    app.replaceChildren();
+    const card = document.createElement('section');
+    card.className = 'card';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Status';
+    const message = document.createElement('p');
+    message.id = 'status-message';
+    message.className = 'status';
+    message.setAttribute('role', 'status');
+    message.textContent = 'Checking…';
+    const body = document.createElement('div');
+    body.id = 'status-body';
+    card.append(heading, message, body);
+    app.append(card);
+  }
+
+  async function loadLog() {
+    const message = document.getElementById('log-message');
+    const view = document.getElementById('log-view');
+    if (!message || !view) return;
+    try {
+      const { entries } = await readJson(await fetch('/api/log?tail=200', { headers: { Accept: 'application/json' } }));
+      view.replaceChildren();
+      for (const entry of entries) {
+        const line = document.createElement('span');
+        line.className = 'log-line';
+        line.textContent = `${entry.time} ${String(entry.level).toUpperCase()} ${entry.message}`;
+        view.append(line, document.createTextNode('\n'));
+      }
+      setStatus(message, `${entries.length} line${entries.length === 1 ? '' : 's'} shown.`);
+    } catch (failure) {
+      setStatus(message, failure.message, 'error');
+    }
+  }
+
+  function renderLogPage() {
+    app.replaceChildren();
+    const card = document.createElement('section');
+    card.className = 'card';
+    const heading = document.createElement('h2');
+    heading.textContent = 'Log';
+    const refresh = document.createElement('button');
+    refresh.type = 'button';
+    refresh.className = 'button';
+    refresh.textContent = 'Refresh log';
+    refresh.addEventListener('click', () => { void loadLog(); });
+    const message = document.createElement('p');
+    message.id = 'log-message';
+    message.className = 'status';
+    message.setAttribute('role', 'status');
+    const view = document.createElement('pre');
+    view.id = 'log-view';
+    view.className = 'log-view';
+    view.setAttribute('aria-label', 'Recent launcher log');
+    card.append(heading, refresh, message, view);
+    app.append(card);
+    void loadLog();
+  }
+
+  function selectPage(page) {
+    activePage = page;
+    for (const button of pageNav.querySelectorAll('button[data-page]')) {
+      button.setAttribute('aria-current', button.dataset.page === page ? 'page' : 'false');
+    }
+    if (page === 'status') renderStatusPage();
+    else if (page === 'log') renderLogPage();
+    else renderSettings();
+    syncStatusPolling();
+  }
+
+  function showPageNav() {
+    pageNav.replaceChildren();
+    for (const [key, name] of PAGES) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'button button-quiet';
+      button.dataset.page = key;
+      button.textContent = name;
+      button.addEventListener('click', () => selectPage(key));
+      pageNav.append(button);
+    }
+    const diagnostics = document.createElement('a');
+    diagnostics.className = 'diagnostics-link';
+    diagnostics.href = '/api/diagnostics';
+    diagnostics.download = 'hml-diagnostics.json';
+    diagnostics.textContent = 'Download diagnostics';
+    pageNav.append(diagnostics);
+    pageNav.hidden = false;
+  }
+
   async function loadAuthenticatedPanel() {
     descriptor = await resolveDescriptor(descriptor);
     if (!descriptor) throw new Error('The settings description is unavailable.');
@@ -287,7 +451,8 @@
     originalSettings = config.settings && typeof config.settings === 'object' ? config.settings : {};
     workingSettings = JSON.parse(JSON.stringify(originalSettings));
     logoutButton.hidden = false;
-    renderSettings();
+    showPageNav();
+    selectPage(activePage);
   }
 
   async function start(passedDescriptor) {
