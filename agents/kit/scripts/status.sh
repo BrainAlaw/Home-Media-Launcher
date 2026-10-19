@@ -67,12 +67,22 @@ for agent in "$@"; do
       limited+=("$agent")
     fi ;;
   esac
+  # The prompt file exists only while the limit is active; the next limit opens it again.
+  [ "$limit" = "-" ] && rm -f "$WT/manual/$round_lower-$agent.md"
   printf '%-9s %-12s %-8s %-7s %-7s %-6s %s\n' "$agent" "$status" "$ticked" "$ahead" "$dirty" "$limit" "$(idle_label "$dir")"
 done
 
-# For every agent that hit a limit: the manual fallback, pasted by hand into a CLI window (last resort only).
+# For every agent that hit a limit: the manual fallback, pasted by hand into a Freebuff window (last resort only).
 # One line per agent, starting with MANUAL, so watch-round.sh can collect them below the table.
+# The prompt is also written to .worktrees/manual/ (git-ignored) and opened once in VS Code, the first time the limit is seen.
+MANUAL_DIR="$WT/manual"
 for agent in ${limited[@]+"${limited[@]}"}; do
-  printf 'MANUAL %s %s/%s-%s :: Read AGENTS.md and agents/rounds/%s/%s.md, then follow the prompt.\n' \
-    "$agent" "$WT" "$round_lower" "$agent" "$round_id" "$agent"
+  prompt="Read AGENTS.md and agents/rounds/$round_id/$agent.md, then follow the prompt."
+  file="$MANUAL_DIR/$round_lower-$agent.md"
+  if [ ! -f "$file" ]; then
+    mkdir -p "$MANUAL_DIR"
+    printf '%s\n\nWorktree to open in Freebuff: %s/%s-%s\n' "$prompt" "$WT" "$round_lower" "$agent" > "$file"
+    if command -v code >/dev/null 2>&1; then code -r "$file" >/dev/null 2>&1 || true; fi
+  fi
+  printf 'MANUAL %s %s/%s-%s :: %s\n' "$agent" "$WT" "$round_lower" "$agent" "$prompt"
 done
