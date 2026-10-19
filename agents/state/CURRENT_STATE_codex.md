@@ -5,7 +5,7 @@ Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:0
 
 ## Tasks
 - [x] 1. Update remote keymap actions and validation tests — `npm test` passed (558 passed, 1 skipped).
-- [ ] 2. Implement Gaming web Home, Back history, and long Back close.
+- [x] 2. Implement Gaming web Home, Back history, and long Back close — `node --check src/main/web-preload.js` passed.
 - [ ] 3. Build configurable TV control script and tests.
 - [ ] 4. Add TV browser home/close bindings and hide/show methods with tests.
 - [ ] 5. Update remote app documentation.
@@ -13,6 +13,7 @@ Agent: codex · Tool: Codex · Branch: r03/codex · Last update: 2026-10-19 12:0
 
 ## Done
 - Updated map schema to `close`/`home`, added `longKeys`, and rejected the removed `exit` action.
+- Gaming preload sends Home IPC, navigates history on short Back, and closes through shared `triggerExit` on long Back.
 
 ## Verified
 - Read repository instructions, R03 plan contract, and assigned source/tests.

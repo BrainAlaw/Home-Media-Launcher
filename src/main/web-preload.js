@@ -6,7 +6,7 @@ const { ipcRenderer } = require('electron');
 // Sandboxed preloads cannot require local modules, so this file is intentionally self-contained.
 //
 // Exit gestures (all hold-to-close so ordinary taps stay with the web app):
-//   Guide/Home button (gamepad button 16), Escape, or B held for HOLD_TO_EXIT_MS, or Select + Start together.
+//   Guide button (gamepad button 16), Escape, or B held for HOLD_TO_EXIT_MS, or Select + Start together.
 // A glass "Close <name>?" panel with a progress ring appears while a hold is in progress.
 
 const INTRO_VISIBLE_MS = 4000;
@@ -32,12 +32,14 @@ function readRemoteKeymap() {
     const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
     const map = JSON.parse(new TextDecoder().decode(bytes));
     if (!map || typeof map !== 'object' || !map.buttons || typeof map.buttons !== 'object'
-      || !map.keys || typeof map.keys !== 'object' || !Array.isArray(map.exitButtons)
+      || !map.keys || typeof map.keys !== 'object' || !map.longKeys || typeof map.longKeys !== 'object' || !Array.isArray(map.exitButtons)
       || !Number.isFinite(map.axisDeadzone) || map.axisDeadzone <= 0 || map.axisDeadzone > 1
       || !Number.isInteger(map.longPressMs) || map.longPressMs < 100 || map.longPressMs > 5000) return null;
-    const actions = new Set(['up', 'down', 'left', 'right', 'confirm', 'back', 'exit']);
+    const actions = new Set(['up', 'down', 'left', 'right', 'confirm', 'back', 'close', 'home']);
     if (Object.entries(map.buttons).some(([index, action]) => !/^(0|[1-9]\d*)$/.test(index) || Number(index) > 31 || !actions.has(action))) return null;
     if (Object.entries(map.keys).some(([key, action]) => !key.trim() || !actions.has(action))) return null;
+    if (Object.entries(map.longKeys).some(([key, action]) => !key.trim() || !actions.has(action))) return null;
+    if (map.exitButtons.some((index) => map.buttons[String(index)] !== 'close')) return null;
     if (map.exitButtons.some((index) => !Number.isInteger(index) || index < 0 || index > 31)) return null;
     return map;
   } catch {
@@ -177,34 +179,53 @@ function createOverlay() {
     closing = true;
     requestClose();
   }
+  function remoteKeyId(event) { return `${event.code}|${event.key}`; }
+  function suppressRemoteKey(event) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }
+  function goBack() {
+    if (history.length > 1) history.back();
+  }
   window.addEventListener('keydown', (event) => {
     if (event[SYNTHETIC_EVENT_FLAG]) return;
     if (event.key === 'Escape' && !event.repeat) escapeHeld = true;
+    if (event.repeat) return;
     const action = actionForKey(event, REMOTE_KEYMAP);
-    if (!action || event.repeat) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    if (action === 'exit') {
-      const id = `${event.code}|${event.key}`;
-      if (pressedRemoteKeys.has(id)) return;
-      const timer = setTimeout(triggerExit, REMOTE_KEYMAP.longPressMs);
-      pressedRemoteKeys.set(id, timer);
-    } else {
-      dispatchAction(action);
+    const longAction = REMOTE_KEYMAP?.longKeys?.[event.key] || REMOTE_KEYMAP?.longKeys?.[event.code];
+    if (action === 'home') {
+      suppressRemoteKey(event);
+      ipcRenderer.send('web-app:home');
+      return;
     }
+    if (longAction) {
+      suppressRemoteKey(event);
+      const id = remoteKeyId(event);
+      if (pressedRemoteKeys.has(id)) return;
+      const press = { fired: false, timer: setTimeout(() => {
+        press.fired = true;
+        if (longAction === 'close') triggerExit();
+      }, REMOTE_KEYMAP.longPressMs) };
+      pressedRemoteKeys.set(id, press);
+      return;
+    }
+    if (!action) return;
+    suppressRemoteKey(event);
+    if (action === 'back') goBack();
+    else dispatchAction(action);
   }, { capture: true });
   window.addEventListener('keyup', (event) => {
     if (event[SYNTHETIC_EVENT_FLAG]) return;
     if (event.key === 'Escape') escapeHeld = false;
     const action = actionForKey(event, REMOTE_KEYMAP);
-    if (!action) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    if (action === 'exit') {
-      const id = `${event.code}|${event.key}`;
-      const timer = pressedRemoteKeys.get(id);
-      if (timer) clearTimeout(timer);
-      pressedRemoteKeys.delete(id);
+    const longAction = REMOTE_KEYMAP?.longKeys?.[event.key] || REMOTE_KEYMAP?.longKeys?.[event.code];
+    if (!action && !longAction) return;
+    suppressRemoteKey(event);
+    if (longAction) {
+      const press = pressedRemoteKeys.get(remoteKeyId(event));
+      if (press) clearTimeout(press.timer);
+      pressedRemoteKeys.delete(remoteKeyId(event));
+      if (!press?.fired && action === 'back') goBack();
     }
   }, { capture: true });
   window.addEventListener('blur', () => {
@@ -226,7 +247,7 @@ function createOverlay() {
       const actions = new Set();
       for (const pad of pads) {
         for (const [index, action] of Object.entries(REMOTE_KEYMAP.buttons)) {
-          if (action !== 'exit' && pad.buttons[Number(index)]?.pressed) actions.add(action);
+          if (action !== 'close' && action !== 'home' && pad.buttons[Number(index)]?.pressed) actions.add(action);
         }
         const x = pad.axes?.[0] || 0;
         const y = pad.axes?.[1] || 0;
