@@ -97,30 +97,57 @@
 #system-panel #host-card[data-tone="off"] { --chip-dot: var(--danger, #ff6b6b); }
 #system-panel #host-card[data-tone="warn"] { --chip-dot: var(--warn, #f1c66f); }
 
-/* Network row: link detail + live ping, and a 20 s speed test on press. The dot follows the ping tone. */
-/* Information-only rows (.qs-info): layout and typography only, no focus or hover state. */
+/* Network card (.qs-info): grey like the MK-PC status card, link detail + ping or the speed result, and one Speed test button.
+   Information-only: the card itself has no focus or hover state; only .qs-speed-button is focusable. */
 #system-panel .qs-info {
   position: relative;
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
+  gap: 4px 14px;
   box-sizing: border-box;
   width: 100%;
   min-height: 64px;
   margin: 0;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 0;
   border-radius: 18px;
   overflow: hidden;
   color: var(--menu-text);
-  background: transparent;
+  background: rgb(255 255 255 / .09);
   font-family: var(--menu-font);
 }
 #system-panel .qs-info .menu-symbol { position: relative; display: grid; place-items: center; width: 38px; height: 38px; color: inherit; background: transparent; }
+#system-panel .qs-info .menu-copy { min-width: 0; pointer-events: none; }
+#system-panel .qs-info .menu-copy strong { font: 600 18px / 1.2 var(--menu-font); letter-spacing: -.015em; }
+#system-panel .qs-info .menu-copy small { color: var(--menu-text-muted); font: 450 14px / 1.3 var(--menu-font); overflow-wrap: anywhere; }
 #system-panel .qs-info .chip-dot { right: -2px; bottom: -2px; --chip-ring: var(--panel-base, #171b26); }
 #system-panel .qs-info .status-glyph { width: 26px; height: 26px; }
-#system-panel .net-action { padding: 8px 12px; border-radius: 999px; background: rgb(255 255 255 / .12); color: inherit; font: 600 14px / 1 var(--menu-font); white-space: nowrap; }
-#system-panel .net-progress { position: absolute; left: 14px; right: 14px; bottom: 6px; height: 3px; border-radius: 2px; background: rgb(255 255 255 / .14); opacity: 0; pointer-events: none; }
-#system-panel .network-action[data-speed="running"] .net-progress { opacity: 1; }
+
+/* Speed test button: the card's only focus target. Its own highlight (accent fill, white ring, slight lift), not the .qs-row rule. */
+#system-panel .qs-speed-button,
+#system-panel .qs-speed-button:hover {
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / .12);
+  color: inherit;
+  font: 600 14px / 1 var(--menu-font);
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: none;
+  transform: none;
+  transition: transform 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out;
+}
+#system-panel .qs-speed-button:is(:focus, :focus-visible) {
+  background: color-mix(in srgb, var(--accent) 36%, var(--panel-base, #171b26));
+  color: #fff;
+  box-shadow: inset 0 0 0 2px var(--panel-ring, #fff);
+  transform: scale(1.06);
+  outline: none;
+}
+#system-panel .qs-info[data-speed="running"] .net-progress { opacity: 1; }
 #system-panel .net-progress i { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--ok, #5ee08a); transform: scaleX(0); transform-origin: left center; transition: transform 260ms linear; }
