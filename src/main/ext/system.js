@@ -2,7 +2,7 @@
 
 const { readNetwork } = require('../../../backend/network-status');
 const { createGatedPoller, gate } = require('../activity');
-const { measurePing, runSpeedTest } = require('../../../backend/net-probe');
+const { measurePing, runSpeedTest, runUploadTest, SPEED_DURATION_MS, UPLOAD_DURATION_MS } = require('../../../backend/net-probe');
 
 const POLL_INTERVAL_MS = 10_000;
 const PING_INTERVAL_MS = 10_000;
@@ -47,18 +47,49 @@ function publishSpeed(ctx, snapshot) {
   ctx.emit('speedtest', snapshot);
 }
 
-/** Starts the 20 s download test unless one is already running; progress arrives as `speedtest` events. */
+/**
+ * One speed cycle: download for SPEED_DURATION_MS, then upload for UPLOAD_DURATION_MS. Every snapshot carries `phase`
+ * ('download' | 'upload' | 'done') and the Mbps measured so far (`downMbps`, `upMbps`). Abort between or inside phases stops it.
+ */
+async function runSpeedCycle(ctx, signal) {
+  const download = await runSpeedTest({
+    signal,
+    onProgress: (progress) => publishSpeed(ctx, { ...progress, phase: 'download', downMbps: 0, upMbps: 0 })
+  });
+  const downMbps = download.averageMbps ?? 0;
+  if (download.state !== 'done' || signal.aborted) return { ...download, phase: 'download', downMbps, upMbps: 0 };
+  const upload = await runUploadTest({
+    durationMs: UPLOAD_DURATION_MS,
+    signal,
+    onProgress: (progress) => publishSpeed(ctx, { ...progress, phase: 'upload', downMbps, upMbps: 0 })
+  });
+  return { ...upload, phase: 'done', downMbps, upMbps: upload.averageMbps ?? 0 };
+}
+
+/** Starts the download + upload cycle unless one is already running; progress arrives as `speedtest` events. */
 function startSpeedTest(ctx) {
   if (speedAbort) return speedState;
   speedAbort = new AbortController();
   const controller = speedAbort;
-  publishSpeed(ctx, { state: 'running', elapsedMs: 0, durationMs: 20_000, mbps: 0, averageMbps: 0 });
-  void runSpeedTest({ signal: controller.signal, onProgress: (progress) => publishSpeed(ctx, progress) })
-    .catch((error) => ({ state: 'error', elapsedMs: 0, durationMs: 20_000, mbps: 0, averageMbps: 0, error: String(error?.message || error) }))
+  publishSpeed(ctx, {
+    state: 'running', phase: 'download', elapsedMs: 0, durationMs: SPEED_DURATION_MS, mbps: 0, averageMbps: 0, downMbps: 0, upMbps: 0
+  });
+  void runSpeedCycle(ctx, controller.signal)
+    .catch((error) => ({
+      state: 'error', phase: 'download', elapsedMs: 0, durationMs: SPEED_DURATION_MS, mbps: 0, averageMbps: 0, downMbps: 0, upMbps: 0,
+      error: String(error?.message || error)
+    }))
     .then(async (result) => {
       if (speedAbort === controller) speedAbort = null;
-      const ping = result.state === 'done' ? await measurePing() : null;
-      publishSpeed(ctx, { ...result, ...(ping !== null ? { pingMs: ping } : {}) });
+      const done = result.state === 'done';
+      const ping = done ? await measurePing() : null;
+      // `doneAt` lets the renderer hold the result for a fixed time and fade it out, even after a reload.
+      publishSpeed(ctx, {
+        ...result,
+        phase: done ? 'done' : result.phase,
+        ...(done ? { doneAt: Date.now() } : {}),
+        ...(ping !== null ? { pingMs: ping } : {})
+      });
     });
   return speedState;
 }
