@@ -1,30 +1,28 @@
-# CURRENT_STATE_copilot (round R08)
+# CURRENT_STATE_copilot (round R09)
 
-Status: DONE
-Agent: copilot · Tool: GitHub Copilot CLI · Branch: r08/copilot · Last update: 2026-10-19 11:35
+Status: IN_PROGRESS
+Agent: copilot · Tool: GitHub Copilot · Branch: r09/copilot · Last update: 2026-10-19 11:43
 
 ## Tasks
-- [x] 1. Create the static quick-settings focus contract test.
-- [x] 2. Run `npm test`, commit the test, and record its result.
-- [x] 3. Set final status and complete this report.
+- [ ] 1. Create `src/renderer/speed-card-model.js` as an IIFE with the interface above and keep it under 80 lines.
+- [ ] 2. Create `test/speed-card-model.test.js` covering each branch and timing boundary with `node:test`.
+- [ ] 3. Run `npm run check` and confirm the suite passes.
+- [ ] 4. Set `Status: DONE`, fill every section, and commit.
 
 ## Done
-- Added the static focus contract test — commits `15c9073`, `a5d8db6`.
-- Recorded progress and verification — commit `7c17da9`.
+- Initial state file created for R09.
 
 ## Verified
-- `npm test`: 668 passed, 1 failed; the sole failure is the expected missing `.qs-row` focus rule before `r08/claude` is merged.
-- `node --test test/quick-settings-focus.test.js`: same expected pre-merge failure.
+- Not yet checked.
 
 ## Unverified / not done
-- The focus contract test passes only after `r08/claude` is merged.
+- The speed-card model and timing tests are not yet implemented or validated.
 
 ## Files changed
-- `test/quick-settings-focus.test.js` — checks shared row focus declarations and prohibits informational/VPN focus selectors.
-- `agents/state/CURRENT_STATE_copilot.md` — records R08 work and verification.
+- `agents/state/CURRENT_STATE_copilot.md` — created round R09 state for the Copilot worktree.
 
 ## Requests for the coordinator
 - None.
 
 ## Resume notes
-None.
+Stopped after the state-file creation. Next steps: add the pure view model, write the node:test file, then run `npm run check` before marking the round done.
