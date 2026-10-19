@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { OBJECT_FIELDS, validateFieldValue } = require('../src/main/admin/object-fields');
+const { DEVICE_NAME_MAX } = require('../backend/soloist/settings');
 
 function validValue(spec) {
   switch (spec.type) {
@@ -26,6 +27,11 @@ test('every object field list is non-empty and has unique keys', () => {
     assert.ok(fields.length > 0);
     assert.equal(new Set(fields.map((spec) => spec.key)).size, fields.length);
   }
+});
+
+test('Soloist device name field uses the validator limit', () => {
+  const deviceName = OBJECT_FIELDS.soloist.find((spec) => spec.key === 'deviceName');
+  assert.equal(deviceName.maxLength, DEVICE_NAME_MAX);
 });
 
 test('every declared field accepts a valid value', () => {
