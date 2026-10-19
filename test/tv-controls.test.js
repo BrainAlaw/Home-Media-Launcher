@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const vm = require('node:vm');
-const { nearestFocusable, TV_CONTROL_SCRIPT } = require('../backend/tv-controls');
+const { nearestFocusable, buildTvControlScript, TV_CONTROL_SCRIPT } = require('../backend/tv-controls');
 const { isLoopbackDevToolsUrl } = require('../src/main/tv-browser');
 
 const rect = (left, top, width = 40, height = 40) => ({ left, top, width, height });
@@ -28,7 +28,26 @@ test('TV browser accepts only the browser debugging socket on its loopback port'
 
 test('TV page controls are valid standalone JavaScript for browser document injection', () => {
   assert.doesNotThrow(() => new vm.Script(TV_CONTROL_SCRIPT));
-  assert.match(TV_CONTROL_SCRIPT, /hmlTvClose/);
+  assert.match(TV_CONTROL_SCRIPT, /hmlClose/);
   assert.match(TV_CONTROL_SCRIPT, /nearestFocusable/);
   assert.match(TV_CONTROL_SCRIPT, /ArrowRight/);
 });
+
+
+test('TV control script inlines configured remote key names and hold timing', () => {
+  const keymap = {
+    keys: { RemoteNorth: 'home', RemoteWest: 'back' },
+    longKeys: { RemoteWest: 'close' },
+    longPressMs: 700,
+    buttons: { 16: 'close' },
+    exitButtons: [16],
+    axisDeadzone: 0.6
+  };
+  const script = buildTvControlScript(keymap);
+  assert.match(script, /"RemoteNorth":"home"/);
+  assert.match(script, /"RemoteWest":"close"/);
+  assert.match(script, /"longPressMs":700/);
+  assert.doesNotMatch(script, /__HML_KEYMAP_JSON__/);
+  assert.doesNotThrow(() => new vm.Script(script));
+});
+

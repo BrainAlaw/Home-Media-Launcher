@@ -1,5 +1,7 @@
 'use strict';
 
+const { loadRemoteKeymap } = require('../src/main/remote-keymap');
+
 /** Select the nearest candidate in a direction, weighting cross-axis drift more heavily than distance. */
 function nearestFocusable(origin, candidates, direction) {
   const vectors = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -24,14 +26,17 @@ function nearestFocusable(origin, candidates, direction) {
   return bestIndex;
 }
 
-const TV_CONTROL_SCRIPT = `(() => {
+function buildTvControlScript(keymap) {
+  const keymapJson = JSON.stringify(keymap);
+  return `(() => {
   if (window !== window.top || window.__hmlTvControls) return;
   window.__hmlTvControls = true;
   const nearestFocusable = (${nearestFocusable.toString()});
   const SELECTOR = 'a[href],button,input,select,textarea,summary,[role="button"],[role="link"],[role="tab"],[role="menuitem"],[role="option"],[role="checkbox"],[role="switch"],[role="slider"],[tabindex]:not([tabindex="-1"]),[data-hml-tv-focus]';
   const DIRECTIONS = ['up', 'down', 'left', 'right'];
   const BUTTON = { A: 0, B: 1, GUIDE: 16, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
-  const HOLD_MS = 750;
+  const KEYMAP = __HML_KEYMAP_JSON__;
+  const HOLD_MS = KEYMAP.longPressMs;
   const REPEAT_MS = 260;
   let focused = null;
   let visibleUntil = 0;
@@ -59,7 +64,7 @@ const TV_CONTROL_SCRIPT = `(() => {
 
   function attach() { if (!document.documentElement) { document.addEventListener('readystatechange', attach, { once: true }); return; } if (!host.isConnected) document.documentElement.append(host); }
   function reveal(duration = 2600) { attach(); host.classList.add('on'); visibleUntil = performance.now() + duration; }
-  function requestClose(reason) { try { window.hmlTvClose(reason); } catch {} }
+  function requestClose(reason) { try { window.hmlClose(reason); } catch {} }
   function isTextEntry(element) { return Boolean(element && (element.isContentEditable || element.matches('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]),textarea,select'))); }
   function candidates() {
     return [...document.querySelectorAll(SELECTOR)].filter((element) => {
@@ -108,18 +113,27 @@ const TV_CONTROL_SCRIPT = `(() => {
   }
   function action(name) {
     if (DIRECTIONS.includes(name)) move(name);
-    else if (name === 'select') select();
+    else if (name === 'confirm') select();
     else if (name === 'back') {
       reveal(1600);
       if (history.length > 2) history.back();
     }
   }
-  const keyActions = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'select', NumpadEnter: 'select', Select: 'select', BrowserBack: 'back', GoBack: 'back' };
+  const keyActions = KEYMAP.keys;
+  const longKeyActions = KEYMAP.longKeys;
   window.addEventListener('keydown', (event) => {
-    const name = keyActions[event.key];
-    if (!name || isTextEntry(event.target)) return;
-    if (name === 'back') { event.preventDefault(); event.stopImmediatePropagation(); window.__hmlTvBackHeld = true; if (!backHeldAt) { backHeldAt = performance.now(); reveal(HOLD_MS + 200); } return; }
-    if (name === 'select' && focused && event.target !== document.body && event.target !== document.documentElement) return;
+    const name = keyActions[event.key] || keyActions[event.code];
+    const longAction = longKeyActions[event.key] || longKeyActions[event.code];
+    if (!name) return;
+    if (name === 'home') {
+      if (event.repeat) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      try { window.hmlHome(); } catch {}
+      return;
+    }
+    if (name === 'back' && longAction === 'close') { event.preventDefault(); event.stopImmediatePropagation(); window.__hmlTvBackHeld = true; if (!backHeldAt) { backHeldAt = performance.now(); reveal(HOLD_MS + 200); } return; }
+    if (isTextEntry(event.target)) return;
+    if (name === 'confirm' && focused && event.target !== document.body && event.target !== document.documentElement) return;
     if (action(name)) { event.preventDefault(); event.stopImmediatePropagation(); }
   }, true);
   window.addEventListener('pointermove', (event) => { if (event.clientX > innerWidth - 180 && event.clientY < 100) reveal(); }, { passive: true, capture: true });
@@ -178,7 +192,10 @@ const TV_CONTROL_SCRIPT = `(() => {
   window.addEventListener('keydown', (event) => { if (event.key === 'Escape') { window.__hmlTvEscapeHeld = true; if (!closeStarted) { closeStarted = performance.now(); reveal(HOLD_MS + 200); } } }, true);
   window.addEventListener('keyup', (event) => { if (event.key === 'Escape') window.__hmlTvEscapeHeld = false; }, true);
   window.addEventListener('keyup', (event) => {
-    if (!['BrowserBack', 'GoBack'].includes(event.key)) return;
+    const name = keyActions[event.key] || keyActions[event.code];
+    const longAction = longKeyActions[event.key] || longKeyActions[event.code];
+    if (name === 'home') { event.preventDefault(); event.stopImmediatePropagation(); return; }
+    if (name !== 'back' || longAction !== 'close') return;
     if (!backHeldAt) return;
     const heldFor = backHeldAt ? performance.now() - backHeldAt : 0;
     backHeldAt = 0; window.__hmlTvBackHeld = false;
@@ -186,6 +203,10 @@ const TV_CONTROL_SCRIPT = `(() => {
   }, true);
   window.addEventListener('blur', () => { window.__hmlTvEscapeHeld = false; window.__hmlTvBackHeld = false; backHeldAt = 0; closeStarted = 0; confirm.classList.remove('visible'); });
   requestAnimationFrame(poll);
-})();`;
+})();`.replace('__HML_KEYMAP_JSON__', keymapJson);
+}
 
-module.exports = { nearestFocusable, TV_CONTROL_SCRIPT };
+const defaultKeymap = loadRemoteKeymap();
+const TV_CONTROL_SCRIPT = buildTvControlScript(defaultKeymap);
+
+module.exports = { nearestFocusable, buildTvControlScript, TV_CONTROL_SCRIPT };
