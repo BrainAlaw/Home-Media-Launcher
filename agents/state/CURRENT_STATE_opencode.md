@@ -1,34 +1,34 @@
-# CURRENT_STATE_opencode (round R01)
+# CURRENT_STATE_opencode (round R06)
 
 Status: DONE            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
-Agent: opencode  ·  Tool: OpenCode  ·  Branch: r01/opencode  ·  Last update: 2026-10-18
+Agent: opencode  ·  Tool: OpenCode  ·  Branch: r06/opencode  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. Remove `createHeroBinding` from `src/renderer/launch-session.js` (function, section comment, export entry) and its two tests plus the import entry in `test/launch-session.test.js`; run `npm test`.
-- [x] 2. Remove the two dead `motionScheduler` lines from `src/renderer/app.js` (confirm no other use of `motionScheduler` in `src/` first); run `npm run check`.
-- [x] 3. Finish this state file: `Status: DONE`, number of lines removed.
+- [x] 1. Create `test/admin-panel-security.test.js` skeleton: read panel folder, keep `.html`/`.js`/`.css`, fail if none.
+- [x] 2. Add HTML rules (no inline script, no inline handlers, no `style=`, no `javascript:`, no external refs, relative refs must exist) and wire into the test.
+- [x] 3. Add JS/CSS rules (no `eval(`, `new Function(`, `innerHTML`, `insertAdjacentHTML`, `document.write`, `url(http`, `@import` URL, `expression(`; comments stripped before matching).
+- [x] 4. Run `node --test test/admin-panel-security.test.js` and `npm test`; report violations (PARTIAL) or pass.
+- [x] 5. Set `Status: DONE` (or `PARTIAL`) and commit.
 
 ## Done
-- Task 1 (remove `createHeroBinding` + 2 tests + dead typedefs `GridCoordinate`/`GridRow` + unused `rows` fixture) — commit `8eebb05`
-- Task 2 (remove unused `motionScheduler` instance + its change listener from `app.js`; `reducedMotionQuery` kept, still used by `launchTransition` on the next line) — commit `806915e`
+- Items 1-4 (new test file, 107 lines) — commit `a8a493b`
+- State file finalised — this commit
 
 ## Verified
-- `npm test` after task 1: 550 pass, 0 fail (was 552; the two removed tests were the hero ones).
-- `npm run check` after task 2: syntax checks + 550 tests, 0 fail.
-- Grep of `src/` for `motionScheduler`: only the two deleted lines used it; the `CompositorScheduler` class stays — `navigation-menu.js` still uses it, so `menu-motion.js` is untouched.
-- Grep of `src/` for `createHeroBinding` / hero references: none remain in `launch-session.js` or elsewhere.
+- `node --test test/admin-panel-security.test.js`: 1 pass.
+- `npm test`: 621 pass, 0 fail, 1 skipped (unrelated `spotify.test.js` flake on first run — missing temp `media-state.json`; passed on rerun, not touched by this change).
+- Negative check (throwaway script, not committed): all regex rules fired on a synthetic violation string.
+- Current panel sources (`index.html`, `panel.js`, `panel.css`, `form-model.js`) have no violations.
 
 ## Unverified / not done
-- No visual/runtime run (Tier S, Electron not launched). Behaviour must be unchanged: both removed sites were provably unused (`createHeroBinding` had no callers in `src/`; `motionScheduler` had no reads after construction).
+- No runtime/Electron run (Tier S, not allowed); the test only reads files so this is not needed.
 
 ## Files changed
-- `src/renderer/launch-session.js` — removed `createHeroBinding`, its section comment, the export entry and the `GridCoordinate`/`GridRow` typedefs used only by it (49 lines).
-- `test/launch-session.test.js` — removed the two hero tests, the `rows` fixture and `createHeroBinding` from the import (24 lines).
-- `src/renderer/app.js` — removed the two dead `motionScheduler` lines (2 lines).
+- `test/admin-panel-security.test.js` — new; enforces the panel CSP rules over every `.html`/`.js`/`.css` file in `src/main/admin/panel/`.
 - `agents/state/CURRENT_STATE_opencode.md` — this state file.
 
 ## Requests for the coordinator
-- None.
+- The `spotify.test.js` flake (missing temp `media-state.json` on a cold run) may be worth a look in a future round; unrelated to R06.
 
 ## Resume notes
 n/a (DONE)
