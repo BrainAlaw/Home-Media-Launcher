@@ -36,6 +36,12 @@ const { parseLocationQuery, pickPlace } = require('../../backend/weather');
 const { registerExtensions } = require('./ext-registry');
 const remoteExt = require('./ext/remote');
 const sessionExt = require('./ext/session');
+const { createLogRing } = require('./admin/log');
+const { buildStatus } = require('./admin/status');
+const { readNetwork } = require('../../backend/network-status');
+const { ensureManager: ensureSoloistManager } = require('./ext/soloist');
+const vpnExt = require('./ext/vpn');
+const mediaExt = require('./ext/media');
 
 loadEnv();
 
@@ -104,6 +110,10 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // GPU raster/zero-copy/VAAPI, set before ready. HML_GPU_SAFE=1 opts out. Timer throttling is deliberately left on so a hidden launcher idles.
 require('./gpu-flags').applyGpuSwitches(app);
 
+// Recent console output for the admin panel's Log page and diagnostics. Wrapped once at start-up; records are redacted on write.
+const logRing = createLogRing();
+logRing.wrap(console);
+
 // Admin panel (LAN, settings.admin). Started or restarted whenever its settings change; never listens when disabled.
 let adminServer = null;
 let adminKey = '';
@@ -116,6 +126,58 @@ function adminSettings() {
 function adminUrl() {
   const status = adminServer?.status();
   return status?.running ? `http://${status.bindAddress}:${status.port}` : '';
+}
+
+/** Probe sources for /api/status. Each one is optional; buildStatus reports a missing source as unknown. */
+function statusSources() {
+  return {
+    secretValues: [secrets.vibepolloApiKey, secrets.weatherApiKey, secrets.steamGridDbKey, secrets.soloistApiKey].filter(Boolean),
+    timeouts: { network: 4000 },
+    version: () => ({ state: 'ok', detail: app.getVersion() }),
+    uptime: () => ({ state: 'ok', detail: `${Math.round(process.uptime())} s` }),
+    admin: () => {
+      const running = adminServer?.status().running === true;
+      return { state: running ? 'ok' : 'unknown', detail: running ? adminUrl() : 'Admin panel is off' };
+    },
+    host: () => {
+      const host = model?.remoteStatus;
+      if (!host) return { state: 'unknown', detail: 'Not checked yet' };
+      if (host.isVibepolloOffline) return { state: 'error', detail: host.message || `${host.host} offline` };
+      return { state: 'ok', detail: host.host || 'Online' };
+    },
+    soloist: () => {
+      const status = ensureSoloistManager({ userData: app.getPath('userData') }).status();
+      const state = status.state === 'error' ? 'error' : status.state === 'connected' ? 'ok' : 'unknown';
+      return { state, detail: { state: status.state, deviceName: status.deviceName || '', connected: status.connected === true, message: status.message || '' } };
+    },
+    vpn: async () => {
+      const entries = await vpnExt.statusSummary();
+      const connected = entries.filter((entry) => entry.connected).map((entry) => entry.label);
+      return { state: connected.length ? 'ok' : 'unknown', detail: connected.length ? `Connected: ${connected.join(', ')}` : 'Not connected' };
+    },
+    spotify: async () => {
+      const status = await mediaExt.statusSummary();
+      return status ? { state: 'ok', detail: status } : { state: 'unknown', detail: 'Not running' };
+    },
+    network: async () => ({ state: 'ok', detail: await readNetwork() }),
+    weather: async () => {
+      const { readFile } = require('node:fs/promises');
+      const cache = await readFile(path.join(app.getPath('userData'), 'weather-cache.json'), 'utf8')
+        .then((text) => JSON.parse(text)).catch(() => ({}));
+      const count = Object.keys(cache && typeof cache === 'object' ? cache : {}).length;
+      return { state: count ? 'ok' : 'unknown', detail: count ? `${count} cached location(s)` : 'No cached weather yet' };
+    }
+  };
+}
+
+function adminSecretNames() {
+  return {
+    VP_API: secrets.vibepolloApiKey,
+    WEATHER_API: secrets.weatherApiKey,
+    STEAMDB_API: secrets.steamGridDbKey,
+    SPOTIFY_CLIENT_ID: secrets.spotifyClientId,
+    SPOTIFY_SOLOIST_API: secrets.soloistApiKey
+  };
 }
 
 async function applyAdminServer() {
@@ -131,7 +193,10 @@ async function applyAdminServer() {
     validate: validateConfig,
     onPairCode: (info) => sendToWindow('launcher:admin-pair-code', { ...info, url: adminUrl() }),
     onPaired: () => sendToWindow('launcher:admin-paired', {}),
-    log: (entry) => console.warn('Admin panel:', entry?.event || 'event', entry?.code || '')
+    log: (entry) => console.warn('Admin panel:', entry?.event || 'event', entry?.code || ''),
+    getStatus: () => buildStatus(statusSources()),
+    getLogTail: (count) => logRing.tail(count),
+    getSecretNames: adminSecretNames
   });
   try {
     await adminServer.start();

@@ -46,8 +46,21 @@ Choose **Allow** for **private networks**. Without it other devices cannot reach
 - `POST /api/logout`, `GET /api/session`.
 - `GET /api/config`: login needed, secrets masked.
 - `PUT /api/config`: login and the `X-HML-Request` header; validated, then saved.
-- `GET /api/settings-description`: no login needed. Returns `{ GROUPS, SETTINGS, INTERNAL_PATHS }` from
-  `backend/settings-descriptor.js`. It holds no values, so it is safe to show before pairing.
+- `GET /api/settings-description`: no login needed. Returns `{ GROUPS, SETTINGS, INTERNAL_PATHS, ACTIONS }` from
+  `backend/settings-descriptor.js` and `backend/actions.js`. It holds no values, so it is safe to show before pairing.
+- `GET /api/status`: login needed. One probe per source (`src/main/admin/status.js`), each `{ state: ok | unknown | error, detail }`.
+  Every probe has a timeout and a missing source reports `unknown`. No token, key or SSID is returned.
+- `GET /api/log?tail=N`: login needed. Returns `{ entries: [{ time, level, message }] }`, the newest `N` lines of the
+  launcher console (`src/main/admin/log.js`, 500 lines kept, `N` clamped to 1 to 500, default 100). Messages are redacted on write.
+- `GET /api/diagnostics`: login needed. A JSON file (`Content-Disposition: attachment; filename="hml-diagnostics.json"`) with the
+  status, the last 500 log lines, the settings with secrets masked, and the names of the secrets with a set/unset flag only.
+  Every secret value is replaced with `<redacted>` in the output.
+- `GET /api/actions/confirm/<name>`: login needed, destructive actions only (other names 404). Returns `{ token, expiresAt }`.
+  The token is single-use and valid 60 seconds; a new request for the same name replaces the earlier token.
+- `POST /api/actions/<name>`: login and the `X-HML-Request` header. Unknown name 404. A destructive action needs
+  `{ "confirm": "<token>" }`: missing token 428, wrong, used or expired token 403. The handler then runs; a name without a
+  registered handler answers 503, a failing handler 500 with a generic message. Success: `{ ok: true, message }`.
+  The handlers come from `createAdminRoutes({ actions })` (`backend/actions.js` names them).
 
 ## Panel files (`/admin/`)
 

@@ -2,11 +2,29 @@
 
 const { version } = require('../../../package.json');
 const { GROUPS, SETTINGS, INTERNAL_PATHS } = require('../../../backend/settings-descriptor');
-const { ACTIONS } = require('../../../backend/actions');
+const { ACTIONS, findAction } = require('../../../backend/actions');
+const { createConfirmations } = require('../../../backend/confirmation');
 const { OBJECT_FIELDS } = require('./object-fields');
 
 const SESSION_COOKIE = 'hml_admin_session';
 const SESSION_MAX_AGE_SECONDS = 12 * 60 * 60;
+const LOG_TAIL_DEFAULT = 100;
+const DIAGNOSTICS_LOG_TAIL = 500;
+const DIAGNOSTICS_FILENAME = 'hml-diagnostics.json';
+const ACTION_CONFIRM_PREFIX = '/api/actions/confirm/';
+const ACTION_PREFIX = '/api/actions/';
+
+// Loaded lazily: diagnostics.js imports redactConfig from this module, so a top-level require would be circular.
+function buildDiagnosticsReport(input) {
+  return require('./diagnostics').buildDiagnostics(input);
+}
+
+function logTailCount(query) {
+  const raw = query?.get?.('tail');
+  if (raw === null || raw === undefined || raw === '') return LOG_TAIL_DEFAULT;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : LOG_TAIL_DEFAULT;
+}
 
 function hasSecret(value) {
   return value !== undefined && value !== null && value !== '';
@@ -59,12 +77,24 @@ function sessionCookie(token, maxAge = SESSION_MAX_AGE_SECONDS) {
   return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
 }
 
-function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion = version, onPaired = () => {} }) {
+/**
+ * @param {object} options
+ * @param {() => Promise<object>} [options.getStatus] returns the sanitised status report (status.js buildStatus).
+ * @param {(count: number) => object[]} [options.getLogTail] returns the newest log records (log.js ring.tail).
+ * @param {() => object} [options.getSecretNames] returns { NAME: value } for every secret the launcher reads; values are only used for redaction.
+ * @param {Record<string, () => (string | void | Promise<string | void>)>} [options.actions] handler per action name (backend/actions.js);
+ *   a handler may return a short message for the panel. Names without a handler answer 503.
+ */
+function createAdminRoutes({
+  getConfig, saveConfig, validate, auth, appVersion = version, onPaired = () => {},
+  getStatus = null, getLogTail = null, getSecretNames = null, actions = {}
+}) {
   if (typeof getConfig !== 'function' || typeof saveConfig !== 'function' || typeof validate !== 'function' || !auth) {
     throw new TypeError('Admin routes require config functions, validation, and authentication');
   }
+  const confirmations = createConfirmations();
 
-  async function dispatch({ method, pathname, body, address, sessionToken }) {
+  async function dispatch({ method, pathname, query, body, address, sessionToken }) {
     if (pathname === '/api/health') {
       if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
       return json(200, { ok: true, version: appVersion });
@@ -103,6 +133,67 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
       if (method !== 'POST') return json(405, { error: 'Method not allowed' }, { Allow: 'POST' });
       auth.revokeSession(sessionToken);
       return json(200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
+    }
+
+    if (pathname === '/api/status' || pathname === '/api/log' || pathname === '/api/diagnostics') {
+      if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
+      const session = auth.verifySession(sessionToken);
+      if (!session) return json(401, { error: 'Authentication required' });
+      const refreshedCookie = { 'Set-Cookie': sessionCookie(sessionToken) };
+      if (pathname === '/api/status') {
+        if (!getStatus) return json(503, { error: 'Status is not available' }, refreshedCookie);
+        return json(200, await getStatus(), refreshedCookie);
+      }
+      if (pathname === '/api/log') {
+        if (!getLogTail) return json(503, { error: 'Log is not available' }, refreshedCookie);
+        return json(200, { entries: getLogTail(logTailCount(query)) }, refreshedCookie);
+      }
+      if (!getStatus || !getLogTail || !getSecretNames) return json(503, { error: 'Diagnostics are not available' }, refreshedCookie);
+      let settings;
+      try { settings = (await getConfig())?.settings ?? {}; }
+      catch { return json(500, { error: 'Could not read configuration' }, refreshedCookie); }
+      const report = buildDiagnosticsReport({
+        status: await getStatus(),
+        logTail: getLogTail(DIAGNOSTICS_LOG_TAIL),
+        settings,
+        secretNames: getSecretNames()
+      });
+      return json(200, report, {
+        ...refreshedCookie,
+        'Content-Disposition': `attachment; filename="${DIAGNOSTICS_FILENAME}"`
+      });
+    }
+
+    if (pathname.startsWith(ACTION_CONFIRM_PREFIX)) {
+      if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
+      const session = auth.verifySession(sessionToken);
+      if (!session) return json(401, { error: 'Authentication required' });
+      const refreshedCookie = { 'Set-Cookie': sessionCookie(sessionToken) };
+      const action = findAction(pathname.slice(ACTION_CONFIRM_PREFIX.length));
+      if (!action || !action.destructive) return json(404, { error: 'Not found' }, refreshedCookie);
+      return json(200, confirmations.issue(action.name), refreshedCookie);
+    }
+
+    if (pathname.startsWith(ACTION_PREFIX)) {
+      if (method !== 'POST') return json(405, { error: 'Method not allowed' }, { Allow: 'POST' });
+      const session = auth.verifySession(sessionToken);
+      if (!session) return json(401, { error: 'Authentication required' });
+      const refreshedCookie = { 'Set-Cookie': sessionCookie(sessionToken) };
+      const action = findAction(pathname.slice(ACTION_PREFIX.length));
+      if (!action) return json(404, { error: 'Not found' }, refreshedCookie);
+      if (action.destructive) {
+        const token = isPlainObject(body) ? body.confirm : undefined;
+        if (token === undefined || token === '') return json(428, { error: 'Confirmation token required' }, refreshedCookie);
+        if (!confirmations.consume(action.name, token)) return json(403, { error: 'Confirmation token is invalid or expired' }, refreshedCookie);
+      }
+      const handler = actions[action.name];
+      if (typeof handler !== 'function') return json(503, { error: 'Action is not available' }, refreshedCookie);
+      try {
+        const message = await handler();
+        return json(200, { ok: true, message: typeof message === 'string' && message ? message : 'Done.' }, refreshedCookie);
+      } catch {
+        return json(500, { error: 'Action failed' }, refreshedCookie);
+      }
     }
 
     if (pathname === '/api/config') {

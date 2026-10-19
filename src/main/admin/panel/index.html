@@ -7,6 +7,7 @@
   <title>Home Media Launcher settings</title>
   <link rel="stylesheet" href="/panel.css">
   <script defer src="/form-model.js"></script>
+  <script defer src="/object-editor-model.js"></script>
   <script defer src="/panel.js"></script>
 </head>
 <body>
@@ -17,7 +18,8 @@
     </div>
     <button id="logout-button" class="button button-quiet" type="button" hidden>Sign out</button>
   </header>
-  <main id="app" class="app-shell" aria-live="polite">
+  <nav id="page-nav" aria-label="Panel pages" hidden></nav>
+  <main id="app" class="app-shell panel" aria-live="polite">
     <p class="status" role="status">Loading settings…</p>
   </main>
   <script id="settings-descriptor" type="application/json">{}</script>

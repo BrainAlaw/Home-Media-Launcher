@@ -1,60 +1,71 @@
-# CURRENT_STATE_claude (round R06)
+# CURRENT_STATE_claude (round R07)
 
 Status: PARTIAL            <!-- IN_PROGRESS | DONE | PARTIAL | BLOCKED | OUT_OF_BUDGET -->
-Agent: claude  ·  Tool: Claude Code  ·  Branch: r06/claude  ·  Last update: 2026-10-19
+Agent: claude  ·  Tool: Claude Code  ·  Branch: r07/claude  ·  Last update: 2026-10-19
 
 ## Tasks
-- [x] 1. `backend/actions.js` (ACTIONS, findAction), `ACTIONS` in `GET /api/settings-description`, `test/admin-actions.test.js`
-- [ ] 2. Confirmation wiring (`createConfirmations()` from `backend/confirmation.js`, freebuff) and `GET /api/actions/confirm/<name>` — blocked: freebuff branch has no commits yet
-- [ ] 3. Routes: `GET /api/status`, `GET /api/log`, `GET /api/diagnostics`, `POST /api/actions/<name>` — blocked: codex branch has no commits yet
-- [ ] 4. `src/main/index.js` wiring: log ring, status sources, the five actions — blocked by 2 and 3
-- [ ] 5. Panel pages: Status, Log, Actions, Object editors (`panel.js`, `index.html`) — blocked by 3 (status/log endpoints)
-- [ ] 6. Object editors for `soloist`, `backgroundApps`, `homeHeader`, `remote`, `vpn`, `wallpaper` — blocked: copilot branch has no commits yet
-- [ ] 7. Real-machine check: every action and editor from the panel, secret-leak search over diagnostics — needs the user at the TV
-- [ ] 8. Side task: focused tile frame corners — not started (see Unverified)
-- [ ] 9. `npm run check`, commit, final `Status:` — npm check passes for task 1 (626/626)
+- [x] 1. Status and log routes (`routes.js`, `index.js`): committed in the first pass; the server wiring is Request 1 (not run in the real app)
+- [x] 2. Diagnostics route with fixture-secret test (`test/admin-actions.test.js`): committed in the first pass; test passes
+- [x] 3. Panel pages Status, Log, Diagnostics link (`panel.js`, `index.html`): committed in the first pass; not opened on the real display
+- [x] 4. Confirmed destructive actions: commit `b4fb116` (routes, panel Actions page, tests, `backend/ADMIN.md`).
+  Handlers are NOT wired (Request 5), so every action answers 503 until `server.js` passes `actions`.
+- [x] 5. Object editors: commit `0a5fc89` (`panel.js`, `panel/object-editor-model.js`, `index.html`, `test/admin-object-editors.test.js`).
+  Browser model is an IIFE exposing `window.AdminObjectEditorModel`; tested in a vm context.
+- [ ] 6. Focus frame: PARTIAL, not measured (no real display in this session)
+- [x] 7. `npm run check` passes on this branch after tasks 4 and 5 (668 tests, 0 failures). Final commit of this file follows.
 
 ## Done
-- Action registry `backend/actions.js`: `reload-config`, `restart-soloist`, `clear-cache`, `pair-tv`, `restart-launcher` (only destructive one); frozen; `findAction` returns null for unknown names, `__proto__`, `constructor`, non-strings — commit `<see git log>`.
-- `GET /api/settings-description` now returns `ACTIONS` as well — same commit.
-- `test/admin-actions.test.js` (5 tests); `test/admin-static.test.js` description assertions extended with `ACTIONS`.
+- Task 4 commit `b4fb116`: `GET /api/actions/confirm/<name>` (destructive only, else 404), `POST /api/actions/<name>` (unknown 404,
+  destructive without `confirm` 428, consumed with `consume` else 403, no handler 503, handler error 500 `Action failed`, success `{ ok, message }`).
+  `createConfirmations()` from `backend/confirmation.js` (on `main`, merged into this branch) is used as is; no own token code.
+  Panel: Actions page, one `button.action-button[data-action]` per `ACTIONS` entry, two presses for `restart-launcher`, result in `p.action-result`
+  (`action-result-ok` / `action-result-error`). Text via `textContent` only.
+- Task 5 commit `0a5fc89`: six structured settings get forms from `OBJECT_FIELDS` (served by `/api/settings-description`): boolean checkbox,
+  text input, enum select, number input with min/max, list textarea (one value per line). Save: `PUT /api/config` with
+  `{ settings: { <object>: <full object> } }`. A 422 shows in `.object-editor-field-error` on the matching field, otherwise on the form.
+  `header`, `categories`, `theme`, `background`, `wallpaperSources` stay read-only with `.object-editor-readonly-hint` "Edit on the TV for now".
+  The browser cannot load `object-fields.js`, so the model mirrors `validateFieldValue`; the test asserts both agree on every field and 24 values.
+- Not touched: `server.js`, `index.js` (see Requests), `main`, `panel.css`, `backend/actions.js`, `backend/confirmation.js`, `object-fields.js`.
 
 ## Verified
-- `node --test test/admin-actions.test.js test/admin-static.test.js`: 11 pass, 0 fail.
-- `npm run check` in this worktree: 626 tests, 626 pass, 0 fail (second run; see Unverified for the first run).
-- Worktree `node_modules` is a junction to `D:\Github Repos\Home-Media-Launcher\node_modules` (not committed).
+- `npm run check` (in `.worktrees/r07-claude`) after commit `b4fb116` and after commit `0a5fc89`: exit 0, 668 tests, 668 pass, 0 fail
+  (the second run is the final one for this round's code).
+- `node --check` on `panel.js` and `object-editor-model.js`.
+- Tests added: `test/admin-actions.test.js` (confirm route 404/401/405, 428, 403, single use, 503, unknown 404, handler 500 generic);
+  `test/admin-object-editors.test.js` (object list, draft/build round trip, kept keys, list and number rules, client/server rule agreement,
+  `patchFor`, server message matching, class names defined in `panel.css`, no top-level globals from the model file).
 
 ## Unverified / not done
-- **First `npm run check` run failed** with one `ERR_ASSERTION` (`actual: [Object]`, `expected: null`) that I did not isolate; the
-  immediate rerun passed 626/626. Possibly a test that reads shared state through the junction. Needs a look before merge.
-- **Tasks 2-6 not started**: they import `backend/confirmation.js` (freebuff), `src/main/admin/log.js`, `redact.js`, `status.js`,
-  `diagnostics.js` (codex) and `src/main/admin/object-fields.js` (copilot). None of those branches has a commit yet
-  (`git log main..r06/<agent>` is empty for all five free-tool and codex branches). I did not write stubs for them.
-- **Task 7 (real machine)**: needs the actions and editors built first, and the user at the TV and phone.
-- **Task 8 (focus frame)**: not started and not measured. Code reading only: `.tile` radius is `--hig-radius-lg`; `.tile::before`
-  and `.tile .art` both use `border-radius: inherit` (so they match each other); `.tile::after` glow uses `--hig-radius-xl`, but it is a
-  radial gradient with `closest-side` and an opacity-only transition. The measurement with `desktopCapturer` on the real display has
-  not been done, so no fix is applied.
+- Real display and TV: the Actions page, the Status/Log pages and the object editors were NOT opened in a browser or on the TV.
+- Task 6 (focus frame): not measured. Needed on the real display: `border-radius`, `inset`, `padding`, `box-shadow` of `.tile`,
+  `.tile::before`, `.tile::after` (glow in `home.css`) and `.tile .art`, then one radius token. Default theme and one other theme, before and after.
+- Status routes: `index.js` `statusSources()` `vpn` and `spotify` entries need `statusSummary` from `src/main/ext/vpn.js` and `media.js` (Request 2).
+  Until then those two report `error`.
+- The 422 path of the object editor and the 403 path of the action (second press after 60 s) were covered by server tests only, not by a browser run.
 
-## Files changed
-- `backend/actions.js` — new: action registry.
-- `test/admin-actions.test.js` — new: 5 tests.
-- `src/main/admin/routes.js` — imports `ACTIONS`; `GET /api/settings-description` returns it.
-- `test/admin-static.test.js` — imports `ACTIONS`; description assertions include it.
-- `agents/state/CURRENT_STATE_claude.md` — this file.
+## Files changed (this round, claude)
+- `src/main/admin/routes.js`: status, log, diagnostics routes; action routes; `actions` option (default `{}`).
+- `src/main/index.js`: log ring, `statusSources()`, `adminSecretNames()`, three options passed to `createAdminServer`. No action handlers.
+- `src/main/admin/panel/panel.js`: Status, Log, Actions pages; object editors.
+- `src/main/admin/panel/index.html`: page nav, `object-editor-model.js` script tag, `<main class="panel">`.
+- `src/main/admin/panel/object-editor-model.js` (new): pure form-to-object logic.
+- `test/admin-actions.test.js`, `test/admin-object-editors.test.js` (new).
+- `backend/ADMIN.md`: status, log, diagnostics and action routes.
 
 ## Requests for the coordinator
-- Merge order matters here: the free-tool and codex branches must land before tasks 2-6 can start. Nothing in them exists yet, so the
-  coordinator should check whether those agents have been run (`git log main..r06/<agent>`).
-- Decide whether the R06 side task 8 should stay in this round or move to R08, since it needs a real-display measurement session.
-- The first `npm run check` failure above: the coordinator should confirm it is not caused by the junction setup.
+1. **`src/main/admin/server.js` (not on any ownership list).** `createAdminServer` must accept `getStatus`, `getLogTail`, `getSecretNames` and
+   `actions` and pass them to `createAdminRoutes`; `handleRequest` must pass `query: new URL(request.url, boundUrl).searchParams` to `routes.dispatch`.
+   Until this lands the status, log and diagnostics routes answer 503 and every action answers 503.
+2. **`src/main/ext/vpn.js` and `src/main/ext/media.js` (not mine).** Export a read-only `statusSummary` (already referenced by `statusSources()`),
+   so the status page can show `vpn` and `spotify`.
+3. **Action handlers (blocks real use of task 4).** In `index.js`, pass `actions: { 'reload-config', 'restart-soloist', 'clear-cache', 'pair-tv',
+   'restart-launcher' }` once `server.js` forwards them: `buildModel`, soloist `restart`, icon and artwork caches plus `weather-cache.json`
+   (never config, `.env` or tokens), `adminServer.pair()`, `app.relaunch()` then `app.exit(0)`. Left out of this round: needs Request 1 first.
+4. **Task 6 needs the TV or a real display session.** Coordinator or user to measure and fix the focus frame (see Unverified).
+5. **`.page-nav` styling.** The page nav uses `button button-quiet` and no extra class, since `.page-nav` is not in the cursor contract.
 
 ## Resume notes
-Next, once `r06/freebuff` and `r06/codex` have commits on `main` (or on their branches, merged into this one):
-1. `git merge --no-ff r06/freebuff r06/codex r06/copilot` into `r06/claude`, resolve, run `npm run check`.
-2. Task 2: `backend/confirmation.js` — `createConfirmations()` instance created once in `createAdminRoutes`; `GET /api/actions/confirm/<name>`
-   for destructive actions only.
-3. Task 3: routes `GET /api/status`, `GET /api/log?tail=N`, `GET /api/diagnostics` (attachment), `POST /api/actions/<name>` (CSRF header,
-   428 without the token for destructive ones, 404 for unknown names). Use `findAction` from `backend/actions.js`.
-4. Task 4 in `src/main/index.js`, then tasks 5-6 in `src/main/admin/panel/panel.js` and `index.html`.
-5. Task 8 with a real `desktopCapturer` capture before and after, in the same session as task 7.
+1. Request 1 and Request 3 land in `server.js` and `index.js`; then re-run `npm run check`.
+2. Task 6: on the real display, read the computed values listed above for `.tile`, `.tile::before`, `.tile::after` and `.tile .art`,
+   record them here, then fix with one radius token shared by frame, art and glow. Keep motion, scale and colour unchanged.
+3. Open the Actions, Status, Log and object-editor pages in the real panel and check each once before the round is closed.
