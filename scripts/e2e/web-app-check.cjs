@@ -125,7 +125,9 @@ async function step(label, action, check) {
   const delta = after.slice(before).map((event) => `${event.type}:${event.key}${event.trusted ? '' : ':synthetic'}`);
   const failures = [];
   if (error) failures.push(`action threw: ${error}`);
-  const verdict = check(delta, { windowOpen: Boolean(pageWindow()), launcherVisible: Boolean(launcherWindow()?.isVisible()) });
+  const windowOpen = Boolean(pageWindow());
+  const siteVisible = Boolean(pageWindow()?.isVisible());
+  const verdict = check(delta, { windowOpen, siteVisible, launcherVisible: Boolean(launcherWindow()?.isVisible()) });
   if (verdict !== true) failures.push(verdict);
   const shot = await capture(`${String(results.length + 1).padStart(2, '0')}-${label}`);
   results.push({ label, delta, failures, shot });
@@ -197,12 +199,13 @@ app.whenReady().then(async () => {
     (delta) => expectKeydowns(delta, ['ArrowRight', 'ArrowRight', 'ArrowDown']));
   await step('key-enter-tap', () => tapKey(page.webContents, 'Enter'), (delta) => expectKeydowns(delta, ['Enter']));
   await step('key-escape-tap', () => tapKey(page.webContents, 'Escape'), (delta) => expectKeydowns(delta, ['Escape']));
-  await step('home-short-keeps-window', () => holdKey(page.webContents, 'Home', 150),
-    (_delta, state) => state.windowOpen || 'short Home closed the web window');
-  await step('home-long-returns-to-launcher', () => holdKey(page.webContents, 'Home', 900), (_delta, state) => {
-    if (state.windowOpen) return 'long Home did not close the web window';
-    return state.launcherVisible || 'launcher is not visible after the web window closed';
+  // Since R03, Home (any length) returns to the launcher and keeps the app alive in the background (hidden, not closed).
+  await step('home-short-returns-to-background', () => holdKey(page.webContents, 'Home', 150), (_delta, state) => {
+    if (!state.windowOpen) return 'Home closed the web window; it should keep the app in the background';
+    if (state.siteVisible) return 'the web window is still visible after Home';
+    return state.launcherVisible || 'launcher is not visible after Home';
   });
+  // A long Home behaves the same way; it is covered by the background-apps check (background-check.cjs).
 
   const summary = writeReport();
   console.log(`WEB-APP ${summary.failed ? 'FAILED' : 'PASSED'}: ${summary.steps} steps, ${summary.failed} failed, report ${path.relative(ROOT, outDir)}`);

@@ -31,3 +31,13 @@ Gaming web key events are synthetic keyboard events dispatched to the focused pa
 Edit [`remote-keymap.json`](remote-keymap.json). It is the source of truth for gamepad button indexes, remote key names, long-press keys, the left-stick deadzone, long-press duration, and close buttons. Restart the launcher after editing; each website reads the mapping when its window or browser session opens. Allowed actions are `up`, `down`, `left`, `right`, `confirm`, `back`, `close`, and `home`. The Guide close button defaults to `[16]`.
 
 If the keymap argument is missing or invalid, Gaming websites disable key mapping but retain the built-in Guide, Escape, B, and Select + Start close gestures.
+
+## Background apps (R03)
+
+- **Home** (short or long) returns to the launcher and keeps the app running in the background. Nothing is closed.
+- **Long Back** (held for 700 ms) closes the app from anywhere. **Guide** held also closes it.
+- **Short Back** steps back through the page history. With no history it does nothing.
+- Up to `settings.backgroundApps.max` apps stay in the background (default 3, allowed 1 to 8). Opening one more closes the oldest background app.
+- Starting an app that is already in the background resumes it; no new process or window is started.
+- While an app loads, a fullscreen card shows its logo (or first letter), its name and a progress bar. The window is revealed after the page has loaded (fallback after 12 s). The card fades out when the app is visible.
+- Not yet verified on a real display: Home Theatre apps (external browser) with the background path, and long Back with a real remote. The harness cannot inject the Back key.

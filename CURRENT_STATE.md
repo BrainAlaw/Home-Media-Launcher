@@ -2,6 +2,14 @@
 
 Resume point for the next session. Everything below is verified against the repository unless marked **unverified**.
 
+## Round status (19 October 2026)
+
+- **R03 merged into `main`:** remote everywhere (Home returns and keeps the app in the background; long Back closes; short Back steps back in history) for Gaming websites and Home Theatre browser apps; background apps with limit (`settings.backgroundApps.max`, default 3, oldest closed first, resume on launch); fullscreen loading card (logo, name, smooth bar, fade in and out) on top of the launch cover. Details in `backend/REMOTE-APPS.md`.
+- **Verified on the real display (second monitor):** Gaming path (`scripts/e2e/background-check.cjs`: Home to background, four apps evict the oldest, resume, card visible during load). Stage A key path (`scripts/e2e/web-app-check.cjs`: arrows, Enter, Escape, short Home).
+- **Not verified yet:** Home Theatre path on the real display (Edge/Chrome, background and card); long Back on the real remote; the pad path (needs a real controller); the background limit has no Settings control yet (config only).
+- **Bugs found and fixed during R03:** the loading card was hidden under the black launch cover (z-index), website windows were shown before the page loaded, Back was consumed by the main process before the page saw it, a background window closing could bring the launcher back.
+- **Next:** verify Home Theatre on the real display; add the Settings control for the background limit.
+
 ## Round status (18 October 2026)
 
 - **R01 merged into `main`:** Linux HTPC kit (`scripts/linux/*`, `backend/LINUX.md`), config round-trip tests, `npm run doctor`, dead code removed (hero binding, motion scheduler), user guides in `docs/`, gamepad end-to-end harness (`scripts/e2e/gamepad-e2e.cjs`, runs on the second monitor by default, `HML_E2E_DISPLAY=primary` to use the primary one). Fixes during merge: `t.pass/t.fail` in `test/linux-scripts.test.js` (not valid in `node:test`), and an unbound `USER` under `set -u` in `setup-permissions.sh`.
