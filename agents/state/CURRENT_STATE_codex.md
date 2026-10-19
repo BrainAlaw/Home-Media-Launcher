@@ -6,7 +6,7 @@ Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:0
 ## Tasks
 - [x] 1. Implement pairing codes, lockout, and sessions — 5 focused tests and `npm run check` passed (577 passed, 1 skipped).
 - [x] 2. Implement API route table and config redaction — 5 focused tests and `npm run check` passed (582 passed, 1 skipped).
-- [ ] 3. Implement HTTP server, security controls, and endpoint tests.
+- [x] 3. Implement HTTP server, security controls, and endpoint tests — `npm run check` passed (588 passed, 1 skipped).
 - [ ] 4. Run full checks and complete handoff state.
 
 ## Done
@@ -16,6 +16,7 @@ Agent: codex · Tool: Codex · Branch: r04/codex · Last update: 2026-10-19 12:0
 ## Verified
 - `npm run check` passed after task 1: 577 passed, 0 failed, 1 skipped.
 - `npm run check` passed after task 2: 582 passed, 0 failed, 1 skipped.
+- `npm run check` passed after task 3: 588 passed, 0 failed, 1 skipped.
 
 ## Unverified / not done
 - HTTP server and end-to-end security tests remain.

@@ -22,6 +22,10 @@ function json(status, body, headers = {}) {
   return { status, body, headers };
 }
 
+function sessionCookie(token, maxAge = SESSION_MAX_AGE_SECONDS) {
+  return `${SESSION_COOKIE}=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}`;
+}
+
 function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion = version }) {
   if (typeof getConfig !== 'function' || typeof saveConfig !== 'function' || typeof validate !== 'function' || !auth) {
     throw new TypeError('Admin routes require config functions, validation, and authentication');
@@ -44,36 +48,42 @@ function createAdminRoutes({ getConfig, saveConfig, validate, auth, appVersion =
       }
       const session = auth.createSession();
       return json(200, { ok: true }, {
-        'Set-Cookie': `${SESSION_COOKIE}=${session.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${SESSION_MAX_AGE_SECONDS}`
+        'Set-Cookie': sessionCookie(session.token)
       });
     }
 
     if (pathname === '/api/session') {
       if (method !== 'GET') return json(405, { error: 'Method not allowed' }, { Allow: 'GET' });
-      return json(200, auth.sessionStatus(sessionToken));
+      const session = auth.verifySession(sessionToken);
+      return session
+        ? json(200, { authenticated: true, expiresAt: session.expiresAt }, { 'Set-Cookie': sessionCookie(sessionToken) })
+        : json(200, { authenticated: false, expiresAt: null });
     }
 
     if (pathname === '/api/logout') {
       if (method !== 'POST') return json(405, { error: 'Method not allowed' }, { Allow: 'POST' });
       auth.revokeSession(sessionToken);
-      return json(200, { ok: true }, { 'Set-Cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0` });
+      return json(200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
     }
 
     if (pathname === '/api/config') {
       if (method === 'GET') {
-        if (!auth.verifySession(sessionToken)) return json(401, { error: 'Authentication required' });
-        try { return json(200, redactConfig(await getConfig())); }
+        const session = auth.verifySession(sessionToken);
+        if (!session) return json(401, { error: 'Authentication required' });
+        try { return json(200, redactConfig(await getConfig()), { 'Set-Cookie': sessionCookie(sessionToken) }); }
         catch { return json(500, { error: 'Could not read configuration' }); }
       }
       if (method === 'PUT') {
-        if (!auth.verifySession(sessionToken)) return json(401, { error: 'Authentication required' });
+        const session = auth.verifySession(sessionToken);
+        if (!session) return json(401, { error: 'Authentication required' });
+        const refreshedCookie = { 'Set-Cookie': sessionCookie(sessionToken) };
         try { await validate(body); }
-        catch (error) { return json(422, { error: error.message || 'Configuration is invalid' }); }
+        catch (error) { return json(422, { error: error.message || 'Configuration is invalid' }, refreshedCookie); }
         try {
           await saveConfig(body);
-          return json(200, { ok: true });
+          return json(200, { ok: true }, refreshedCookie);
         } catch {
-          return json(500, { error: 'Could not save configuration' });
+          return json(500, { error: 'Could not save configuration' }, refreshedCookie);
         }
       }
       return json(405, { error: 'Method not allowed' }, { Allow: 'GET, PUT' });

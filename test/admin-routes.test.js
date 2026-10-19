@@ -71,6 +71,9 @@ test('pair returns secure cookie and config requires authenticated session', asy
   assert.match(result.headers['Set-Cookie'], /^hml_admin_session=[A-Za-z0-9_-]+; HttpOnly; SameSite=Strict; Path=\/; Max-Age=43200$/);
   assert.ok(token.length >= 40);
   assert.equal((await routes.dispatch({ method: 'GET', pathname: '/api/config', sessionToken: token })).status, 200);
+  const refreshed = await routes.dispatch({ method: 'GET', pathname: '/api/session', sessionToken: token });
+  assert.equal(refreshed.body.authenticated, true);
+  assert.match(refreshed.headers['Set-Cookie'], /Max-Age=43200$/);
 });
 
 test('logout revokes a session and expires the session cookie', async () => {
