@@ -1,30 +1,33 @@
 # CURRENT_STATE_copilot (round R09)
 
-Status: IN_PROGRESS
-Agent: copilot · Tool: GitHub Copilot · Branch: r09/copilot · Last update: 2026-10-19 11:43
+Status: DONE
+Agent: copilot · Tool: GitHub Copilot · Branch: r09/copilot · Last update: 2026-10-19 11:50
 
 ## Tasks
 - [x] 1. Create `src/renderer/speed-card-model.js` as an IIFE with the interface above and keep it under 80 lines.
 - [x] 2. Create `test/speed-card-model.test.js` covering each branch and timing boundary with `node:test`.
-- [ ] 3. Run `npm run check` and confirm the suite passes.
-- [ ] 4. Set `Status: DONE`, fill every section, and commit.
+- [x] 3. Run `npm run check` and confirm the suite passes.
+- [x] 4. Set `Status: DONE`, fill every section, and commit.
 
 ## Done
-- Initial state file created for R09.\n- Added `src/renderer/speed-card-model.js` and kept the view logic limited to the pure model API.\n- Added the focused `node:test` coverage for every branch and fade boundary.
+- Added `src/renderer/speed-card-model.js` — commit `b6fc9aa`.
+- Added `test/speed-card-model.test.js` — commit `2df7cc6`.
+- Captured the passing project validation for the round.
 
 ## Verified
-- Not yet checked.
+- `npm run check` passed in the R09 Copilot worktree.
 
 ## Unverified / not done
-- The speed-card model and timing tests are not yet implemented or validated.
+- No real-display or Electron validation was run, per the round contract.
 
 ## Files changed
-- `agents/state/CURRENT_STATE_copilot.md` — created round R09 state for the Copilot worktree.
+- `src/renderer/speed-card-model.js` — pure IIFE view model for card state and fade opacity.
+- `test/speed-card-model.test.js` — checks each `cardView` branch, fade boundaries, constants, and opacity values.
+- `agents/state/CURRENT_STATE_copilot.md` — records the final R09 Copilot status and verification.
 
 ## Requests for the coordinator
 - None.
 
 ## Resume notes
-Stopped after the state-file creation. Next steps: add the pure view model, write the node:test file, then run `npm run check` before marking the round done.
-
+The speed-card model is complete and validated by the repo check suite. No further work remains in this branch.
 
